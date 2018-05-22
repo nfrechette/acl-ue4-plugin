@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "ACL",
+	"Description": "Use the Animation Compression Library to compress AnimSequences",
+	"Category": "Animation",
+	"CreatedBy": "Nicholas Frechette",
+	"CreatedByURL": "http://nfrechette.github.io/",
+	"DocsURL": "https://github.com/nfrechette/acl-ue4-plugin",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/nfrechette/acl-ue4-plugin",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Modules" :
+	[
+		{
+			"Name": "ACLPlugin",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
