@@ -45,6 +45,15 @@ UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer
 	Description = TEXT("ACL");
 	bNeedsSkeleton = true;
 
+	// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
+	// We use 100cm instead of 3cm. UE 4 usually uses 50cm (END_EFFECTOR_SOCKET_DUMMY_BONE_SIZE) but
+	// we use a higher value anyway due to the fact that ACL has no error compensation and it is more aggressive.
+	DefaultVirtualVertexDistance = 3.0f;	// 3cm, suitable for ordinary characters
+	SafeVirtualVertexDistance = 100.0f;		// 100cm
+
+	SafetyFallbackThreshold = 1.0f;			// 1cm, should be very rarely exceeded
+	ErrorThreshold = 0.01f;					// 0.01cm, conservative enough for cinematographic quality
+
 	RotationFormat = ACLRotationFormat::QuatDropW_Variable;
 	TranslationFormat = ACLVectorFormat::Vector3_Variable;
 	ScaleFormat = ACLVectorFormat::Vector3_Variable;
@@ -83,7 +92,7 @@ static acl::VectorFormat8 GetVectorFormat(ACLVectorFormat Format)
 	}
 }
 
-static acl::RigidSkeleton* BuildACLSkeleton(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const TArray<FBoneData>& BoneData)
+static TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const TArray<FBoneData>& BoneData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance)
 {
 	using namespace acl;
 
@@ -101,15 +110,13 @@ static acl::RigidSkeleton* BuildACLSkeleton(ACLAllocator& AllocatorImpl, const U
 		ACLBone.bind_transform = transform_cast(transform_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), vector_set(1.0f)));
 
 		// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
-		// We use 100cm instead of 3cm. UE 4 usually uses 50cm (END_EFFECTOR_SOCKET_DUMMY_BONE_SIZE) but
-		// we use a higher value anyway due to the fact that ACL has no error compensation and it is more aggressive.
-		ACLBone.vertex_distance = (UE4Bone.bHasSocket || UE4Bone.bKeyEndEffector) ? 100.0f : 3.0f;
+		ACLBone.vertex_distance = (UE4Bone.bHasSocket || UE4Bone.bKeyEndEffector) ? SafeVirtualVertexDistance : DefaultVirtualVertexDistance;
 
 		const int32 ParentBoneIndex = UE4Bone.GetParent();
 		ACLBone.parent_index = ParentBoneIndex >= 0 ? safe_static_cast<uint16_t>(ParentBoneIndex) : acl::k_invalid_bone_index;
 	}
 
-	return new RigidSkeleton(AllocatorImpl, ACLSkeletonBones.GetData(), NumBones);
+	return MakeUnique<RigidSkeleton>(AllocatorImpl, ACLSkeletonBones.GetData(), NumBones);
 }
 
 static int32 FindAnimationTrackIndex(const UAnimSequence& AnimSeq, int32 BoneIndex)
@@ -128,7 +135,7 @@ static int32 FindAnimationTrackIndex(const UAnimSequence& AnimSeq, int32 BoneInd
 	return INDEX_NONE;
 }
 
-static acl::AnimationClip* BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence* AnimSeq, const acl::RigidSkeleton& ACLSkeleton, int32 RefFrameIndex, bool IsAdditive)
+static TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence* AnimSeq, const acl::RigidSkeleton& ACLSkeleton, int32 RefFrameIndex, bool IsAdditive)
 {
 	using namespace acl;
 
@@ -144,7 +151,7 @@ static acl::AnimationClip* BuildACLClip(ACLAllocator& AllocatorImpl, const UAnim
 		const uint32 FirstSampleIndex = RefFrameIndex >= 0 ? FMath::Min(RefFrameIndex, AnimSeq->NumFrames - 1) : 0;
 		const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*AnimSeq->GetPathName()));
 
-		AnimationClip* ACLClip = new AnimationClip(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
+		TUniquePtr<AnimationClip> ACLClip = MakeUnique<AnimationClip>(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
 
 		AnimatedBone* ACLBones = ACLClip->get_bones();
 		const uint16 NumBones = ACLSkeleton.get_num_bones();
@@ -201,7 +208,7 @@ static acl::AnimationClip* BuildACLClip(ACLAllocator& AllocatorImpl, const UAnim
 		const uint32 SampleRate = 30;
 		const String ClipName(AllocatorImpl, "Bind Pose");
 
-		AnimationClip* ACLClip = new AnimationClip(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
+		TUniquePtr<AnimationClip> ACLClip = MakeUnique<AnimationClip>(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
 
 		AnimatedBone* ACLBones = ACLClip->get_bones();
 		for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
@@ -241,9 +248,11 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 
 	ACLAllocator AllocatorImpl;
 
-	RigidSkeleton* ACLSkeleton = BuildACLSkeleton(AllocatorImpl, *AnimSeq, BoneData);
-	AnimationClip* ACLClip = BuildACLClip(AllocatorImpl, AnimSeq, *ACLSkeleton, -1, AnimSeq->IsValidAdditive());
-	AnimationClip* ACLBaseClip = nullptr;
+	TUniquePtr<RigidSkeleton> ACLSkeleton = BuildACLSkeleton(AllocatorImpl, *AnimSeq, BoneData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance);
+	TUniquePtr<AnimationClip> ACLClip = BuildACLClip(AllocatorImpl, AnimSeq, *ACLSkeleton, -1, AnimSeq->IsValidAdditive());
+	TUniquePtr<AnimationClip> ACLBaseClip = nullptr;
+
+	UE_LOG(LogAnimation, Warning, TEXT("ACL Animation raw size: %u bytes"), ACLClip->get_raw_size());
 
 	if (AnimSeq->IsValidAdditive())
 	{
@@ -255,7 +264,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 			ACLBaseClip = BuildACLClip(AllocatorImpl, AnimSeq->RefPoseSeq, *ACLSkeleton, AnimSeq->RefFrameIndex, false);
 
 		if (ACLBaseClip != nullptr)
-			ACLClip->set_additive_base(ACLBaseClip, AdditiveClipFormat8::Additive1);
+			ACLClip->set_additive_base(ACLBaseClip.Get(), AdditiveClipFormat8::Additive1);
 	}
 
 	OutputStats Stats;
@@ -281,9 +290,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	else
 		Settings.error_metric = &DefaultErrorMetric;
 
-	Settings.error_threshold = 0.01f;
-
-	const bool IsDecompressionFastPath = IsUsingDefaultCompressionSettings(Settings);
+	Settings.error_threshold = ErrorThreshold;
 
 	static volatile bool DumpClip = false;
 	if (DumpClip)
@@ -291,37 +298,63 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 
 	CompressedClip* CompressedClipData = nullptr;
 	ErrorResult CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
+
+	// Make sure if we managed to compress, that the error is acceptable and if it isn't, re-compress again with safer settings
+	// This should be VERY rare with the default threshold
 	if (CompressionResult.empty())
 	{
-		check(CompressedClipData != nullptr);
-		check(CompressedClipData->is_valid(true).empty());
-
-		const uint32 CompressedClipDataSize = CompressedClipData->get_size();
-
-		AnimSeq->CompressedByteStream.Empty(CompressedClipDataSize + 1);
-		AnimSeq->CompressedByteStream.AddUninitialized(CompressedClipDataSize + 1);
-		memcpy(AnimSeq->CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
-		AnimSeq->CompressedByteStream[CompressedClipDataSize] = IsDecompressionFastPath ? 1 : 0;
+		checkSlow(CompressedClipData->is_valid(true).empty());
 
 		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
 		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
 		Context.initialize(*CompressedClipData);
 		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
+		if (bone_error.error >= SafetyFallbackThreshold)
+		{
+			UE_LOG(LogAnimation, Warning, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
+			UE_LOG(LogAnimation, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm"), bone_error.error);
 
-		UE_LOG(LogAnimation, Warning, TEXT("ACL Animation raw size: %u bytes"), ACLClip->get_raw_size());
-		UE_LOG(LogAnimation, Warning, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
+			AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
+			CompressedClipData = nullptr;
 
-		AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
+			// Fallback to full precision rotations with no range reduction
+			Settings.rotation_format = RotationFormat8::Quat_128;
+			Settings.range_reduction &= ~RangeReductionFlags8::Rotations;
+			Settings.segmenting.range_reduction &= ~RangeReductionFlags8::Rotations;
+
+			CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
+		}
 	}
-	else
+
+	if (!CompressionResult.empty())
 	{
 		AnimSeq->CompressedByteStream.Empty();
 		UE_LOG(LogAnimation, Error, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
+		return;
 	}
 
-	delete ACLBaseClip;
-	delete ACLClip;
-	delete ACLSkeleton;
+	checkSlow(CompressedClipData->is_valid(true).empty());
+
+	const uint32 CompressedClipDataSize = CompressedClipData->get_size();
+
+	AnimSeq->CompressedByteStream.Empty(CompressedClipDataSize + 1);
+	AnimSeq->CompressedByteStream.AddUninitialized(CompressedClipDataSize + 1);
+	memcpy(AnimSeq->CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
+
+	const bool IsDecompressionFastPath = IsUsingDefaultCompressionSettings(Settings);
+	AnimSeq->CompressedByteStream[CompressedClipDataSize] = IsDecompressionFastPath ? 1 : 0;
+
+	{
+		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
+		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
+		Context.initialize(*CompressedClipData);
+		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
+
+		UE_LOG(LogAnimation, Warning, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
+		UE_LOG(LogAnimation, Warning, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
+	}
+
+	AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
 }
 
 void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
@@ -340,6 +373,7 @@ void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
 	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::AlgorithmType8::UniformlySampled);
 
 	Ar	<< RotationFormat << TranslationFormat << ScaleFormat
+		<< SafetyFallbackThreshold << ErrorThreshold << DefaultVirtualVertexDistance << SafeVirtualVertexDistance
 		<< Flags
 		<< IdealNumKeyFramesPerSegment << MaxNumKeyFramesPerSegment
 		<< ForceRebuildVersion << AlgorithmVersion;

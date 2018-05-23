@@ -49,40 +49,52 @@ class UAnimCompress_ACL : public UAnimCompress
 {
 	GENERATED_UCLASS_BODY()
 
-	UPROPERTY(EditAnywhere, Category=Clip)
+	UPROPERTY(EditAnywhere, Category = Skeleton)
+	float DefaultVirtualVertexDistance;
+
+	UPROPERTY(EditAnywhere, Category = Skeleton)
+	float SafeVirtualVertexDistance;
+
+	UPROPERTY(EditAnywhere, Category = Clip)
+	float SafetyFallbackThreshold;
+
+	UPROPERTY(EditAnywhere, Category = Clip)
+	float ErrorThreshold;
+
+	UPROPERTY(EditAnywhere, Category = Clip)
 	ACLRotationFormat RotationFormat;
 
-	UPROPERTY(EditAnywhere, Category=Clip)
+	UPROPERTY(EditAnywhere, Category = Clip)
 	ACLVectorFormat TranslationFormat;
 
-	UPROPERTY(EditAnywhere, Category=Clip)
+	UPROPERTY(EditAnywhere, Category = Clip)
 	ACLVectorFormat ScaleFormat;
 
-	UPROPERTY(EditAnywhere, Category=Clip)
+	UPROPERTY(EditAnywhere, Category = Clip)
 	uint32 bClipRangeReduceRotations : 1;
 
-	UPROPERTY(EditAnywhere, Category=Clip)
+	UPROPERTY(EditAnywhere, Category = Clip)
 	uint32 bClipRangeReduceTranslations : 1;
 
-	UPROPERTY(EditAnywhere, Category=Clip)
+	UPROPERTY(EditAnywhere, Category = Clip)
 	uint32 bClipRangeReduceScales : 1;
 
-	UPROPERTY(EditAnywhere, Category=Segmenting)
+	UPROPERTY(EditAnywhere, Category = Segmenting)
 	uint32 bEnableSegmenting : 1;
 
-	UPROPERTY(EditAnywhere, Category=Segmenting)
+	UPROPERTY(EditAnywhere, Category = Segmenting)
 	uint32 bSegmentRangeReduceRotations : 1;
 
-	UPROPERTY(EditAnywhere, Category=Segmenting)
+	UPROPERTY(EditAnywhere, Category = Segmenting)
 	uint32 bSegmentRangeReduceTranslations : 1;
 
-	UPROPERTY(EditAnywhere, Category=Segmenting)
+	UPROPERTY(EditAnywhere, Category = Segmenting)
 	uint32 bSegmentRangeReduceScales : 1;
 
-	UPROPERTY(EditAnywhere, Category=Segmenting)
+	UPROPERTY(EditAnywhere, Category = Segmenting)
 	uint16 IdealNumKeyFramesPerSegment;
 
-	UPROPERTY(EditAnywhere, Category=Segmenting)
+	UPROPERTY(EditAnywhere, Category = Segmenting)
 	uint16 MaxNumKeyFramesPerSegment;
 
 protected:
