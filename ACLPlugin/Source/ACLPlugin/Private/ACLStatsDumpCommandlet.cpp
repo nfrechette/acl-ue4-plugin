@@ -41,12 +41,10 @@
 #include <acl/io/clip_reader.h>
 #include <acl/math/quat_32.h>
 #include <acl/math/transform_32.h>
-#endif	// WITH_EDITOR
 
 // Commandlet example inspired by: https://github.com/ue4plugins/CommandletPlugin
 // To run the commandlet, add to the commandline: "$(SolutionDir)$(ProjectName).uproject" -run=/Script/ACLPlugin.ACLStatsDump "-acl=<path/to/raw/acl/sjson/files/directory>" "-stats=<path/to/output/stats/directory>"
 
-#if WITH_EDITOR
 class UE4SJSONStreamWriter final : public sjson::StreamWriter
 {
 public:
@@ -62,16 +60,6 @@ public:
 private:
 	FArchive* File;
 };
-
-UACLStatsDumpCommandlet::UACLStatsDumpCommandlet(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
-{
-	IsClient = false;
-	IsServer = false;
-	IsEditor = false;
-	LogToConsole = true;
-	ShowErrorCount = true;
-}
 
 static const TCHAR* ReadACLClip(FFileManagerGeneric& FileManager, const FString& ACLClipPath, acl::IAllocator& Allocator, std::unique_ptr<acl::AnimationClip, acl::Deleter<acl::AnimationClip>>& OutACLClip, std::unique_ptr<acl::RigidSkeleton, acl::Deleter<acl::RigidSkeleton>>& OutACLSkeleton)
 {
@@ -299,6 +287,16 @@ static void DumpClipDetailedError(const acl::AnimationClip& ACLClip, const acl::
 	};
 }
 #endif	// WITH_EDITOR
+
+UACLStatsDumpCommandlet::UACLStatsDumpCommandlet(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	IsClient = false;
+	IsServer = false;
+	IsEditor = false;
+	LogToConsole = true;
+	ShowErrorCount = true;
+}
 
 int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 {
