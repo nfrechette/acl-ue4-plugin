@@ -29,7 +29,7 @@
 #if DO_GUARD_SLOW
 	// ACL has a lot of asserts, only enabled in Debug
 	#define ACL_ON_ASSERT_CUSTOM
-	#define ACL_ASSERT(expression, format, ...) checkf(expression, ANSI_TO_TCHAR(format), #__VA_ARGS__)
+	#define ACL_ASSERT(expression, format, ...) checkf(expression, TEXT(format), #__VA_ARGS__)
 #endif
 
 #include <acl/core/error.h>
