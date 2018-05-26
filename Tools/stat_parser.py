@@ -1,4 +1,7 @@
+import multiprocessing
 import os
+import queue
+import time
 import sys
 
 # This script depends on a SJSON parsing package:
@@ -13,6 +16,7 @@ def parse_argv():
 	options['stats'] = ""
 	options['csv_summary'] = False
 	options['csv_error'] = False
+	options['num_threads'] = 1
 
 	for i in range(1, len(sys.argv)):
 		value = sys.argv[i]
@@ -27,8 +31,16 @@ def parse_argv():
 		if value == '-csv_error':
 			options['csv_error'] = True
 
+		if value.startswith('-parallel='):
+			options['num_threads'] = int(value[len('-parallel='):].replace('"', ''))
+
 	if options['stats'] == None:
 		print('Stat input directory not found')
+		print_usage()
+		sys.exit(1)
+
+	if options['num_threads'] <= 0:
+		print('-parallel switch argument must be greater than 0')
 		print_usage()
 		sys.exit(1)
 
@@ -36,10 +48,6 @@ def parse_argv():
 
 def print_usage():
 	print('Usage: python stat_parser.py -stats=<path to input directory for stats> [-csv_summary] [-csv_error]')
-
-def print_stat(stat):
-	print('Algorithm: {}, Format: [{}, {}], Ratio: {:.2f}, Error: {}'.format(stat['algorithm_name'], stat['rotation_format'], stat['translation_format'], stat['acl_compression_ratio'], stat['acl_max_error']))
-	print('')
 
 def bytes_to_mb(size_in_bytes):
 	return size_in_bytes / (1024.0 * 1024.0)
@@ -55,24 +63,45 @@ def sanitize_csv_entry(entry):
 def output_csv_summary(stat_dir, stats):
 	csv_filename = os.path.join(stat_dir, 'stats_summary.csv')
 	print('Generating CSV file {} ...'.format(csv_filename))
-	print()
 	file = open(csv_filename, 'w')
-	print('Algorithm Name, Raw Size, Compressed Size, Compression Ratio, Clip Duration, Max Error', file = file)
+	print('Clip Name, Raw Size, Auto Size, ACL Size, Auto Ratio, ACL Ratio, Auto Error, ACL Error', file = file)
 	for stat in stats:
-		clean_name = sanitize_csv_entry(stat['desc'])
-		print('{}, {}, {}, {}, {}, {}'.format(clean_name, stat['acl_raw_size'], stat['compressed_size'], stat['acl_compression_ratio'], stat['duration'], stat['acl_max_error']), file = file)
+		clip_name = stat['clip_name']
+		raw_size = stat['acl_raw_size']
+		auto_size = stat['ue4_auto']['compressed_size']
+		acl_size = stat['ue4_acl']['compressed_size']
+		auto_ratio = stat['ue4_auto']['acl_compression_ratio']
+		acl_ratio = stat['ue4_acl']['acl_compression_ratio']
+		auto_error = stat['ue4_auto']['acl_max_error']
+		acl_error = stat['ue4_acl']['acl_max_error']
+		print('{}, {}, {}, {}, {}, {}, {}, {}'.format(clip_name, raw_size, auto_size, acl_size, auto_ratio, acl_ratio, auto_error, acl_error), file = file)
 	file.close()
 
 def output_csv_error(stat_dir, stats):
-	csv_filename = os.path.join(stat_dir, 'stats_error.csv')
+	csv_filename = os.path.join(stat_dir, 'stats_ue4_auto_error.csv')
 	print('Generating CSV file {} ...'.format(csv_filename))
-	print()
 	file = open(csv_filename, 'w')
 	print('Clip Name, Key Frame, Bone Index, Error', file = file)
 	for stat in stats:
 		name = stat['clip_name']
 		key_frame = 0
-		for frame_errors in stat['error_per_frame_and_bone']:
+		for frame_errors in stat['ue4_auto']['error_per_frame_and_bone']:
+			bone_index = 0
+			for bone_error in frame_errors:
+				print('{}, {}, {}, {}'.format(name, key_frame, bone_index, bone_error), file = file)
+				bone_index += 1
+
+			key_frame += 1
+	file.close()
+
+	csv_filename = os.path.join(stat_dir, 'stats_ue4_acl_error.csv')
+	print('Generating CSV file {} ...'.format(csv_filename))
+	file = open(csv_filename, 'w')
+	print('Clip Name, Key Frame, Bone Index, Error', file = file)
+	for stat in stats:
+		name = stat['clip_name']
+		key_frame = 0
+		for frame_errors in stat['ue4_acl']['error_per_frame_and_bone']:
 			bone_index = 0
 			for bone_error in frame_errors:
 				print('{}, {}, {}, {}'.format(name, key_frame, bone_index, bone_error), file = file)
@@ -104,6 +133,114 @@ def print_progress(iteration, total, prefix='', suffix='', decimals = 1, bar_len
 		sys.stdout.write('\n')
 	sys.stdout.flush()
 
+def append_stats(permutation, clip_stats, run_stats, aggregate_results):
+	key = run_stats['desc']
+	if not key in aggregate_results:
+		run_total_stats = {}
+		run_total_stats['desc'] = key
+		run_total_stats['total_raw_size'] = 0
+		run_total_stats['total_compressed_size'] = 0
+		run_total_stats['total_compression_time'] = 0.0
+		run_total_stats['max_error'] = 0.0
+		run_total_stats['num_runs'] = 0
+		aggregate_results[key] = run_total_stats
+
+	run_total_stats = aggregate_results[key]
+	run_total_stats['total_raw_size'] += clip_stats['acl_raw_size']
+	run_total_stats['total_compressed_size'] += run_stats['compressed_size']
+	run_total_stats['total_compression_time'] += run_stats['compression_time']
+	run_total_stats['max_error'] = max(run_stats['acl_max_error'], run_total_stats['max_error'])
+	run_total_stats['num_runs'] += 1
+
+	if not permutation in aggregate_results:
+		permutation_stats = {}
+		permutation_stats['total_raw_size'] = 0
+		permutation_stats['total_compressed_size'] = 0
+		permutation_stats['total_compression_time'] = 0.0
+		permutation_stats['max_error'] = 0.0
+		permutation_stats['num_runs'] = 0
+		permutation_stats['worst_error'] = -1.0
+		permutation_stats['worst_entry'] = None
+		aggregate_results[permutation] = permutation_stats
+
+	permutation_stats = aggregate_results[permutation]
+	permutation_stats['total_raw_size'] += clip_stats['acl_raw_size']
+	permutation_stats['total_compressed_size'] += run_stats['compressed_size']
+	permutation_stats['total_compression_time'] += run_stats['compression_time']
+	permutation_stats['max_error'] = max(run_stats['acl_max_error'], permutation_stats['max_error'])
+	permutation_stats['num_runs'] += 1
+	if run_stats['acl_max_error'] > permutation_stats['worst_error']:
+		permutation_stats['worst_error'] = run_stats['acl_max_error']
+		permutation_stats['worst_entry'] = clip_stats
+
+def do_parse_stats(options, stat_queue, result_queue):
+	try:
+		stats = []
+
+		while True:
+			stat_filename = stat_queue.get()
+			if stat_filename is None:
+				break
+
+			with open(stat_filename, 'r') as file:
+				try:
+					file_data = sjson.loads(file.read())
+					file_data['filename'] = stat_filename
+					file_data['clip_name'] = os.path.splitext(os.path.basename(stat_filename))[0].replace('_stats', '')
+
+					if not options['csv_error']:
+						file_data['error_per_frame_and_bone'] = []
+
+					stats.append(file_data)
+				except sjson.ParseException:
+					print('Failed to parse SJSON file: {}'.format(stat_filename))
+
+			result_queue.put(('progress', stat_filename))
+
+		result_queue.put(('done', stats))
+	except KeyboardInterrupt:
+		print('Interrupted')
+
+def parallel_parse_stats(options, stat_files):
+	stat_queue = multiprocessing.Queue()
+	for stat_filename in stat_files:
+		stat_queue.put(stat_filename)
+
+	# Add a marker to terminate the jobs
+	for i in range(options['num_threads']):
+		stat_queue.put(None)
+
+	result_queue = multiprocessing.Queue()
+
+	jobs = [ multiprocessing.Process(target = do_parse_stats, args = (options, stat_queue, result_queue)) for _i in range(options['num_threads']) ]
+	for job in jobs:
+		job.start()
+
+	num_stat_file_processed = 0
+	stats = []
+	print_progress(num_stat_file_processed, len(stat_files), 'Aggregating results:', '{} / {}'.format(num_stat_file_processed, len(stat_files)))
+	try:
+		while True:
+			try:
+				(msg, data) = result_queue.get(True, 1.0)
+				if msg == 'progress':
+					num_stat_file_processed += 1
+					print_progress(num_stat_file_processed, len(stat_files), 'Aggregating results:', '{} / {}'.format(num_stat_file_processed, len(stat_files)))
+				elif msg == 'done':
+					stats.extend(data)
+			except queue.Empty:
+				all_jobs_done = True
+				for job in jobs:
+					if job.is_alive():
+						all_jobs_done = False
+
+				if all_jobs_done:
+					break
+	except KeyboardInterrupt:
+		sys.exit(1)
+
+	return stats
+
 if __name__ == "__main__":
 	options = parse_argv()
 
@@ -127,24 +264,12 @@ if __name__ == "__main__":
 	if len(stat_files) == 0:
 		sys.exit(0)
 
-	stats = []
-	num_stat_file_processed = 0
-	print_progress(0, len(stat_files), 'Aggregating results:', '{} / {}'.format(num_stat_file_processed, len(stat_files)))
-	for stat_filename in stat_files:
-		with open(stat_filename, 'r') as file:
-			file_data = sjson.loads(file.read())
-			file_data['filename'] = stat_filename
-			file_data['desc'] = '{} {} {}'.format(file_data['algorithm_name'], file_data['rotation_format'], file_data['translation_format'])
-			file_data['clip_name'] = os.path.splitext(os.path.basename(stat_filename))[0]
+	aggregating_start_time = time.clock()
 
-			if not options['csv_error']:
-				file_data['error_per_frame_and_bone'] = []
+	stats = parallel_parse_stats(options, stat_files)
 
-			stats.append(file_data)
-			num_stat_file_processed += 1
-			print_progress(num_stat_file_processed, len(stat_files), 'Aggregating results:', '{} / {}'.format(num_stat_file_processed, len(stat_files)))
-
-	print()
+	aggregating_end_time = time.clock()
+	print('Parsed stats in {}'.format(format_elapsed_time(aggregating_end_time - aggregating_start_time)))
 
 	if options['csv_summary']:
 		output_csv_summary(stat_dir, stats)
@@ -152,86 +277,47 @@ if __name__ == "__main__":
 	if options['csv_error']:
 		output_csv_error(stat_dir, stats)
 
-	# Aggregate per run type
+	print()
 	print('Stats per run type:')
-	run_types = {}
-	total_run_types = {}
-	total_run_types['desc'] = 'Total'
-	total_run_types['total_raw_size'] = 0
-	total_run_types['total_compressed_size'] = 0
-	total_run_types['total_compression_time'] = 0.0
-	total_run_types['max_error'] = 0.0
-	total_run_types['num_runs'] = 0
+	aggregate_results = {}
+	num_acl_size_wins = 0
+	num_acl_accuracy_wins = 0
 	for stat in stats:
-		key = stat['desc']
-		if not key in run_types:
-			run_stats = {}
-			run_stats['desc'] = key
-			run_stats['total_raw_size'] = 0
-			run_stats['total_compressed_size'] = 0
-			run_stats['total_compression_time'] = 0.0
-			run_stats['max_error'] = 0.0
-			run_stats['num_runs'] = 0
-			run_types[key] = run_stats
+		if 'ue4_auto' in stat:
+			ue4_auto = stat['ue4_auto']
+			ue4_auto['desc'] = '{} {} {}'.format(ue4_auto['algorithm_name'], ue4_auto['rotation_format'], ue4_auto['translation_format'])
+			append_stats('ue4_auto', stat, ue4_auto, aggregate_results)
 
-		run_stats = run_types[key]
-		run_stats['total_raw_size'] += stat['acl_raw_size']
-		run_stats['total_compressed_size'] += stat['compressed_size']
-		run_stats['total_compression_time'] += stat['compression_time']
-		run_stats['max_error'] = max(stat['acl_max_error'], run_stats['max_error'])
-		run_stats['num_runs'] += 1
+		if 'ue4_acl' in stat:
+			ue4_acl = stat['ue4_acl']
+			ue4_acl['desc'] = ue4_acl['algorithm_name']
+			append_stats('ue4_acl', stat, ue4_acl, aggregate_results)
 
-		total_run_types['total_raw_size'] += stat['acl_raw_size']
-		total_run_types['total_compressed_size'] += stat['compressed_size']
-		total_run_types['total_compression_time'] += stat['compression_time']
-		total_run_types['max_error'] = max(stat['acl_max_error'], total_run_types['max_error'])
-		total_run_types['num_runs'] += 1
-
-	run_types_by_size = sorted(run_types.values(), key = lambda entry: entry['total_compressed_size'])
-	for run_stats in run_types_by_size:
-		ratio = float(run_stats['total_raw_size']) / float(run_stats['total_compressed_size'])
-		print('Raw {:.2f} MB, Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [{:.4f}] Run type: {}'.format(bytes_to_mb(run_stats['total_raw_size']), bytes_to_mb(run_stats['total_compressed_size']), format_elapsed_time(run_stats['total_compression_time']), ratio, run_stats['max_error'], run_stats['desc']))
+		if 'ue4_auto' in stat and 'ue4_acl' in stat:
+			ue4_auto = stat['ue4_auto']
+			ue4_acl = stat['ue4_acl']
+			if ue4_acl['compressed_size'] < ue4_auto['compressed_size']:
+				num_acl_size_wins += 1
+			if ue4_acl['acl_max_error'] < ue4_auto['acl_max_error']:
+				num_acl_accuracy_wins += 1
 
 	print()
-	print('Total:')
-	ratio = float(total_run_types['total_raw_size']) / float(total_run_types['total_compressed_size'])
-	print('Raw {:.2f} MB, Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [{:.4f}]'.format(bytes_to_mb(total_run_types['total_raw_size']), bytes_to_mb(total_run_types['total_compressed_size']), format_elapsed_time(total_run_types['total_compression_time']), ratio, total_run_types['max_error']))
-	print()
+	if 'ue4_auto' in aggregate_results:
+		ue4_auto = aggregate_results['ue4_auto']
+		ratio = float(ue4_auto['total_raw_size']) / float(ue4_auto['total_compressed_size'])
+		print('Total Automatic Compression:')
+		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [{:.4f}]'.format(bytes_to_mb(ue4_auto['total_compressed_size']), format_elapsed_time(ue4_auto['total_compression_time']), ratio, ue4_auto['max_error']))
+		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_auto['worst_entry']['clip_name'], ue4_auto['worst_entry']['ue4_auto']['acl_compression_ratio'], ue4_auto['worst_entry']['ue4_auto']['acl_max_error']))
+		print()
 
-	# Find outliers
-	best_error = 100000000.0
-	best_error_entry = None
-	worst_error = -100000000.0
-	worst_error_entry = None
-	best_ratio = 0.0
-	best_ratio_entry = None
-	worst_ratio = 100000000.0
-	worst_ratio_entry = None
-	for stat in stats:
-		if stat['acl_max_error'] < best_error:
-			best_error = stat['acl_max_error']
-			best_error_entry = stat
+	if 'ue4_acl' in aggregate_results:
+		ue4_acl = aggregate_results['ue4_acl']
+		ratio = float(ue4_acl['total_raw_size']) / float(ue4_acl['total_compressed_size'])
+		print('Total ACL Compression:')
+		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [{:.4f}]'.format(bytes_to_mb(ue4_acl['total_compressed_size']), format_elapsed_time(ue4_acl['total_compression_time']), ratio, ue4_acl['max_error']))
+		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
+		print()
 
-		if stat['acl_max_error'] > worst_error:
-			worst_error = stat['acl_max_error']
-			worst_error_entry = stat
-
-		if stat['acl_compression_ratio'] > best_ratio:
-			best_ratio = stat['acl_compression_ratio']
-			best_ratio_entry = stat
-
-		if stat['acl_compression_ratio'] < worst_ratio:
-			worst_ratio = stat['acl_compression_ratio']
-			worst_ratio_entry = stat
-
-	print('Most accurate: {}'.format(best_error_entry['filename']))
-	print_stat(best_error_entry)
-
-	print('Least accurate: {}'.format(worst_error_entry['filename']))
-	print_stat(worst_error_entry)
-
-	print('Best ratio: {}'.format(best_ratio_entry['filename']))
-	print_stat(best_ratio_entry)
-
-	print('Worst ratio: {}'.format(worst_ratio_entry['filename']))
-	print_stat(worst_ratio_entry)
+	print('Raw size: {:.2f} MB'.format(bytes_to_mb(aggregate_results['ue4_auto']['total_raw_size'])))
+	print('ACL was smaller for {} clips ({:.2f} %)'.format(num_acl_size_wins, float(num_acl_size_wins) / float(len(stats)) * 100.0))
+	print('ACL was more accurate for {} clips ({:.2f} %)'.format(num_acl_accuracy_wins, float(num_acl_accuracy_wins) / float(len(stats)) * 100.0))
