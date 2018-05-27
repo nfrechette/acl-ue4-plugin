@@ -432,7 +432,6 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 			UE4Clip->CompressedTrackOffsets.Empty();
 			UE4Clip->CompressedByteStream.Empty();
 			UE4Clip->CompressedScaleOffsets.Empty();
-			UE4Clip->CompressedSegments.Empty();
 
 			uint64 ACLStartTimeCycles = FPlatformTime::Cycles64();
 
