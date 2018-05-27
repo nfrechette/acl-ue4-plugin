@@ -282,6 +282,9 @@ if __name__ == "__main__":
 	aggregate_results = {}
 	num_acl_size_wins = 0
 	num_acl_accuracy_wins = 0
+	num_acl_speed_wins = 0
+	num_acl_wins = 0
+	num_acl_auto_wins = 0
 	for stat in stats:
 		if 'ue4_auto' in stat:
 			ue4_auto = stat['ue4_auto']
@@ -300,6 +303,24 @@ if __name__ == "__main__":
 				num_acl_size_wins += 1
 			if ue4_acl['acl_max_error'] < ue4_auto['acl_max_error']:
 				num_acl_accuracy_wins += 1
+			if ue4_acl['compression_time'] < ue4_auto['compression_time']:
+				num_acl_speed_wins += 1
+			if ue4_acl['compressed_size'] < ue4_auto['compressed_size'] and ue4_acl['acl_max_error'] < ue4_auto['acl_max_error'] and ue4_acl['compression_time'] < ue4_auto['compression_time']:
+				num_acl_wins += 1
+
+			lowers_error = ue4_acl['ue4_max_error'] < ue4_auto['ue4_max_error'];
+			saved_size = int(ue4_auto['compressed_size']) - int(ue4_acl['compressed_size'])
+			lowers_size = ue4_acl['compressed_size'] < ue4_auto['compressed_size'];
+			error_under_threshold = float(ue4_acl['ue4_max_error']) <= 0.1;
+
+			# keep it if it we want to force the error below the threshold and it reduces error
+			# or if has an acceptable error and saves space
+			# or if saves the same amount and an acceptable error that is lower than the previous best
+			reduces_error_below_threshold = lowers_error and error_under_threshold;
+			has_acceptable_error_and_saves_space = error_under_threshold and saved_size > 0;
+			lowers_error_and_saves_same_or_better = error_under_threshold and lowers_error and saved_size >= 0;
+			if reduces_error_below_threshold or has_acceptable_error_and_saves_space or lowers_error_and_saves_same_or_better:
+				num_acl_auto_wins += 1
 
 	print()
 	if 'ue4_auto' in aggregate_results:
@@ -321,3 +342,6 @@ if __name__ == "__main__":
 	print('Raw size: {:.2f} MB'.format(bytes_to_mb(aggregate_results['ue4_auto']['total_raw_size'])))
 	print('ACL was smaller for {} clips ({:.2f} %)'.format(num_acl_size_wins, float(num_acl_size_wins) / float(len(stats)) * 100.0))
 	print('ACL was more accurate for {} clips ({:.2f} %)'.format(num_acl_accuracy_wins, float(num_acl_accuracy_wins) / float(len(stats)) * 100.0))
+	print('ACL has faster compression for {} clips ({:.2f} %)'.format(num_acl_speed_wins, float(num_acl_speed_wins) / float(len(stats)) * 100.0))
+	print('ACL was smaller, better, faster for {} clips ({:.2f} %)'.format(num_acl_wins, float(num_acl_wins) / float(len(stats)) * 100.0))
+	print('ACL won with simulated auto {} clips ({:.2f} %)'.format(num_acl_auto_wins, float(num_acl_auto_wins) / float(len(stats)) * 100.0))
