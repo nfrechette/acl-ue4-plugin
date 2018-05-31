@@ -252,7 +252,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	TUniquePtr<AnimationClip> ACLClip = BuildACLClip(AllocatorImpl, AnimSeq, *ACLSkeleton, -1, AnimSeq->IsValidAdditive());
 	TUniquePtr<AnimationClip> ACLBaseClip = nullptr;
 
-	UE_LOG(LogAnimation, Warning, TEXT("ACL Animation raw size: %u bytes"), ACLClip->get_raw_size());
+	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLClip->get_raw_size());
 
 	if (AnimSeq->IsValidAdditive())
 	{
@@ -311,8 +311,8 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
 		if (bone_error.error >= SafetyFallbackThreshold)
 		{
-			UE_LOG(LogAnimation, Warning, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
-			UE_LOG(LogAnimation, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm"), bone_error.error);
+			UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
+			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm"), bone_error.error);
 
 			AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
 			CompressedClipData = nullptr;
@@ -329,7 +329,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	if (!CompressionResult.empty())
 	{
 		AnimSeq->CompressedByteStream.Empty();
-		UE_LOG(LogAnimation, Error, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
+		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
 		return;
 	}
 
@@ -350,8 +350,8 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 		Context.initialize(*CompressedClipData);
 		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
 
-		UE_LOG(LogAnimation, Warning, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
-		UE_LOG(LogAnimation, Warning, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
 	}
 
 	AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());

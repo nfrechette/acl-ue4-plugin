@@ -309,13 +309,13 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 	if (!ParamsMap.Contains("acl"))
 	{
-		UE_LOG(LogAnimation, Warning, TEXT("Missing commandlet argument: -acl=<path/to/raw/acl/sjson/files/directory>"));
+		UE_LOG(LogAnimationCompression, Error, TEXT("Missing commandlet argument: -acl=<path/to/raw/acl/sjson/files/directory>"));
 		return 0;
 	}
 
 	if (!ParamsMap.Contains("stats"))
 	{
-		UE_LOG(LogAnimation, Warning, TEXT("Missing commandlet argument: -stats=<path/to/output/stats/directory>"));
+		UE_LOG(LogAnimationCompression, Error, TEXT("Missing commandlet argument: -stats=<path/to/output/stats/directory>"));
 		return 0;
 	}
 
