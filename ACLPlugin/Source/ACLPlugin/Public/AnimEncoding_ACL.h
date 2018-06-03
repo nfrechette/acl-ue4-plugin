@@ -27,6 +27,7 @@
 #include "CoreMinimal.h"
 #include "AnimEncoding.h"
 
+/** The ACL codec runtime implementation. */
 class AEFACLCompressionCodec : public AnimEncoding
 {
 public:

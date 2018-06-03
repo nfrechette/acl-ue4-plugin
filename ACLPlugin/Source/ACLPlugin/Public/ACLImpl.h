@@ -28,6 +28,10 @@
 
 #if DO_GUARD_SLOW
 	// ACL has a lot of asserts, only enabled in Debug
+	// This decision has been made because the extensive asserts add considerable overhead and most
+	// developers use a Development configuration for the editor. The ACL library runs extensive
+	// unit and regression tests on a very large number of clips which minimizes the risk of
+	// having a legitimate assert fire.
 	#define ACL_ON_ASSERT_CUSTOM
 	#define ACL_ASSERT(expression, format, ...) checkf(expression, TEXT(format), #__VA_ARGS__)
 #endif
@@ -38,7 +42,8 @@
 #include <acl/math/vector4_32.h>
 #include <acl/math/transform_32.h>
 
-class ACLAllocator : public acl::IAllocator
+/** The ACL allocator implementation simply forwards to the default heap allocator. */
+class ACLAllocator final : public acl::IAllocator
 {
 public:
 	virtual void* allocate(size_t size, size_t alignment = acl::IAllocator::k_default_alignment)

@@ -27,6 +27,15 @@
 #include "Commandlets/Commandlet.h"
 #include "ACLStatsDumpCommandlet.generated.h"
 
+/*
+ * This commandlet is used to extract and dump animation compression statistics.
+ *
+ * It supports the following arguments: -acl=<path> -stats=<path> -MasterTolerance=<tolerance>
+ *
+ *   acl: This is the path to the input directory that contains the ACL SJSON animation clips.
+ *   stats: This is the path to the output directory that will contain the extracted SJSON statistics.
+ *   MasterTolerance: This is the master tolerance used by the UE4 Automatic compression algorithm. Defaults to 0.1cm.
+ */
 UCLASS()
 class UACLStatsDumpCommandlet : public UCommandlet
 {

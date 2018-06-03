@@ -54,9 +54,9 @@ UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer
 	SafetyFallbackThreshold = 1.0f;			// 1cm, should be very rarely exceeded
 	ErrorThreshold = 0.01f;					// 0.01cm, conservative enough for cinematographic quality
 
-	RotationFormat = ACLRotationFormat::QuatDropW_Variable;
-	TranslationFormat = ACLVectorFormat::Vector3_Variable;
-	ScaleFormat = ACLVectorFormat::Vector3_Variable;
+	RotationFormat = ACLRotationFormat::ACLRF_QuatDropW_Variable;
+	TranslationFormat = ACLVectorFormat::ACLVF_Vector3_Variable;
+	ScaleFormat = ACLVectorFormat::ACLVF_Vector3_Variable;
 
 	bClipRangeReduceRotations = true;
 	bClipRangeReduceTranslations = true;
@@ -76,9 +76,9 @@ static acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format)
 	switch (Format)
 	{
 	default:
-	case ACLRotationFormat::Quat_128:			return acl::RotationFormat8::Quat_128;
-	case ACLRotationFormat::QuatDropW_96:		return acl::RotationFormat8::QuatDropW_96;
-	case ACLRotationFormat::QuatDropW_Variable:	return acl::RotationFormat8::QuatDropW_Variable;
+	case ACLRotationFormat::ACLRF_Quat_128:			return acl::RotationFormat8::Quat_128;
+	case ACLRotationFormat::ACLRF_QuatDropW_96:		return acl::RotationFormat8::QuatDropW_96;
+	case ACLRotationFormat::ACLRF_QuatDropW_Variable:	return acl::RotationFormat8::QuatDropW_Variable;
 	}
 }
 
@@ -87,8 +87,8 @@ static acl::VectorFormat8 GetVectorFormat(ACLVectorFormat Format)
 	switch (Format)
 	{
 	default:
-	case ACLVectorFormat::Vector3_96:			return acl::VectorFormat8::Vector3_96;
-	case ACLVectorFormat::Vector3_Variable:		return acl::VectorFormat8::Vector3_Variable;
+	case ACLVectorFormat::ACLVF_Vector3_96:			return acl::VectorFormat8::Vector3_96;
+	case ACLVectorFormat::ACLVF_Vector3_Variable:		return acl::VectorFormat8::Vector3_Variable;
 	}
 }
 
