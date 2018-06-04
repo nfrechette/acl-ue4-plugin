@@ -61,8 +61,12 @@ class UAnimCompress_ACL : public UAnimCompress
 	float SafeVirtualVertexDistance;
 
 	/** The error threshold after which we fallback on a safer encoding. */
-	UPROPERTY(EditAnywhere, Category = Clip)
+	UPROPERTY(EditAnywhere, Category = SafetyFallback)
 	float SafetyFallbackThreshold;
+
+	/** Whether to enable the safety fallback or not. */
+	UPROPERTY(EditAnywhere, Category = SafetyFallback)
+	uint32 bEnableSafetyFallback : 1;
 
 	/** The error threshold to used when optimizing and compressing the animation sequence. */
 	UPROPERTY(EditAnywhere, Category = Clip)

@@ -29,7 +29,7 @@
 #include "Animation/AnimEncodingRegistry.h"
 #include "AnimEncoding_ACL.h"
 
-class FACLPlugin : public IACLPlugin
+class FACLPlugin final : public IACLPlugin
 {
 private:
 	/** IModuleInterface implementation */
@@ -38,6 +38,10 @@ private:
 };
 
 IMPLEMENT_MODULE(FACLPlugin, ACLPlugin)
+
+static const FName NAME_ACLDefaultCodec("ACLDefault");
+static const FName NAME_ACLDebugCodec("ACLDebug");
+static const FName NAME_ACLSafetyFallbackCodec("ACLSafetyFallback");
 
 // Function that hooks up the proper interface links for the ACL codec implementation
 static void ACLSetInterfaceLinks(UAnimSequence& AnimSeq)
@@ -51,10 +55,14 @@ static void ACLSetInterfaceLinks(UAnimSequence& AnimSeq)
 
 void FACLPlugin::StartupModule()
 {
-	FAnimEncodingRegistry::Get().RegisterEncoding(AKF_MAX, &ACLSetInterfaceLinks);
+	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLDefaultCodec, &ACLSetInterfaceLinks);
+	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLDebugCodec, &ACLSetInterfaceLinks);
+	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLSafetyFallbackCodec, &ACLSetInterfaceLinks);
 }
 
 void FACLPlugin::ShutdownModule()
 {
-	FAnimEncodingRegistry::Get().UnregisterEncoding(AKF_MAX);
+	FAnimEncodingRegistry::Get().UnregisterEncoding(NAME_ACLDefaultCodec);
+	FAnimEncodingRegistry::Get().UnregisterEncoding(NAME_ACLDebugCodec);
+	FAnimEncodingRegistry::Get().UnregisterEncoding(NAME_ACLSafetyFallbackCodec);
 }

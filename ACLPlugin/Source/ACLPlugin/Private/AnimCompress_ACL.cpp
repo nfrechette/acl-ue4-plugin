@@ -51,6 +51,7 @@ UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer
 	DefaultVirtualVertexDistance = 3.0f;	// 3cm, suitable for ordinary characters
 	SafeVirtualVertexDistance = 100.0f;		// 100cm
 
+	bEnableSafetyFallback = true;
 	SafetyFallbackThreshold = 1.0f;			// 1cm, should be very rarely exceeded
 	ErrorThreshold = 0.01f;					// 0.01cm, conservative enough for cinematographic quality
 
@@ -241,9 +242,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 {
 	using namespace acl;
 
-	AnimSeq->KeyEncodingFormat = AKF_MAX;
-	FAnimEncodingRegistry::Get().SetInterfaceLinks(*AnimSeq);
-
+	AnimSeq->KeyEncodingFormat = AKF_MAX;	// Legacy value, should not be used by the engine
 	AnimSeq->CompressionScheme = static_cast<UAnimCompress*>(StaticDuplicateObject(this, AnimSeq));
 
 	ACLAllocator AllocatorImpl;
@@ -296,12 +295,20 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	if (DumpClip)
 		write_acl_clip(*ACLSkeleton, *ACLClip, AlgorithmType8::UniformlySampled, Settings, "D:\\acl_clip.acl.sjson");
 
+	// TODO: Move these somewhere more sensible so we can share them with the module that registers them
+	static const FName NAME_ACLDefaultCodec("ACLDefault");
+	static const FName NAME_ACLDebugCodec("ACLDebug");
+	static const FName NAME_ACLSafetyFallbackCodec("ACLSafetyFallback");
+
+	const bool IsDecompressionFastPath = IsUsingDefaultCompressionSettings(Settings);
+	FName CodecFormat = IsDecompressionFastPath ? NAME_ACLDefaultCodec : NAME_ACLDebugCodec;
+
 	CompressedClip* CompressedClipData = nullptr;
 	ErrorResult CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
 
 	// Make sure if we managed to compress, that the error is acceptable and if it isn't, re-compress again with safer settings
 	// This should be VERY rare with the default threshold
-	if (CompressionResult.empty())
+	if (CompressionResult.empty() && bEnableSafetyFallback)
 	{
 		checkSlow(CompressedClipData->is_valid(true).empty());
 
@@ -321,6 +328,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 			Settings.rotation_format = RotationFormat8::Quat_128;
 			Settings.range_reduction &= ~RangeReductionFlags8::Rotations;
 			Settings.segmenting.range_reduction &= ~RangeReductionFlags8::Rotations;
+			CodecFormat = IsDecompressionFastPath ? NAME_ACLSafetyFallbackCodec : NAME_ACLDebugCodec;
 
 			CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
 		}
@@ -329,6 +337,8 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	if (!CompressionResult.empty())
 	{
 		AnimSeq->CompressedByteStream.Empty();
+		AnimSeq->CompressedCodecFormat = NAME_ACLDefaultCodec;
+		FAnimEncodingRegistry::Get().SetInterfaceLinks(*AnimSeq);
 		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
 		return;
 	}
@@ -341,9 +351,13 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	AnimSeq->CompressedByteStream.AddUninitialized(CompressedClipDataSize + 1);
 	memcpy(AnimSeq->CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
 
-	const bool IsDecompressionFastPath = IsUsingDefaultCompressionSettings(Settings);
-	AnimSeq->CompressedByteStream[CompressedClipDataSize] = IsDecompressionFastPath ? 1 : 0;
+	// TODO: Remove this later
+	AnimSeq->CompressedByteStream[CompressedClipDataSize] = IsUsingDefaultCompressionSettings(Settings) ? 1 : 0;
 
+	AnimSeq->CompressedCodecFormat = CodecFormat;
+	FAnimEncodingRegistry::Get().SetInterfaceLinks(*AnimSeq);
+
+#if !NO_LOGGING
 	{
 		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
 		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
@@ -353,6 +367,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
 	}
+#endif
 
 	AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
 }
@@ -361,20 +376,21 @@ void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
 {
 	Super::PopulateDDCKey(Ar);
 
-	uint8 Flags =	MakeBitForFlag(bClipRangeReduceRotations, 0) +
-					MakeBitForFlag(bClipRangeReduceTranslations, 1) +
-					MakeBitForFlag(bClipRangeReduceScales, 2) +
-					MakeBitForFlag(bEnableSegmenting, 3) +
-					MakeBitForFlag(bSegmentRangeReduceRotations, 4) +
-					MakeBitForFlag(bSegmentRangeReduceTranslations, 5) +
-					MakeBitForFlag(bSegmentRangeReduceScales, 6);
+	uint8 MiscFlags =	MakeBitForFlag(bEnableSafetyFallback, 0);
+	uint8 ClipFlags =	MakeBitForFlag(bClipRangeReduceRotations, 0) +
+						MakeBitForFlag(bClipRangeReduceTranslations, 1) +
+						MakeBitForFlag(bClipRangeReduceScales, 2);
+	uint8 SegmentingFlags = MakeBitForFlag(bEnableSegmenting, 0) +
+							MakeBitForFlag(bSegmentRangeReduceRotations, 1) +
+							MakeBitForFlag(bSegmentRangeReduceTranslations, 2) +
+							MakeBitForFlag(bSegmentRangeReduceScales, 3);
 
 	uint32 ForceRebuildVersion = 0;
 	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::AlgorithmType8::UniformlySampled);
 
 	Ar	<< RotationFormat << TranslationFormat << ScaleFormat
 		<< SafetyFallbackThreshold << ErrorThreshold << DefaultVirtualVertexDistance << SafeVirtualVertexDistance
-		<< Flags
+		<< MiscFlags << ClipFlags << SegmentingFlags
 		<< IdealNumKeyFramesPerSegment << MaxNumKeyFramesPerSegment
 		<< ForceRebuildVersion << AlgorithmVersion;
 }
