@@ -34,59 +34,6 @@
 
 static acl::SampleRoundingPolicy get_rounding_policy(EAnimInterpolationType InterpType) { return InterpType == EAnimInterpolationType::Step ? acl::SampleRoundingPolicy::Floor : acl::SampleRoundingPolicy::None; }
 
-static constexpr bool ValidateClipHash = false;
-
-void AEFACLCompressionCodec::ByteSwapIn(UAnimSequence& Seq, FMemoryReader& MemoryReader)
-{
-	// TODO: ACL does not support byte swapping
-	const int32 OriginalNumBytes = MemoryReader.TotalSize();
-	Seq.CompressedByteStream.Empty(OriginalNumBytes);
-	Seq.CompressedByteStream.AddUninitialized(OriginalNumBytes);
-	MemoryReader.Serialize(Seq.CompressedByteStream.GetData(), Seq.CompressedByteStream.Num());
-}
-
-void AEFACLCompressionCodec::ByteSwapOut(UAnimSequence& Seq, TArray<uint8>& SerializedData, bool ForceByteSwapping)
-{
-	// TODO: ACL does not support byte swapping
-	FMemoryWriter MemoryWriter(SerializedData, true);
-	MemoryWriter.SetByteSwapping(ForceByteSwapping);
-	MemoryWriter.Serialize(Seq.CompressedByteStream.GetData(), Seq.CompressedByteStream.Num());
-}
-
-void AEFACLCompressionCodec::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
-{
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(ValidateClipHash).empty());
-
-	Quat_32 Rotation;
-	Vector4_32 Translation;
-	Vector4_32 Scale;
-
-	const bool IsDecompressionFastPath = Seq.CompressedByteStream.Last() != 0;
-	if (IsDecompressionFastPath)
-	{
-		uniformly_sampled::DefaultDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DefaultDecompressionSettings> Context(DecompressionSettings);
-		Context.initialize(*CompressedClipData);
-		Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-		Context.decompress_bone(TrackIndex, &Rotation, &Translation, &Scale);
-	}
-	else
-	{
-		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
-		Context.initialize(*CompressedClipData);
-		Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-		Context.decompress_bone(TrackIndex, &Rotation, &Translation, &Scale);
-	}
-
-	OutAtom = FTransform(QuatCast(Rotation), VectorCast(Translation), VectorCast(Scale));
-}
-
 template<bool SkipRotations, bool SkipTranslations, bool SkipScales>
 struct UE4OutputWriter : acl::OutputWriter
 {
@@ -148,13 +95,59 @@ using UE4RotationWriter = UE4OutputWriter<false, true, true>;
 using UE4TranslationWriter = UE4OutputWriter<true, false, true>;
 using UE4ScaleWriter = UE4OutputWriter<true, true, false>;
 
+using UE4DefaultDecompressionSettings = acl::uniformly_sampled::DefaultDecompressionSettings;
+using UE4DebugDecompressionSettings = acl::uniformly_sampled::DebugDecompressionSettings;
+
+struct UE4SafeDecompressionSettings : public UE4DefaultDecompressionSettings
+{
+	constexpr bool is_rotation_format_supported(acl::RotationFormat8 format) const { return format == acl::RotationFormat8::Quat_128; }
+	constexpr acl::RotationFormat8 get_rotation_format(acl::RotationFormat8 /*format*/) const { return acl::RotationFormat8::Quat_128; }
+};
+
+void AEFACLCompressionCodec_Base::ByteSwapIn(UAnimSequence& Seq, FMemoryReader& MemoryReader)
+{
+	// TODO: ACL does not support byte swapping
+	const int32 OriginalNumBytes = MemoryReader.TotalSize();
+	Seq.CompressedByteStream.Empty(OriginalNumBytes);
+	Seq.CompressedByteStream.AddUninitialized(OriginalNumBytes);
+	MemoryReader.Serialize(Seq.CompressedByteStream.GetData(), Seq.CompressedByteStream.Num());
+}
+
+void AEFACLCompressionCodec_Base::ByteSwapOut(UAnimSequence& Seq, TArray<uint8>& SerializedData, bool ForceByteSwapping)
+{
+	// TODO: ACL does not support byte swapping
+	FMemoryWriter MemoryWriter(SerializedData, true);
+	MemoryWriter.SetByteSwapping(ForceByteSwapping);
+	MemoryWriter.Serialize(Seq.CompressedByteStream.GetData(), Seq.CompressedByteStream.Num());
+}
+
+void AEFACLCompressionCodec_Default::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	UE4DefaultDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	Quat_32 Rotation;
+	Vector4_32 Translation;
+	Vector4_32 Scale;
+	Context.decompress_bone(TrackIndex, &Rotation, &Translation, &Scale);
+
+	OutAtom = FTransform(QuatCast(Rotation), VectorCast(Translation), VectorCast(Scale));
+}
+
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
-void AEFACLCompressionCodec::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Default::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
 	using namespace acl;
 
 	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(ValidateClipHash).empty());
+	check(CompressedClipData->is_valid(false).empty());
 
 	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
 	const uint32_t ACLBoneCount = ClipHeader.num_bones;
@@ -170,35 +163,21 @@ void AEFACLCompressionCodec::GetPoseRotations(FTransformArray& Atoms, const Bone
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	const bool IsDecompressionFastPath = Seq.CompressedByteStream.Last() != 0;
-	if (IsDecompressionFastPath)
-	{
-		uniformly_sampled::DefaultDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DefaultDecompressionSettings> Context(DecompressionSettings);
-		Context.initialize(*CompressedClipData);
-		Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+	UE4DefaultDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
-		UE4RotationWriter PoseWriter(Atoms, TrackToAtomsMap);
-		Context.decompress_pose(PoseWriter);
-	}
-	else
-	{
-		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
-		Context.initialize(*CompressedClipData);
-		Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-		UE4RotationWriter PoseWriter(Atoms, TrackToAtomsMap);
-		Context.decompress_pose(PoseWriter);
-	}
+	UE4RotationWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
 }
 
-void AEFACLCompressionCodec::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Default::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
 	using namespace acl;
 
 	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(ValidateClipHash).empty());
+	check(CompressedClipData->is_valid(false).empty());
 
 	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
 	const uint32_t ACLBoneCount = ClipHeader.num_bones;
@@ -214,35 +193,21 @@ void AEFACLCompressionCodec::GetPoseTranslations(FTransformArray& Atoms, const B
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	const bool IsDecompressionFastPath = Seq.CompressedByteStream.Last() != 0;
-	if (IsDecompressionFastPath)
-	{
-		uniformly_sampled::DefaultDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DefaultDecompressionSettings> Context(DecompressionSettings);
-		Context.initialize(*CompressedClipData);
-		Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+	UE4DefaultDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
-		UE4TranslationWriter PoseWriter(Atoms, TrackToAtomsMap);
-		Context.decompress_pose(PoseWriter);
-	}
-	else
-	{
-		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
-		Context.initialize(*CompressedClipData);
-		Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-		UE4TranslationWriter PoseWriter(Atoms, TrackToAtomsMap);
-		Context.decompress_pose(PoseWriter);
-	}
+	UE4TranslationWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
 }
 
-void AEFACLCompressionCodec::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Default::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
 	using namespace acl;
 
 	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(ValidateClipHash).empty());
+	check(CompressedClipData->is_valid(false).empty());
 
 	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
 	const uint32_t ACLBoneCount = ClipHeader.num_bones;
@@ -258,26 +223,236 @@ void AEFACLCompressionCodec::GetPoseScales(FTransformArray& Atoms, const BoneTra
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	const bool IsDecompressionFastPath = Seq.CompressedByteStream.Last() != 0;
-	if (IsDecompressionFastPath)
-	{
-		uniformly_sampled::DefaultDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DefaultDecompressionSettings> Context(DecompressionSettings);
-		Context.initialize(*CompressedClipData);
-		Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+	UE4DefaultDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
-		UE4ScaleWriter PoseWriter(Atoms, TrackToAtomsMap);
-		Context.decompress_pose(PoseWriter);
-	}
-	else
-	{
-		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
-		Context.initialize(*CompressedClipData);
-		Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+	UE4ScaleWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
+}
+#endif
 
-		UE4ScaleWriter PoseWriter(Atoms, TrackToAtomsMap);
-		Context.decompress_pose(PoseWriter);
+void AEFACLCompressionCodec_Safe::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	UE4SafeDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	Quat_32 Rotation;
+	Vector4_32 Translation;
+	Vector4_32 Scale;
+	Context.decompress_bone(TrackIndex, &Rotation, &Translation, &Scale);
+
+	OutAtom = FTransform(QuatCast(Rotation), VectorCast(Translation), VectorCast(Scale));
+}
+
+#if USE_ANIMATION_CODEC_BATCH_SOLVER
+void AEFACLCompressionCodec_Safe::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
+	const uint32_t ACLBoneCount = ClipHeader.num_bones;
+	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
+	TrackToAtomsMap.Reserve(ACLBoneCount);
+	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
+	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
+
+	const uint32 PairCount = DesiredPairs.Num();
+	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
+	{
+		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
+		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
+
+	UE4SafeDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	UE4RotationWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
+}
+
+void AEFACLCompressionCodec_Safe::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
+	const uint32_t ACLBoneCount = ClipHeader.num_bones;
+	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
+	TrackToAtomsMap.Reserve(ACLBoneCount);
+	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
+	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
+
+	const uint32 PairCount = DesiredPairs.Num();
+	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
+	{
+		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
+		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
+	}
+
+	UE4SafeDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	UE4TranslationWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
+}
+
+void AEFACLCompressionCodec_Safe::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
+	const uint32_t ACLBoneCount = ClipHeader.num_bones;
+	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
+	TrackToAtomsMap.Reserve(ACLBoneCount);
+	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
+	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
+
+	const uint32 PairCount = DesiredPairs.Num();
+	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
+	{
+		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
+		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
+	}
+
+	UE4SafeDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	UE4ScaleWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
+}
+#endif
+
+void AEFACLCompressionCodec_Debug::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	UE4DebugDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	Quat_32 Rotation;
+	Vector4_32 Translation;
+	Vector4_32 Scale;
+	Context.decompress_bone(TrackIndex, &Rotation, &Translation, &Scale);
+
+	OutAtom = FTransform(QuatCast(Rotation), VectorCast(Translation), VectorCast(Scale));
+}
+
+#if USE_ANIMATION_CODEC_BATCH_SOLVER
+void AEFACLCompressionCodec_Debug::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
+	const uint32_t ACLBoneCount = ClipHeader.num_bones;
+	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
+	TrackToAtomsMap.Reserve(ACLBoneCount);
+	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
+	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
+
+	const uint32 PairCount = DesiredPairs.Num();
+	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
+	{
+		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
+		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
+	}
+
+	UE4DebugDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	UE4RotationWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
+}
+
+void AEFACLCompressionCodec_Debug::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
+	const uint32_t ACLBoneCount = ClipHeader.num_bones;
+	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
+	TrackToAtomsMap.Reserve(ACLBoneCount);
+	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
+	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
+
+	const uint32 PairCount = DesiredPairs.Num();
+	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
+	{
+		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
+		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
+	}
+
+	UE4DebugDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	UE4TranslationWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
+}
+
+void AEFACLCompressionCodec_Debug::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+{
+	using namespace acl;
+
+	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
+	check(CompressedClipData->is_valid(false).empty());
+
+	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
+	const uint32_t ACLBoneCount = ClipHeader.num_bones;
+	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
+	TrackToAtomsMap.Reserve(ACLBoneCount);
+	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
+	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
+
+	const uint32 PairCount = DesiredPairs.Num();
+	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
+	{
+		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
+		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
+	}
+
+	UE4DebugDecompressionSettings DecompressionSettings;
+	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context(DecompressionSettings);
+	Context.initialize(*CompressedClipData);
+	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
+
+	UE4ScaleWriter PoseWriter(Atoms, TrackToAtomsMap);
+	Context.decompress_pose(PoseWriter);
 }
 #endif

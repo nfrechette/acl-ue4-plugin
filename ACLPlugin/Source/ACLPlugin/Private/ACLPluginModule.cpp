@@ -43,21 +43,37 @@ static const FName NAME_ACLDefaultCodec("ACLDefault");
 static const FName NAME_ACLDebugCodec("ACLDebug");
 static const FName NAME_ACLSafetyFallbackCodec("ACLSafetyFallback");
 
-// Function that hooks up the proper interface links for the ACL codec implementation
-static void ACLSetInterfaceLinks(UAnimSequence& AnimSeq)
-{
-	static AEFACLCompressionCodec StaticCodec;
+static AEFACLCompressionCodec_Default StaticCodec_Default;
+static AEFACLCompressionCodec_Safe StaticCodec_Safe;
+static AEFACLCompressionCodec_Debug StaticCodec_Debug;
 
-	AnimSeq.RotationCodec = &StaticCodec;
-	AnimSeq.TranslationCodec = &StaticCodec;
-	AnimSeq.ScaleCodec = &StaticCodec;
+// Function that hooks up the proper interface links for the ACL codec implementations
+static void ACLSetInterfaceLinks_Default(UAnimSequence& AnimSeq)
+{
+	AnimSeq.RotationCodec = &StaticCodec_Default;
+	AnimSeq.TranslationCodec = &StaticCodec_Default;
+	AnimSeq.ScaleCodec = &StaticCodec_Default;
+}
+
+static void ACLSetInterfaceLinks_Safe(UAnimSequence& AnimSeq)
+{
+	AnimSeq.RotationCodec = &StaticCodec_Safe;
+	AnimSeq.TranslationCodec = &StaticCodec_Safe;
+	AnimSeq.ScaleCodec = &StaticCodec_Safe;
+}
+
+static void ACLSetInterfaceLinks_Debug(UAnimSequence& AnimSeq)
+{
+	AnimSeq.RotationCodec = &StaticCodec_Debug;
+	AnimSeq.TranslationCodec = &StaticCodec_Debug;
+	AnimSeq.ScaleCodec = &StaticCodec_Debug;
 }
 
 void FACLPlugin::StartupModule()
 {
-	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLDefaultCodec, &ACLSetInterfaceLinks);
-	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLDebugCodec, &ACLSetInterfaceLinks);
-	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLSafetyFallbackCodec, &ACLSetInterfaceLinks);
+	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLDefaultCodec, &ACLSetInterfaceLinks_Default);
+	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLDebugCodec, &ACLSetInterfaceLinks_Debug);
+	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLSafetyFallbackCodec, &ACLSetInterfaceLinks_Safe);
 }
 
 void FACLPlugin::ShutdownModule()

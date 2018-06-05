@@ -347,12 +347,9 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 
 	const uint32 CompressedClipDataSize = CompressedClipData->get_size();
 
-	AnimSeq->CompressedByteStream.Empty(CompressedClipDataSize + 1);
-	AnimSeq->CompressedByteStream.AddUninitialized(CompressedClipDataSize + 1);
+	AnimSeq->CompressedByteStream.Empty(CompressedClipDataSize);
+	AnimSeq->CompressedByteStream.AddUninitialized(CompressedClipDataSize);
 	memcpy(AnimSeq->CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
-
-	// TODO: Remove this later
-	AnimSeq->CompressedByteStream[CompressedClipDataSize] = IsUsingDefaultCompressionSettings(Settings) ? 1 : 0;
 
 	AnimSeq->CompressedCodecFormat = CodecFormat;
 	FAnimEncodingRegistry::Get().SetInterfaceLinks(*AnimSeq);

@@ -27,13 +27,51 @@
 #include "CoreMinimal.h"
 #include "AnimEncoding.h"
 
-/** The ACL codec runtime implementation. */
-class AEFACLCompressionCodec : public AnimEncoding
+//////////////////////////////////////////////////////////////////////////
+// For performance reasons, the codec is split into 3:
+//    default: This uses the default and recommended settings
+//    safe: This uses safe settings in case the error is too high with the default settings
+//    debug: This has every feature enabled and supported, mainly used for debugging
+//////////////////////////////////////////////////////////////////////////
+
+/** The ACL codec base class runtime implementation. */
+class AEFACLCompressionCodec_Base : public AnimEncoding
 {
 public:
 	virtual void ByteSwapIn(UAnimSequence& Seq, FMemoryReader& MemoryReader) override;
 	virtual void ByteSwapOut(UAnimSequence& Seq, TArray<uint8>& SerializedData, bool ForceByteSwapping) override;
+};
 
+/** The ACL default codec runtime implementation. */
+class AEFACLCompressionCodec_Default final : public AEFACLCompressionCodec_Base
+{
+public:
+	virtual void GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time) override;
+
+#if USE_ANIMATION_CODEC_BATCH_SOLVER
+	virtual void GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+	virtual void GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+#endif
+};
+
+/** The ACL safe codec runtime implementation. */
+class AEFACLCompressionCodec_Safe final : public AEFACLCompressionCodec_Base
+{
+public:
+	virtual void GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time) override;
+
+#if USE_ANIMATION_CODEC_BATCH_SOLVER
+	virtual void GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+	virtual void GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+#endif
+};
+
+/** The ACL debug codec runtime implementation. */
+class AEFACLCompressionCodec_Debug final : public AEFACLCompressionCodec_Base
+{
+public:
 	virtual void GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time) override;
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
