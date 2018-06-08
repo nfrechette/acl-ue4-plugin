@@ -106,6 +106,10 @@ struct UE4SafeDecompressionSettings : public UE4DefaultDecompressionSettings
 
 void AEFACLCompressionCodec_Base::ByteSwapIn(UAnimSequence& Seq, FMemoryReader& MemoryReader)
 {
+#if !PLATFORM_LITTLE_ENDIAN
+#error "ACL does not currently support big-endian platforms"
+#endif
+
 	// TODO: ACL does not support byte swapping
 	const int32 OriginalNumBytes = MemoryReader.TotalSize();
 	Seq.CompressedByteStream.Empty(OriginalNumBytes);
@@ -115,6 +119,10 @@ void AEFACLCompressionCodec_Base::ByteSwapIn(UAnimSequence& Seq, FMemoryReader& 
 
 void AEFACLCompressionCodec_Base::ByteSwapOut(UAnimSequence& Seq, TArray<uint8>& SerializedData, bool ForceByteSwapping)
 {
+#if !PLATFORM_LITTLE_ENDIAN
+#error "ACL does not currently support big-endian platforms"
+#endif
+
 	// TODO: ACL does not support byte swapping
 	FMemoryWriter MemoryWriter(SerializedData, true);
 	MemoryWriter.SetByteSwapping(ForceByteSwapping);
