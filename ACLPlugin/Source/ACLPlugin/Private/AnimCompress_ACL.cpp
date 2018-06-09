@@ -312,8 +312,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	{
 		checkSlow(CompressedClipData->is_valid(true).empty());
 
-		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
+		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context;
 		Context.initialize(*CompressedClipData);
 		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
 		if (bone_error.error >= SafetyFallbackThreshold)
@@ -356,8 +355,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 
 #if !NO_LOGGING
 	{
-		uniformly_sampled::DebugDecompressionSettings DecompressionSettings;
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context(DecompressionSettings);
+		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context;
 		Context.initialize(*CompressedClipData);
 		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
 
@@ -374,9 +372,11 @@ void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
 	Super::PopulateDDCKey(Ar);
 
 	uint8 MiscFlags =	MakeBitForFlag(bEnableSafetyFallback, 0);
+
 	uint8 ClipFlags =	MakeBitForFlag(bClipRangeReduceRotations, 0) +
 						MakeBitForFlag(bClipRangeReduceTranslations, 1) +
 						MakeBitForFlag(bClipRangeReduceScales, 2);
+
 	uint8 SegmentingFlags = MakeBitForFlag(bEnableSegmenting, 0) +
 							MakeBitForFlag(bSegmentRangeReduceRotations, 1) +
 							MakeBitForFlag(bSegmentRangeReduceTranslations, 2) +

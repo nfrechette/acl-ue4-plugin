@@ -136,8 +136,7 @@ void AEFACLCompressionCodec_Default::GetBoneAtom(FTransform& OutAtom, const UAni
 	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
 	check(CompressedClipData->is_valid(false).empty());
 
-	UE4DefaultDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -171,8 +170,7 @@ void AEFACLCompressionCodec_Default::GetPoseRotations(FTransformArray& Atoms, co
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4DefaultDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -201,8 +199,7 @@ void AEFACLCompressionCodec_Default::GetPoseTranslations(FTransformArray& Atoms,
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4DefaultDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -231,8 +228,7 @@ void AEFACLCompressionCodec_Default::GetPoseScales(FTransformArray& Atoms, const
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4DefaultDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -248,8 +244,7 @@ void AEFACLCompressionCodec_Safe::GetBoneAtom(FTransform& OutAtom, const UAnimSe
 	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
 	check(CompressedClipData->is_valid(false).empty());
 
-	UE4SafeDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -283,8 +278,7 @@ void AEFACLCompressionCodec_Safe::GetPoseRotations(FTransformArray& Atoms, const
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4SafeDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -313,8 +307,7 @@ void AEFACLCompressionCodec_Safe::GetPoseTranslations(FTransformArray& Atoms, co
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4SafeDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -343,8 +336,7 @@ void AEFACLCompressionCodec_Safe::GetPoseScales(FTransformArray& Atoms, const Bo
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4SafeDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -360,8 +352,7 @@ void AEFACLCompressionCodec_Debug::GetBoneAtom(FTransform& OutAtom, const UAnimS
 	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
 	check(CompressedClipData->is_valid(false).empty());
 
-	UE4DebugDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -395,8 +386,7 @@ void AEFACLCompressionCodec_Debug::GetPoseRotations(FTransformArray& Atoms, cons
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4DebugDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -425,8 +415,7 @@ void AEFACLCompressionCodec_Debug::GetPoseTranslations(FTransformArray& Atoms, c
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4DebugDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -455,8 +444,7 @@ void AEFACLCompressionCodec_Debug::GetPoseScales(FTransformArray& Atoms, const B
 		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
 	}
 
-	UE4DebugDecompressionSettings DecompressionSettings;
-	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context(DecompressionSettings);
+	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
