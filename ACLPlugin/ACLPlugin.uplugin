@@ -10,6 +10,8 @@
 	"DocsURL": "https://github.com/nfrechette/acl-ue4-plugin",
 	"MarketplaceURL": "",
 	"SupportURL": "https://github.com/nfrechette/acl-ue4-plugin",
+	"EngineVersion": "4.19.2",
+	"EnabledByDefault" : true,
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"Installed": false,
