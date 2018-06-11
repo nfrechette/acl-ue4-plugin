@@ -368,6 +368,9 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 			UAnimSequence* UE4Clip = NewObject<UAnimSequence>(this, UAnimSequence::StaticClass());
 			ConvertClip(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton);
 
+			TArray<FBoneData> UE4BoneData;
+			FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, UE4BoneData);
+
 			uint32 ACLRawSize = ACLClip->get_raw_size();
 			int32 UE4RawSize = UE4Clip->GetApproxRawSize();
 
@@ -387,9 +390,6 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 			if (UE4Success)
 			{
-				TArray<FBoneData> UE4BoneData;
-				FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, UE4BoneData);
-
 				AnimationErrorStats UE4ErrorStats;
 				FAnimationUtils::ComputeCompressionError(UE4Clip, UE4BoneData, UE4ErrorStats);
 
@@ -444,9 +444,6 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 			if (ACLSuccess)
 			{
-				TArray<FBoneData> UE4BoneData;
-				FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, UE4BoneData);
-
 				AnimationErrorStats UE4ErrorStats;
 				FAnimationUtils::ComputeCompressionError(UE4Clip, UE4BoneData, UE4ErrorStats);
 
