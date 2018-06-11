@@ -46,7 +46,7 @@ UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer
 	bNeedsSkeleton = true;
 
 	// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
-	// We use 100cm instead of 3cm. UE 4 usually uses 50cm (END_EFFECTOR_SOCKET_DUMMY_BONE_SIZE) but
+	// We use 100cm instead of 3cm. UE 4 usually uses 50cm (END_EFFECTOR_DUMMY_BONE_LENGTH_SOCKET) but
 	// we use a higher value anyway due to the fact that ACL has no error compensation and it is more aggressive.
 	DefaultVirtualVertexDistance = 3.0f;	// 3cm, suitable for ordinary characters
 	SafeVirtualVertexDistance = 100.0f;		// 100cm
