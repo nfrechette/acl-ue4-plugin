@@ -40,12 +40,12 @@ private:
 IMPLEMENT_MODULE(FACLPlugin, ACLPlugin)
 
 static const FName NAME_ACLDefaultCodec("ACLDefault");
-static const FName NAME_ACLDebugCodec("ACLDebug");
+static const FName NAME_ACLCustomCodec("ACLCustom");
 static const FName NAME_ACLSafetyFallbackCodec("ACLSafetyFallback");
 
 static AEFACLCompressionCodec_Default StaticCodec_Default;
 static AEFACLCompressionCodec_Safe StaticCodec_Safe;
-static AEFACLCompressionCodec_Debug StaticCodec_Debug;
+static AEFACLCompressionCodec_Custom StaticCodec_Custom;
 
 // Function that hooks up the proper interface links for the ACL codec implementations
 static void ACLSetInterfaceLinks_Default(UAnimSequence& AnimSeq)
@@ -62,23 +62,23 @@ static void ACLSetInterfaceLinks_Safe(UAnimSequence& AnimSeq)
 	AnimSeq.ScaleCodec = &StaticCodec_Safe;
 }
 
-static void ACLSetInterfaceLinks_Debug(UAnimSequence& AnimSeq)
+static void ACLSetInterfaceLinks_Custom(UAnimSequence& AnimSeq)
 {
-	AnimSeq.RotationCodec = &StaticCodec_Debug;
-	AnimSeq.TranslationCodec = &StaticCodec_Debug;
-	AnimSeq.ScaleCodec = &StaticCodec_Debug;
+	AnimSeq.RotationCodec = &StaticCodec_Custom;
+	AnimSeq.TranslationCodec = &StaticCodec_Custom;
+	AnimSeq.ScaleCodec = &StaticCodec_Custom;
 }
 
 void FACLPlugin::StartupModule()
 {
 	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLDefaultCodec, &ACLSetInterfaceLinks_Default);
-	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLDebugCodec, &ACLSetInterfaceLinks_Debug);
+	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLCustomCodec, &ACLSetInterfaceLinks_Custom);
 	FAnimEncodingRegistry::Get().RegisterEncoding(NAME_ACLSafetyFallbackCodec, &ACLSetInterfaceLinks_Safe);
 }
 
 void FACLPlugin::ShutdownModule()
 {
 	FAnimEncodingRegistry::Get().UnregisterEncoding(NAME_ACLDefaultCodec);
-	FAnimEncodingRegistry::Get().UnregisterEncoding(NAME_ACLDebugCodec);
+	FAnimEncodingRegistry::Get().UnregisterEncoding(NAME_ACLCustomCodec);
 	FAnimEncodingRegistry::Get().UnregisterEncoding(NAME_ACLSafetyFallbackCodec);
 }

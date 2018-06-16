@@ -63,3 +63,15 @@ inline acl::Quat_32 QuatCast(const FQuat& Input) { return acl::quat_set(Input.X,
 inline FQuat QuatCast(const acl::Quat_32& Input) { return FQuat(acl::quat_get_x(Input), acl::quat_get_y(Input), acl::quat_get_z(Input), acl::quat_get_w(Input)); }
 inline acl::Transform_32 TransformCast(const FTransform& Input) { return acl::transform_set(QuatCast(Input.GetRotation()), VectorCast(Input.GetTranslation()), VectorCast(Input.GetScale3D())); }
 inline FTransform TransformCast(const acl::Transform_32& Input) { return FTransform(QuatCast(Input.rotation), VectorCast(Input.translation), VectorCast(Input.scale)); }
+
+#if WITH_EDITOR
+#include "AnimCompress_ACLBase.h"
+
+#include <acl/compression/skeleton.h>
+#include <acl/compression/animation_clip.h>
+
+acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format);
+acl::VectorFormat8 GetVectorFormat(ACLVectorFormat Format);
+TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const TArray<FBoneData>& BoneData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance);
+TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence* AnimSeq, const acl::RigidSkeleton& ACLSkeleton, int32 RefFrameIndex, bool IsAdditive);
+#endif // WITH_EDITOR

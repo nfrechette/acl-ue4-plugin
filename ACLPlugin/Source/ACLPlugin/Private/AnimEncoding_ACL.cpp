@@ -349,7 +349,7 @@ void AEFACLCompressionCodec_Safe::GetPoseScales(FTransformArray& Atoms, const Bo
 }
 #endif
 
-void AEFACLCompressionCodec_Debug::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
+void AEFACLCompressionCodec_Custom::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
 {
 	using namespace acl;
 
@@ -369,7 +369,7 @@ void AEFACLCompressionCodec_Debug::GetBoneAtom(FTransform& OutAtom, const UAnimS
 }
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
-void AEFACLCompressionCodec_Debug::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Custom::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
 	using namespace acl;
 
@@ -398,7 +398,7 @@ void AEFACLCompressionCodec_Debug::GetPoseRotations(FTransformArray& Atoms, cons
 	Context.decompress_pose(PoseWriter);
 }
 
-void AEFACLCompressionCodec_Debug::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Custom::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
 	using namespace acl;
 
@@ -427,7 +427,7 @@ void AEFACLCompressionCodec_Debug::GetPoseTranslations(FTransformArray& Atoms, c
 	Context.decompress_pose(PoseWriter);
 }
 
-void AEFACLCompressionCodec_Debug::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Custom::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
 	using namespace acl;
 

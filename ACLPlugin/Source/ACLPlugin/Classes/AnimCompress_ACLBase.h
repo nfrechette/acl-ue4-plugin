@@ -27,36 +27,28 @@
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
 #include "Animation/AnimCompress.h"
-#include "AnimCompress_ACLBase.h"
-#include "AnimCompress_ACL.generated.h"
+#include "AnimCompress_ACLBase.generated.h"
 
-/** The default codec implementation for ACL support with the minimal set of exposed features for ease of use. */
-UCLASS(MinimalAPI, config = Engine)
-class UAnimCompress_ACL : public UAnimCompress_ACLBase
+/** An enum for ACL rotation formats. */
+UENUM()
+enum ACLRotationFormat
+{
+	ACLRF_Quat_128 UMETA(DisplayName = "Quat Full Bit Rate"),
+	ACLRF_QuatDropW_96 UMETA(DisplayName = "Quat Drop W Full Bit Rate"),
+	ACLRF_QuatDropW_Variable UMETA(DisplayName = "Quat Drop W Variable Bit Rate"),
+};
+
+/** An enum for ACL Vector3 formats. */
+UENUM()
+enum ACLVectorFormat
+{
+	ACLVF_Vector3_96 UMETA(DisplayName = "Vector3 Full Bit Rate"),
+	ACLVF_Vector3_Variable UMETA(DisplayName = "Vector3 Variable Bit Rate"),
+};
+
+/** The base codec implementation for ACL support. */
+UCLASS(abstract, MinimalAPI)
+class UAnimCompress_ACLBase : public UAnimCompress
 {
 	GENERATED_UCLASS_BODY()
-
-	/** The default virtual vertex distance for normal bones. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	float DefaultVirtualVertexDistance;
-
-	/** The virtual vertex distance for bones that requires extra accuracy. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	float SafeVirtualVertexDistance;
-
-	/** The error threshold after which we fallback on a safer encoding. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	float SafetyFallbackThreshold;
-
-	/** The error threshold to used when optimizing and compressing the animation sequence. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	float ErrorThreshold;
-
-protected:
-	//~ Begin UAnimCompress Interface
-#if WITH_EDITOR
-	virtual void DoReduction(class UAnimSequence* AnimSeq, const TArray<class FBoneData>& BoneData) override;
-	virtual void PopulateDDCKey(FArchive& Ar) override;
-#endif // WITH_EDITOR
-	//~ Begin UAnimCompress Interface
 };

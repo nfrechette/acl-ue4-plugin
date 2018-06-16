@@ -22,25 +22,13 @@
 // SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "AnimCompress_ACL.h"
+#include "AnimCompress_ACLCustom.h"
 #include "Animation/AnimEncodingRegistry.h"
 
-#if WITH_EDITOR
-#include "ACLImpl.h"
-
-#include <acl/algorithm/uniformly_sampled/encoder.h>
-#include <acl/algorithm/uniformly_sampled/decoder.h>
-#include <acl/compression/skeleton_error_metric.h>
-#include <acl/compression/utils.h>
-
-#include <sjson/writer.h>
-#include <acl/io/clip_writer.h>
-#endif	// WITH_EDITOR
-
-UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer)
+UAnimCompress_ACLCustom::UAnimCompress_ACLCustom(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	Description = TEXT("ACL");
+	Description = TEXT("ACL Custom");
 	bNeedsSkeleton = true;
 
 	// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
@@ -49,12 +37,29 @@ UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer
 	DefaultVirtualVertexDistance = 3.0f;	// 3cm, suitable for ordinary characters
 	SafeVirtualVertexDistance = 100.0f;		// 100cm
 
-	SafetyFallbackThreshold = 1.0f;			// 1cm, should be very rarely exceeded
-	ErrorThreshold = 0.01f;					// 0.01cm, conservative enough for cinematographic quality
+	RotationFormat = ACLRotationFormat::ACLRF_QuatDropW_Variable;
+	TranslationFormat = ACLVectorFormat::ACLVF_Vector3_Variable;
+	ScaleFormat = ACLVectorFormat::ACLVF_Vector3_Variable;
+
+	ErrorThreshold = 0.01f;								// 0.01cm, conservative enough for cinematographic quality
+	ConstantRotationThresholdAngle = 0.00284714461f;	// The smallest angle a float32 can represent in a quaternion is 0.000690533954 so we use a value just slightly larger
+	ConstantTranslationThreshold = 0.001f;				// 0.001cm, very conservative to be safe
+	ConstantScaleThreshold = 0.00001f;					// Very small value to be safe since scale is sensitive
+
+	bClipRangeReduceRotations = true;
+	bClipRangeReduceTranslations = true;
+	bClipRangeReduceScales = true;
+
+	bEnableSegmenting = true;
+	bSegmentRangeReduceRotations = true;
+	bSegmentRangeReduceTranslations = true;
+	bSegmentRangeReduceScales = true;
+	IdealNumKeyFramesPerSegment = 16;
+	MaxNumKeyFramesPerSegment = 31;
 }
 
 #if WITH_EDITOR
-void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneData>& BoneData)
+void UAnimCompress_ACLCustom::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneData>& BoneData)
 {
 	using namespace acl;
 
@@ -84,7 +89,19 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 
 	OutputStats Stats;
 
-	CompressionSettings Settings = get_default_compression_settings();
+	CompressionSettings Settings;
+	Settings.rotation_format = GetRotationFormat(RotationFormat);
+	Settings.translation_format = GetVectorFormat(TranslationFormat);
+	Settings.scale_format = GetVectorFormat(ScaleFormat);
+	Settings.range_reduction |= bClipRangeReduceRotations ? RangeReductionFlags8::Rotations : RangeReductionFlags8::None;
+	Settings.range_reduction |= bClipRangeReduceTranslations ? RangeReductionFlags8::Translations : RangeReductionFlags8::None;
+	Settings.range_reduction |= bClipRangeReduceScales ? RangeReductionFlags8::Scales : RangeReductionFlags8::None;
+	Settings.segmenting.enabled = bEnableSegmenting != 0;
+	Settings.segmenting.ideal_num_samples = IdealNumKeyFramesPerSegment;
+	Settings.segmenting.max_num_samples = MaxNumKeyFramesPerSegment;
+	Settings.segmenting.range_reduction |= bSegmentRangeReduceRotations ? RangeReductionFlags8::Rotations : RangeReductionFlags8::None;
+	Settings.segmenting.range_reduction |= bSegmentRangeReduceTranslations ? RangeReductionFlags8::Translations : RangeReductionFlags8::None;
+	Settings.segmenting.range_reduction |= bSegmentRangeReduceScales ? RangeReductionFlags8::Scales : RangeReductionFlags8::None;
 
 	TransformErrorMetric DefaultErrorMetric;
 	AdditiveTransformErrorMetric<AdditiveClipFormat8::Additive1> AdditiveErrorMetric;
@@ -93,60 +110,25 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	else
 		Settings.error_metric = &DefaultErrorMetric;
 
+	Settings.constant_rotation_threshold_angle = ConstantRotationThresholdAngle;
+	Settings.constant_translation_threshold = ConstantTranslationThreshold;
+	Settings.constant_scale_threshold = ConstantScaleThreshold;
 	Settings.error_threshold = ErrorThreshold;
 
 	static volatile bool DumpClip = false;
 	if (DumpClip)
 		write_acl_clip(*ACLSkeleton, *ACLClip, AlgorithmType8::UniformlySampled, Settings, "D:\\acl_clip.acl.sjson");
 
-	// TODO: Move these somewhere more sensible so we can share them with the module that registers them
-	static const FName NAME_ACLDefaultCodec("ACLDefault");
-	static const FName NAME_ACLSafetyFallbackCodec("ACLSafetyFallback");
-
-	FName CodecFormat = NAME_ACLDefaultCodec;
+	// TODO: Move this somewhere more sensible so we can share them with the module that registers them
+	static const FName NAME_ACLCustomCodec("ACLCustom");
 
 	CompressedClip* CompressedClipData = nullptr;
 	ErrorResult CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
 
-	// Make sure if we managed to compress, that the error is acceptable and if it isn't, re-compress again with safer settings
-	// This should be VERY rare with the default threshold
-	if (CompressionResult.empty())
-	{
-		checkSlow(CompressedClipData->is_valid(true).empty());
-
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context;
-		Context.initialize(*CompressedClipData);
-		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
-		if (bone_error.error >= SafetyFallbackThreshold)
-		{
-			UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
-			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm"), bone_error.error);
-
-			AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
-			CompressedClipData = nullptr;
-
-			// 99.999% of the time if we have accuracy issues, it comes from the rotations
-
-			// Fallback to full precision rotations
-			Settings.rotation_format = RotationFormat8::Quat_128;
-
-			// Disable rotation range reduction for clip and segments to make sure they remain at maximum precision
-			Settings.range_reduction &= ~RangeReductionFlags8::Rotations;
-			Settings.segmenting.range_reduction &= ~RangeReductionFlags8::Rotations;
-
-			// Disable constant rotation track detection
-			Settings.constant_rotation_threshold_angle = 0.0f;
-
-			CodecFormat = NAME_ACLSafetyFallbackCodec;
-
-			CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
-		}
-	}
-
 	if (!CompressionResult.empty())
 	{
 		AnimSeq->CompressedByteStream.Empty();
-		AnimSeq->CompressedCodecFormat = NAME_ACLDefaultCodec;
+		AnimSeq->CompressedCodecFormat = NAME_ACLCustomCodec;
 		FAnimEncodingRegistry::Get().SetInterfaceLinks(*AnimSeq);
 		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
 		return;
@@ -160,7 +142,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	AnimSeq->CompressedByteStream.AddUninitialized(CompressedClipDataSize);
 	memcpy(AnimSeq->CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
 
-	AnimSeq->CompressedCodecFormat = CodecFormat;
+	AnimSeq->CompressedCodecFormat = NAME_ACLCustomCodec;
 	FAnimEncodingRegistry::Get().SetInterfaceLinks(*AnimSeq);
 
 #if !NO_LOGGING
@@ -177,20 +159,29 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
 }
 
-void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
+void UAnimCompress_ACLCustom::PopulateDDCKey(FArchive& Ar)
 {
 	Super::PopulateDDCKey(Ar);
 
 	using namespace acl;
 
-	CompressionSettings Settings = get_default_compression_settings();
-	Settings.error_threshold = ErrorThreshold;
+	uint8 ClipFlags =	MakeBitForFlag(bClipRangeReduceRotations, 0) +
+						MakeBitForFlag(bClipRangeReduceTranslations, 1) +
+						MakeBitForFlag(bClipRangeReduceScales, 2);
+
+	uint8 SegmentingFlags =	MakeBitForFlag(bEnableSegmenting, 0) +
+							MakeBitForFlag(bSegmentRangeReduceRotations, 1) +
+							MakeBitForFlag(bSegmentRangeReduceTranslations, 2) +
+							MakeBitForFlag(bSegmentRangeReduceScales, 3);
 
 	uint32 ForceRebuildVersion = 0;
 	uint16 AlgorithmVersion = get_algorithm_version(AlgorithmType8::UniformlySampled);
-	uint32 SettingsHash = Settings.get_hash();
 
-	Ar	<< SafetyFallbackThreshold << ErrorThreshold << DefaultVirtualVertexDistance << SafeVirtualVertexDistance
-		<< ForceRebuildVersion << AlgorithmVersion << SettingsHash;
+	Ar	<< RotationFormat << TranslationFormat << ScaleFormat
+		<< DefaultVirtualVertexDistance << SafeVirtualVertexDistance
+		<< ClipFlags << SegmentingFlags
+		<< IdealNumKeyFramesPerSegment << MaxNumKeyFramesPerSegment
+		<< ErrorThreshold << ConstantRotationThresholdAngle << ConstantTranslationThreshold << ConstantScaleThreshold
+		<< ForceRebuildVersion << AlgorithmVersion;
 }
 #endif // WITH_EDITOR

@@ -1,5 +1,3 @@
-#pragma once
-
 ////////////////////////////////////////////////////////////////////////////////
 // The MIT License (MIT)
 //
@@ -24,39 +22,9 @@
 // SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "CoreMinimal.h"
-#include "UObject/ObjectMacros.h"
-#include "Animation/AnimCompress.h"
 #include "AnimCompress_ACLBase.h"
-#include "AnimCompress_ACL.generated.h"
 
-/** The default codec implementation for ACL support with the minimal set of exposed features for ease of use. */
-UCLASS(MinimalAPI, config = Engine)
-class UAnimCompress_ACL : public UAnimCompress_ACLBase
+UAnimCompress_ACLBase::UAnimCompress_ACLBase(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
-	GENERATED_UCLASS_BODY()
-
-	/** The default virtual vertex distance for normal bones. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	float DefaultVirtualVertexDistance;
-
-	/** The virtual vertex distance for bones that requires extra accuracy. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	float SafeVirtualVertexDistance;
-
-	/** The error threshold after which we fallback on a safer encoding. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	float SafetyFallbackThreshold;
-
-	/** The error threshold to used when optimizing and compressing the animation sequence. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	float ErrorThreshold;
-
-protected:
-	//~ Begin UAnimCompress Interface
-#if WITH_EDITOR
-	virtual void DoReduction(class UAnimSequence* AnimSeq, const TArray<class FBoneData>& BoneData) override;
-	virtual void PopulateDDCKey(FArchive& Ar) override;
-#endif // WITH_EDITOR
-	//~ Begin UAnimCompress Interface
-};
+}

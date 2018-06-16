@@ -68,8 +68,8 @@ public:
 #endif
 };
 
-/** The ACL debug codec runtime implementation. */
-class AEFACLCompressionCodec_Debug final : public AEFACLCompressionCodec_Base
+/** The ACL custom codec runtime implementation. */
+class AEFACLCompressionCodec_Custom final : public AEFACLCompressionCodec_Base
 {
 public:
 	virtual void GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time) override;
