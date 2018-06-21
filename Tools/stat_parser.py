@@ -64,51 +64,75 @@ def output_csv_summary(stat_dir, stats):
 	csv_filename = os.path.join(stat_dir, 'stats_summary.csv')
 	print('Generating CSV file {} ...'.format(csv_filename))
 	file = open(csv_filename, 'w')
-	print('Clip Name, Raw Size, Auto Size, ACL Size, Auto Ratio, ACL Ratio, Auto Error, ACL Error', file = file)
+
+	header = 'Clip Name, Raw Size'
+	if 'ue4_auto' in stats[0]:
+		header += ', Auto Size, Auto Ratio, Auto Error'
+	if 'ue4_acl' in stats[0]:
+		header += ', ACL Size, ACL Ratio, ACL Error'
+	print(header, file = file)
+
 	for stat in stats:
 		clip_name = stat['clip_name']
 		raw_size = stat['acl_raw_size']
-		auto_size = stat['ue4_auto']['compressed_size']
-		acl_size = stat['ue4_acl']['compressed_size']
-		auto_ratio = stat['ue4_auto']['acl_compression_ratio']
-		acl_ratio = stat['ue4_acl']['acl_compression_ratio']
-		auto_error = stat['ue4_auto']['acl_max_error']
-		acl_error = stat['ue4_acl']['acl_max_error']
-		print('{}, {}, {}, {}, {}, {}, {}, {}'.format(clip_name, raw_size, auto_size, acl_size, auto_ratio, acl_ratio, auto_error, acl_error), file = file)
+		csv_line = '{}, {}'.format(clip_name, raw_size)
+
+		if 'ue4_auto' in stat:
+			auto_size = stat['ue4_auto']['compressed_size']
+			auto_ratio = stat['ue4_auto']['acl_compression_ratio']
+			auto_error = stat['ue4_auto']['acl_max_error']
+			csv_line += ', {}, {}, {}'.format(auto_size, auto_ratio, auto_error)
+
+		if 'ue4_acl' in stat:
+			acl_size = stat['ue4_acl']['compressed_size']
+			acl_ratio = stat['ue4_acl']['acl_compression_ratio']
+			acl_error = stat['ue4_acl']['acl_max_error']
+			csv_line += ', {}, {}, {}'.format(acl_size, acl_ratio, acl_error)
+
+		print(csv_line, file = file)
+
 	file.close()
 
 def output_csv_error(stat_dir, stats):
-	csv_filename = os.path.join(stat_dir, 'stats_ue4_auto_error.csv')
-	print('Generating CSV file {} ...'.format(csv_filename))
-	file = open(csv_filename, 'w')
-	print('Clip Name, Key Frame, Bone Index, Error', file = file)
-	for stat in stats:
-		name = stat['clip_name']
-		key_frame = 0
-		for frame_errors in stat['ue4_auto']['error_per_frame_and_bone']:
-			bone_index = 0
-			for bone_error in frame_errors:
-				print('{}, {}, {}, {}'.format(name, key_frame, bone_index, bone_error), file = file)
-				bone_index += 1
+	if 'ue4_auto' in stats[0] and 'error_per_frame_and_bone' in stats[0]['ue4_auto']:
+		csv_filename = os.path.join(stat_dir, 'stats_ue4_auto_error.csv')
+		print('Generating CSV file {} ...'.format(csv_filename))
+		file = open(csv_filename, 'w')
 
-			key_frame += 1
-	file.close()
+		print('Clip Name, Key Frame, Bone Index, Error', file = file)
 
-	csv_filename = os.path.join(stat_dir, 'stats_ue4_acl_error.csv')
-	print('Generating CSV file {} ...'.format(csv_filename))
-	file = open(csv_filename, 'w')
-	print('Clip Name, Key Frame, Bone Index, Error', file = file)
-	for stat in stats:
-		name = stat['clip_name']
-		key_frame = 0
-		for frame_errors in stat['ue4_acl']['error_per_frame_and_bone']:
-			bone_index = 0
-			for bone_error in frame_errors:
-				print('{}, {}, {}, {}'.format(name, key_frame, bone_index, bone_error), file = file)
-				bone_index += 1
+		for stat in stats:
+			name = stat['clip_name']
+			key_frame = 0
+			for frame_errors in stat['ue4_auto']['error_per_frame_and_bone']:
+				bone_index = 0
+				for bone_error in frame_errors:
+					print('{}, {}, {}, {}'.format(name, key_frame, bone_index, bone_error), file = file)
+					bone_index += 1
 
-			key_frame += 1
-	file.close()
+				key_frame += 1
+
+		file.close()
+
+	if 'ue4_acl' in stats[0] and 'error_per_frame_and_bone' in stats[0]['ue4_acl']:
+		csv_filename = os.path.join(stat_dir, 'stats_ue4_acl_error.csv')
+		print('Generating CSV file {} ...'.format(csv_filename))
+		file = open(csv_filename, 'w')
+
+		print('Clip Name, Key Frame, Bone Index, Error', file = file)
+
+		for stat in stats:
+			name = stat['clip_name']
+			key_frame = 0
+			for frame_errors in stat['ue4_acl']['error_per_frame_and_bone']:
+				bone_index = 0
+				for bone_error in frame_errors:
+					print('{}, {}, {}, {}'.format(name, key_frame, bone_index, bone_error), file = file)
+					bone_index += 1
+
+				key_frame += 1
+
+		file.close()
 
 def print_progress(iteration, total, prefix='', suffix='', decimals = 1, bar_length = 50):
 	# Taken from https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
@@ -323,8 +347,10 @@ if __name__ == "__main__":
 				num_acl_auto_wins += 1
 
 	print()
+	raw_size = 0.0
 	if 'ue4_auto' in aggregate_results:
 		ue4_auto = aggregate_results['ue4_auto']
+		raw_size = ue4_auto['total_raw_size']
 		ratio = float(ue4_auto['total_raw_size']) / float(ue4_auto['total_compressed_size'])
 		print('Total Automatic Compression:')
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [{:.4f}]'.format(bytes_to_mb(ue4_auto['total_compressed_size']), format_elapsed_time(ue4_auto['total_compression_time']), ratio, ue4_auto['max_error']))
@@ -333,13 +359,14 @@ if __name__ == "__main__":
 
 	if 'ue4_acl' in aggregate_results:
 		ue4_acl = aggregate_results['ue4_acl']
+		raw_size = ue4_acl['total_raw_size']
 		ratio = float(ue4_acl['total_raw_size']) / float(ue4_acl['total_compressed_size'])
 		print('Total ACL Compression:')
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [{:.4f}]'.format(bytes_to_mb(ue4_acl['total_compressed_size']), format_elapsed_time(ue4_acl['total_compression_time']), ratio, ue4_acl['max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
 		print()
 
-	print('Raw size: {:.2f} MB'.format(bytes_to_mb(aggregate_results['ue4_auto']['total_raw_size'])))
+	print('Raw size: {:.2f} MB'.format(bytes_to_mb(raw_size)))
 	print('ACL was smaller for {} clips ({:.2f} %)'.format(num_acl_size_wins, float(num_acl_size_wins) / float(len(stats)) * 100.0))
 	print('ACL was more accurate for {} clips ({:.2f} %)'.format(num_acl_accuracy_wins, float(num_acl_accuracy_wins) / float(len(stats)) * 100.0))
 	print('ACL has faster compression for {} clips ({:.2f} %)'.format(num_acl_speed_wins, float(num_acl_speed_wins) / float(len(stats)) * 100.0))
