@@ -307,27 +307,29 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 	TMap<FString, FString> ParamsMap;
 	UCommandlet::ParseCommandLine(*Params, Tokens, Switches, ParamsMap);
 
-	if (!ParamsMap.Contains("acl"))
+	if (!ParamsMap.Contains(TEXT("acl")))
 	{
 		UE_LOG(LogAnimationCompression, Error, TEXT("Missing commandlet argument: -acl=<path/to/raw/acl/sjson/files/directory>"));
 		return 0;
 	}
 
-	if (!ParamsMap.Contains("stats"))
+	if (!ParamsMap.Contains(TEXT("stats")))
 	{
 		UE_LOG(LogAnimationCompression, Error, TEXT("Missing commandlet argument: -stats=<path/to/output/stats/directory>"));
 		return 0;
 	}
 
-	FString ACLRawDir = ParamsMap["acl"];
-	FString UE4StatDir = ParamsMap["stats"];
+	FString ACLRawDir = ParamsMap[TEXT("acl")];
+	FString UE4StatDir = ParamsMap[TEXT("stats")];
 
-	const bool PerformExhaustiveDump = true;
+	const bool PerformExhaustiveDump = !Switches.Contains(TEXT("noerror"));
+	const bool TryAutomaticCompression = !Switches.Contains(TEXT("noauto"));
+	const bool TryACLCompression = !Switches.Contains(TEXT("noacl"));
 
 	float MasterTolerance = 0.1f;	// 0.1cm is a sensible default for production use
-	if (ParamsMap.Contains("MasterTolerance"))
+	if (ParamsMap.Contains(TEXT("MasterTolerance")))
 	{
-		MasterTolerance = FCString::Atof(*ParamsMap["MasterTolerance"]);
+		MasterTolerance = FCString::Atof(*ParamsMap[TEXT("MasterTolerance")]);
 	}
 
 	FFileManagerGeneric FileManager;
@@ -371,113 +373,121 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 			TArray<FBoneData> UE4BoneData;
 			FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, UE4BoneData);
 
-			uint32 ACLRawSize = ACLClip->get_raw_size();
-			int32 UE4RawSize = UE4Clip->GetApproxRawSize();
+			const uint32 ACLRawSize = ACLClip->get_raw_size();
+			const int32 UE4RawSize = UE4Clip->GetApproxRawSize();
 
 			Writer["duration"] = UE4Clip->SequenceLength;
 			Writer["num_samples"] = UE4Clip->NumFrames;
 			Writer["ue4_raw_size"] = UE4RawSize;
 			Writer["acl_raw_size"] = ACLRawSize;
 
-			uint64 UE4StartTimeCycles = FPlatformTime::Cycles64();
-
-			bool UE4Success = AutoCompressor->Reduce(UE4Clip, false);
-
-			uint64 UE4EndTimeCycles = FPlatformTime::Cycles64();
-
-			uint64 UE4ElapsedCycles = UE4EndTimeCycles - UE4StartTimeCycles;
-			double UE4ElapsedTimeSec = FPlatformTime::ToSeconds64(UE4ElapsedCycles);
-
-			if (UE4Success)
+			if (TryAutomaticCompression)
 			{
-				AnimationErrorStats UE4ErrorStats;
-				FAnimationUtils::ComputeCompressionError(UE4Clip, UE4BoneData, UE4ErrorStats);
+				const uint64 UE4StartTimeCycles = FPlatformTime::Cycles64();
 
-				uint16 WorstBone;
-				float MaxError;
-				float WorstSampleTime;
-				CalculateClipError(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+				const bool UE4Success = AutoCompressor->Reduce(UE4Clip, false);
 
-				int32 CompressedSize = UE4Clip->GetApproxCompressedSize();
-				double UE4CompressionRatio = double(UE4RawSize) / double(CompressedSize);
-				double ACLCompressionRatio = double(ACLRawSize) / double(CompressedSize);
+				const uint64 UE4EndTimeCycles = FPlatformTime::Cycles64();
 
-				Writer["ue4_auto"] = [&](sjson::ObjectWriter& Writer)
+				const uint64 UE4ElapsedCycles = UE4EndTimeCycles - UE4StartTimeCycles;
+				const double UE4ElapsedTimeSec = FPlatformTime::ToSeconds64(UE4ElapsedCycles);
+
+				if (UE4Success)
 				{
-					Writer["algorithm_name"] = TCHAR_TO_ANSI(*UE4Clip->CompressionScheme->GetClass()->GetName());
-					Writer["compressed_size"] = CompressedSize;
-					Writer["ue4_compression_ratio"] = UE4CompressionRatio;
-					Writer["acl_compression_ratio"] = ACLCompressionRatio;
-					Writer["compression_time"] = UE4ElapsedTimeSec;
-					Writer["ue4_max_error"] = UE4ErrorStats.MaxError;
-					Writer["ue4_avg_error"] = UE4ErrorStats.AverageError;
-					Writer["ue4_worst_bone"] = UE4ErrorStats.MaxErrorBone;
-					Writer["ue4_worst_time"] = UE4ErrorStats.MaxErrorTime;
-					Writer["acl_max_error"] = MaxError;
-					Writer["acl_worst_bone"] = WorstBone;
-					Writer["acl_worst_time"] = WorstSampleTime;
-					Writer["rotation_format"] = TCHAR_TO_ANSI(*AnimFormatEnum->GetDisplayNameTextByIndex(UE4Clip->CompressionScheme->RotationCompressionFormat).ToString());
-					Writer["translation_format"] = TCHAR_TO_ANSI(*AnimFormatEnum->GetDisplayNameTextByIndex(UE4Clip->CompressionScheme->TranslationCompressionFormat).ToString());
-					Writer["scale_format"] = TCHAR_TO_ANSI(*AnimFormatEnum->GetDisplayNameTextByIndex(UE4Clip->CompressionScheme->ScaleCompressionFormat).ToString());
+					AnimationErrorStats UE4ErrorStats;
+					FAnimationUtils::ComputeCompressionError(UE4Clip, UE4BoneData, UE4ErrorStats);
 
-					if (PerformExhaustiveDump)
-						DumpClipDetailedError(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton, Writer);
-				};
-			}
-			else
-			{
-				Writer["error"] = "failed to compress UE4 clip";
+					uint16 WorstBone;
+					float MaxError;
+					float WorstSampleTime;
+					CalculateClipError(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+
+					const int32 CompressedSize = UE4Clip->GetApproxCompressedSize();
+					const double UE4CompressionRatio = double(UE4RawSize) / double(CompressedSize);
+					const double ACLCompressionRatio = double(ACLRawSize) / double(CompressedSize);
+
+					Writer["ue4_auto"] = [&](sjson::ObjectWriter& Writer)
+					{
+						Writer["algorithm_name"] = TCHAR_TO_ANSI(*UE4Clip->CompressionScheme->GetClass()->GetName());
+						Writer["codec_name"] = TCHAR_TO_ANSI(*UE4Clip->CompressedCodecFormat.ToString());
+						Writer["compressed_size"] = CompressedSize;
+						Writer["ue4_compression_ratio"] = UE4CompressionRatio;
+						Writer["acl_compression_ratio"] = ACLCompressionRatio;
+						Writer["compression_time"] = UE4ElapsedTimeSec;
+						Writer["ue4_max_error"] = UE4ErrorStats.MaxError;
+						Writer["ue4_avg_error"] = UE4ErrorStats.AverageError;
+						Writer["ue4_worst_bone"] = UE4ErrorStats.MaxErrorBone;
+						Writer["ue4_worst_time"] = UE4ErrorStats.MaxErrorTime;
+						Writer["acl_max_error"] = MaxError;
+						Writer["acl_worst_bone"] = WorstBone;
+						Writer["acl_worst_time"] = WorstSampleTime;
+						Writer["rotation_format"] = TCHAR_TO_ANSI(*AnimFormatEnum->GetDisplayNameTextByIndex(UE4Clip->CompressionScheme->RotationCompressionFormat).ToString());
+						Writer["translation_format"] = TCHAR_TO_ANSI(*AnimFormatEnum->GetDisplayNameTextByIndex(UE4Clip->CompressionScheme->TranslationCompressionFormat).ToString());
+						Writer["scale_format"] = TCHAR_TO_ANSI(*AnimFormatEnum->GetDisplayNameTextByIndex(UE4Clip->CompressionScheme->ScaleCompressionFormat).ToString());
+
+						if (PerformExhaustiveDump)
+							DumpClipDetailedError(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton, Writer);
+					};
+				}
+				else
+				{
+					Writer["error"] = "failed to compress UE4 clip";
+				}
 			}
 
 			UE4Clip->CompressedTrackOffsets.Empty();
 			UE4Clip->CompressedByteStream.Empty();
 			UE4Clip->CompressedScaleOffsets.Empty();
 
-			uint64 ACLStartTimeCycles = FPlatformTime::Cycles64();
-
-			bool ACLSuccess = ACLCompressor->Reduce(UE4Clip, false);
-
-			uint64 ACLEndTimeCycles = FPlatformTime::Cycles64();
-
-			uint64 ACLElapsedCycles = ACLEndTimeCycles - ACLStartTimeCycles;
-			double ACLElapsedTimeSec = FPlatformTime::ToSeconds64(ACLElapsedCycles);
-
-			if (ACLSuccess)
+			if (TryACLCompression)
 			{
-				AnimationErrorStats UE4ErrorStats;
-				FAnimationUtils::ComputeCompressionError(UE4Clip, UE4BoneData, UE4ErrorStats);
+				const uint64 ACLStartTimeCycles = FPlatformTime::Cycles64();
 
-				uint16 WorstBone;
-				float MaxError;
-				float WorstSampleTime;
-				CalculateClipError(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+				const bool ACLSuccess = ACLCompressor->Reduce(UE4Clip, false);
 
-				int32 CompressedSize = UE4Clip->GetApproxCompressedSize();
-				double UE4CompressionRatio = double(UE4RawSize) / double(CompressedSize);
-				double ACLCompressionRatio = double(ACLRawSize) / double(CompressedSize);
+				const uint64 ACLEndTimeCycles = FPlatformTime::Cycles64();
 
-				Writer["ue4_acl"] = [&](sjson::ObjectWriter& Writer)
+				const uint64 ACLElapsedCycles = ACLEndTimeCycles - ACLStartTimeCycles;
+				const double ACLElapsedTimeSec = FPlatformTime::ToSeconds64(ACLElapsedCycles);
+
+				if (ACLSuccess)
 				{
-					Writer["algorithm_name"] = TCHAR_TO_ANSI(*UE4Clip->CompressionScheme->GetClass()->GetName());
-					Writer["compressed_size"] = CompressedSize;
-					Writer["ue4_compression_ratio"] = UE4CompressionRatio;
-					Writer["acl_compression_ratio"] = ACLCompressionRatio;
-					Writer["compression_time"] = ACLElapsedTimeSec;
-					Writer["ue4_max_error"] = UE4ErrorStats.MaxError;
-					Writer["ue4_avg_error"] = UE4ErrorStats.AverageError;
-					Writer["ue4_worst_bone"] = UE4ErrorStats.MaxErrorBone;
-					Writer["ue4_worst_time"] = UE4ErrorStats.MaxErrorTime;
-					Writer["acl_max_error"] = MaxError;
-					Writer["acl_worst_bone"] = WorstBone;
-					Writer["acl_worst_time"] = WorstSampleTime;
+					AnimationErrorStats UE4ErrorStats;
+					FAnimationUtils::ComputeCompressionError(UE4Clip, UE4BoneData, UE4ErrorStats);
 
-					if (PerformExhaustiveDump)
-						DumpClipDetailedError(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton, Writer);
-				};
-			}
-			else
-			{
-				Writer["error"] = "failed to compress UE4 clip";
+					uint16 WorstBone;
+					float MaxError;
+					float WorstSampleTime;
+					CalculateClipError(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+
+					const int32 CompressedSize = UE4Clip->GetApproxCompressedSize();
+					const double UE4CompressionRatio = double(UE4RawSize) / double(CompressedSize);
+					const double ACLCompressionRatio = double(ACLRawSize) / double(CompressedSize);
+
+					Writer["ue4_acl"] = [&](sjson::ObjectWriter& Writer)
+					{
+						Writer["algorithm_name"] = TCHAR_TO_ANSI(*UE4Clip->CompressionScheme->GetClass()->GetName());
+						Writer["codec_name"] = TCHAR_TO_ANSI(*UE4Clip->CompressedCodecFormat.ToString());
+						Writer["compressed_size"] = CompressedSize;
+						Writer["ue4_compression_ratio"] = UE4CompressionRatio;
+						Writer["acl_compression_ratio"] = ACLCompressionRatio;
+						Writer["compression_time"] = ACLElapsedTimeSec;
+						Writer["ue4_max_error"] = UE4ErrorStats.MaxError;
+						Writer["ue4_avg_error"] = UE4ErrorStats.AverageError;
+						Writer["ue4_worst_bone"] = UE4ErrorStats.MaxErrorBone;
+						Writer["ue4_worst_time"] = UE4ErrorStats.MaxErrorTime;
+						Writer["acl_max_error"] = MaxError;
+						Writer["acl_worst_bone"] = WorstBone;
+						Writer["acl_worst_time"] = WorstSampleTime;
+
+						if (PerformExhaustiveDump)
+							DumpClipDetailedError(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton, Writer);
+					};
+				}
+				else
+				{
+					Writer["error"] = "failed to compress UE4 clip";
+				}
 			}
 
 			UE4Clip->RecycleAnimSequence();
