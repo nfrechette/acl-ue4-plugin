@@ -27,4 +27,4 @@ ACL was smaller, better, and faster for **2522** clips (**99.53 %**)
 
 Would the *ACL Plugin* have been included in the *Automatic Compression* permutations tried, it would have won for **2534** clips (**100.00 %**)
 
-**Results from release [0.1.0](https://github.com/nfrechette/acl-ue4-plugin/releases/tag/v0.1.0)**
+**Results from release [v0.1.0](https://github.com/nfrechette/acl-ue4-plugin/releases/tag/v0.1.0)**
