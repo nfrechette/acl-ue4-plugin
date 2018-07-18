@@ -34,13 +34,29 @@
 
 static acl::SampleRoundingPolicy get_rounding_policy(EAnimInterpolationType InterpType) { return InterpType == EAnimInterpolationType::Step ? acl::SampleRoundingPolicy::Floor : acl::SampleRoundingPolicy::None; }
 
-template<bool SkipRotations, bool SkipTranslations, bool SkipScales>
+/*
+ * We disable range checks when using certain allocations for performance reasons.
+ */
+class ACLMemStackAllocator : public TMemStackAllocator<>
+{
+public:
+	enum { RequireRangeCheck = false };
+};
+
+/*
+ * Output pose writer that can selectively skip certain track types.
+ */
+template<bool SkipRotations_, bool SkipTranslations_, bool SkipScales_>
 struct UE4OutputWriter : acl::OutputWriter
 {
-	FTransformArray& Atoms;
-	const TArray<uint16, TMemStackAllocator<>>& TrackToAtomsMap;
+	static constexpr bool SkipRotations = SkipRotations_;
+	static constexpr bool SkipTranslations = SkipTranslations_;
+	static constexpr bool SkipScales = SkipScales_;
 
-	UE4OutputWriter(FTransformArray& Atoms_, const TArray<uint16, TMemStackAllocator<>>& TrackToAtomsMap_)
+	FTransformArray& Atoms;
+	const TArray<uint16, ACLMemStackAllocator>& TrackToAtomsMap;
+
+	UE4OutputWriter(FTransformArray& Atoms_, const TArray<uint16, ACLMemStackAllocator>& TrackToAtomsMap_)
 		: Atoms(Atoms_)
 		, TrackToAtomsMap(TrackToAtomsMap_)
 	{}
@@ -49,7 +65,7 @@ struct UE4OutputWriter : acl::OutputWriter
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
 	void write_bone_rotation(int32_t bone_index, const acl::Quat_32& rotation)
 	{
-		if (SkipRotations)
+		if (SkipRotations_)
 			return;
 
 		const uint16 AtomIndex = TrackToAtomsMap[bone_index];
@@ -64,7 +80,7 @@ struct UE4OutputWriter : acl::OutputWriter
 	// Called by the decoder to write out a translation value for a specified bone index
 	void write_bone_translation(int32_t bone_index, const acl::Vector4_32& translation)
 	{
-		if (SkipTranslations)
+		if (SkipTranslations_)
 			return;
 
 		const uint16 AtomIndex = TrackToAtomsMap[bone_index];
@@ -79,7 +95,7 @@ struct UE4OutputWriter : acl::OutputWriter
 	// Called by the decoder to write out a scale value for a specified bone index
 	void write_bone_scale(int32_t bone_index, const acl::Vector4_32& scale)
 	{
-		if (SkipScales)
+		if (SkipScales_)
 			return;
 
 		const uint16 AtomIndex = TrackToAtomsMap[bone_index];
@@ -96,7 +112,7 @@ using UE4TranslationWriter = UE4OutputWriter<true, false, true>;
 using UE4ScaleWriter = UE4OutputWriter<true, true, false>;
 
 using UE4DefaultDecompressionSettings = acl::uniformly_sampled::DefaultDecompressionSettings;
-using UE4DebugDecompressionSettings = acl::uniformly_sampled::DebugDecompressionSettings;
+using UE4CustomDecompressionSettings = acl::uniformly_sampled::DebugDecompressionSettings;
 
 struct UE4SafeDecompressionSettings : public UE4DefaultDecompressionSettings
 {
@@ -133,14 +149,15 @@ void AEFACLCompressionCodec_Base::ByteSwapOut(UAnimSequence& Seq, TArray<uint8>&
 	MemoryWriter.Serialize(Seq.CompressedByteStream.GetData(), Seq.CompressedByteStream.Num());
 }
 
-void AEFACLCompressionCodec_Default::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
+template<typename DecompressionSettingsType>
+static FORCEINLINE_DEBUGGABLE void GetBoneAtomImpl(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
 {
 	using namespace acl;
 
 	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
 	check(CompressedClipData->is_valid(false).empty());
 
-	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
+	uniformly_sampled::DecompressionContext<DecompressionSettingsType> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
@@ -152,8 +169,14 @@ void AEFACLCompressionCodec_Default::GetBoneAtom(FTransform& OutAtom, const UAni
 	OutAtom = FTransform(QuatCast(Rotation), VectorCast(Translation), VectorCast(Scale));
 }
 
+void AEFACLCompressionCodec_Default::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
+{
+	GetBoneAtomImpl<UE4DefaultDecompressionSettings>(OutAtom, Seq, TrackIndex, Time);
+}
+
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
-void AEFACLCompressionCodec_Default::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+template<typename DecompressionSettingsType, typename WriterType>
+static FORCEINLINE_DEBUGGABLE void GetPoseTracks(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
 	using namespace acl;
 
@@ -161,298 +184,126 @@ void AEFACLCompressionCodec_Default::GetPoseRotations(FTransformArray& Atoms, co
 	check(CompressedClipData->is_valid(false).empty());
 
 	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
+	if (!WriterType::SkipScales && !ClipHeader.has_scale)
 	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
+		return;
 	}
 
-	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
+	uniformly_sampled::DecompressionContext<DecompressionSettingsType> Context;
 	Context.initialize(*CompressedClipData);
 	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
 
-	UE4RotationWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	// It is currently faster to decompress the whole pose if most of them are required,
+	// we only decompress individual bones if we need just a few.
+
+	const int32 ACLBoneCount = ClipHeader.num_bones;
+	const int32 PairCount = DesiredPairs.Num();
+	if (PairCount * 4 < ACLBoneCount)
+	{
+		// Check if we have fewer than 25% of the tracks we are interested in, in that case, use decompress_bone
+		// PairCount <= ACLBoneCount * 0.25
+		// PC <= BC * 25 / 100
+		// PC * 100 <= BC * 25
+		// PC * 100 / 25 <= BC
+		// PC * 4 <= BC
+		for (const BoneTrackPair& Pair : DesiredPairs)
+		{
+			Quat_32 Rotation;
+			Vector4_32 Translation;
+			Vector4_32 Scale;
+			Context.decompress_bone(Pair.TrackIndex,
+				WriterType::SkipRotations ? nullptr : &Rotation,
+				WriterType::SkipTranslations ? nullptr : &Translation,
+				WriterType::SkipScales ? nullptr : &Scale);
+
+			FTransform& BoneAtom = Atoms[Pair.AtomIndex];
+			if (!WriterType::SkipRotations)
+			{
+				BoneAtom.SetRotation(QuatCast(Rotation));
+			}
+			else if (!WriterType::SkipTranslations)
+			{
+				BoneAtom.SetTranslation(VectorCast(Translation));
+			}
+			else if (!WriterType::SkipScales)
+			{
+				BoneAtom.SetScale3D(VectorCast(Scale));
+			}
+		}
+	}
+	else
+	{
+		TArray<uint16, ACLMemStackAllocator> TrackToAtomsMap;
+		TrackToAtomsMap.Reserve(ACLBoneCount);
+		TrackToAtomsMap.AddUninitialized(ACLBoneCount);
+		std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
+
+		for (const BoneTrackPair& Pair : DesiredPairs)
+		{
+			TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
+		}
+
+		WriterType PoseWriter(Atoms, TrackToAtomsMap);
+		Context.decompress_pose(PoseWriter);
+	}
+}
+
+void AEFACLCompressionCodec_Default::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+{
+	GetPoseTracks<UE4DefaultDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 
 void AEFACLCompressionCodec_Default::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
-	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
-	}
-
-	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	UE4TranslationWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	GetPoseTracks<UE4DefaultDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 
 void AEFACLCompressionCodec_Default::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
-	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
-	}
-
-	uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	UE4ScaleWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	GetPoseTracks<UE4DefaultDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 #endif
 
 void AEFACLCompressionCodec_Safe::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	Quat_32 Rotation;
-	Vector4_32 Translation;
-	Vector4_32 Scale;
-	Context.decompress_bone(TrackIndex, &Rotation, &Translation, &Scale);
-
-	OutAtom = FTransform(QuatCast(Rotation), VectorCast(Translation), VectorCast(Scale));
+	GetBoneAtomImpl<UE4SafeDecompressionSettings>(OutAtom, Seq, TrackIndex, Time);
 }
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
 void AEFACLCompressionCodec_Safe::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
-	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
-	}
-
-	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	UE4RotationWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	GetPoseTracks<UE4SafeDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 
 void AEFACLCompressionCodec_Safe::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
-	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
-	}
-
-	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	UE4TranslationWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	GetPoseTracks<UE4SafeDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 
 void AEFACLCompressionCodec_Safe::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
-	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
-	}
-
-	uniformly_sampled::DecompressionContext<UE4SafeDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	UE4ScaleWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	GetPoseTracks<UE4SafeDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 #endif
 
 void AEFACLCompressionCodec_Custom::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	Quat_32 Rotation;
-	Vector4_32 Translation;
-	Vector4_32 Scale;
-	Context.decompress_bone(TrackIndex, &Rotation, &Translation, &Scale);
-
-	OutAtom = FTransform(QuatCast(Rotation), VectorCast(Translation), VectorCast(Scale));
+	GetBoneAtomImpl<UE4CustomDecompressionSettings>(OutAtom, Seq, TrackIndex, Time);
 }
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
 void AEFACLCompressionCodec_Custom::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
-	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
-	}
-
-	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	UE4RotationWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	GetPoseTracks<UE4CustomDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 
 void AEFACLCompressionCodec_Custom::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
-	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
-	}
-
-	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	UE4TranslationWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	GetPoseTracks<UE4CustomDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 
 void AEFACLCompressionCodec_Custom::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
 {
-	using namespace acl;
-
-	const CompressedClip* CompressedClipData = reinterpret_cast<const CompressedClip*>(Seq.CompressedByteStream.GetData());
-	check(CompressedClipData->is_valid(false).empty());
-
-	const ClipHeader& ClipHeader = get_clip_header(*CompressedClipData);
-	const uint32_t ACLBoneCount = ClipHeader.num_bones;
-	TArray<uint16, TMemStackAllocator<>> TrackToAtomsMap;
-	TrackToAtomsMap.Reserve(ACLBoneCount);
-	TrackToAtomsMap.AddUninitialized(ACLBoneCount);
-	std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
-
-	const uint32 PairCount = DesiredPairs.Num();
-	for (uint32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
-	{
-		const BoneTrackPair& Pair = DesiredPairs[PairIndex];
-		TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
-	}
-
-	uniformly_sampled::DecompressionContext<UE4DebugDecompressionSettings> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(Time, get_rounding_policy(Seq.Interpolation));
-
-	UE4ScaleWriter PoseWriter(Atoms, TrackToAtomsMap);
-	Context.decompress_pose(PoseWriter);
+	GetPoseTracks<UE4CustomDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, Seq, Time);
 }
 #endif
