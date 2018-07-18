@@ -67,9 +67,9 @@ def output_csv_summary(stat_dir, stats):
 
 	header = 'Clip Name, Raw Size'
 	if 'ue4_auto' in stats[0]:
-		header += ', Auto Size, Auto Ratio, Auto Error'
+		header += ', Auto Size, Auto Ratio, Auto UE4 Error, Auto ACL Error'
 	if 'ue4_acl' in stats[0]:
-		header += ', ACL Size, ACL Ratio, ACL Error'
+		header += ', ACL Size, ACL Ratio, ACL UE4 Error, ACL ACL Error'
 	print(header, file = file)
 
 	for stat in stats:
@@ -80,14 +80,16 @@ def output_csv_summary(stat_dir, stats):
 		if 'ue4_auto' in stat:
 			auto_size = stat['ue4_auto']['compressed_size']
 			auto_ratio = stat['ue4_auto']['acl_compression_ratio']
-			auto_error = stat['ue4_auto']['acl_max_error']
-			csv_line += ', {}, {}, {}'.format(auto_size, auto_ratio, auto_error)
+			auto_ue4_error = stat['ue4_auto']['ue4_max_error']
+			auto_acl_error = stat['ue4_auto']['acl_max_error']
+			csv_line += ', {}, {}, {}, {}'.format(auto_size, auto_ratio, auto_ue4_error, auto_acl_error)
 
 		if 'ue4_acl' in stat:
 			acl_size = stat['ue4_acl']['compressed_size']
 			acl_ratio = stat['ue4_acl']['acl_compression_ratio']
-			acl_error = stat['ue4_acl']['acl_max_error']
-			csv_line += ', {}, {}, {}'.format(acl_size, acl_ratio, acl_error)
+			acl_ue4_error = stat['ue4_acl']['ue4_max_error']
+			acl_acl_error = stat['ue4_acl']['acl_max_error']
+			csv_line += ', {}, {}, {}, {}'.format(acl_size, acl_ratio, acl_ue4_error, acl_acl_error)
 
 		print(csv_line, file = file)
 
@@ -165,7 +167,8 @@ def append_stats(permutation, clip_stats, run_stats, aggregate_results):
 		run_total_stats['total_raw_size'] = 0
 		run_total_stats['total_compressed_size'] = 0
 		run_total_stats['total_compression_time'] = 0.0
-		run_total_stats['max_error'] = 0.0
+		run_total_stats['acl_max_error'] = 0.0
+		run_total_stats['ue4_max_error'] = 0.0
 		run_total_stats['num_runs'] = 0
 		aggregate_results[key] = run_total_stats
 
@@ -173,7 +176,8 @@ def append_stats(permutation, clip_stats, run_stats, aggregate_results):
 	run_total_stats['total_raw_size'] += clip_stats['acl_raw_size']
 	run_total_stats['total_compressed_size'] += run_stats['compressed_size']
 	run_total_stats['total_compression_time'] += run_stats['compression_time']
-	run_total_stats['max_error'] = max(run_stats['acl_max_error'], run_total_stats['max_error'])
+	run_total_stats['acl_max_error'] = max(run_stats['acl_max_error'], run_total_stats['acl_max_error'])
+	run_total_stats['ue4_max_error'] = max(run_stats['ue4_max_error'], run_total_stats['ue4_max_error'])
 	run_total_stats['num_runs'] += 1
 
 	if not permutation in aggregate_results:
@@ -181,7 +185,8 @@ def append_stats(permutation, clip_stats, run_stats, aggregate_results):
 		permutation_stats['total_raw_size'] = 0
 		permutation_stats['total_compressed_size'] = 0
 		permutation_stats['total_compression_time'] = 0.0
-		permutation_stats['max_error'] = 0.0
+		permutation_stats['acl_max_error'] = 0.0
+		permutation_stats['ue4_max_error'] = 0.0
 		permutation_stats['num_runs'] = 0
 		permutation_stats['worst_error'] = -1.0
 		permutation_stats['worst_entry'] = None
@@ -191,7 +196,8 @@ def append_stats(permutation, clip_stats, run_stats, aggregate_results):
 	permutation_stats['total_raw_size'] += clip_stats['acl_raw_size']
 	permutation_stats['total_compressed_size'] += run_stats['compressed_size']
 	permutation_stats['total_compression_time'] += run_stats['compression_time']
-	permutation_stats['max_error'] = max(run_stats['acl_max_error'], permutation_stats['max_error'])
+	permutation_stats['acl_max_error'] = max(run_stats['acl_max_error'], permutation_stats['acl_max_error'])
+	permutation_stats['ue4_max_error'] = max(run_stats['ue4_max_error'], permutation_stats['ue4_max_error'])
 	permutation_stats['num_runs'] += 1
 	if run_stats['acl_max_error'] > permutation_stats['worst_error']:
 		permutation_stats['worst_error'] = run_stats['acl_max_error']
@@ -325,11 +331,11 @@ if __name__ == "__main__":
 			ue4_acl = stat['ue4_acl']
 			if ue4_acl['compressed_size'] < ue4_auto['compressed_size']:
 				num_acl_size_wins += 1
-			if ue4_acl['acl_max_error'] < ue4_auto['acl_max_error']:
+			if ue4_acl['ue4_max_error'] < ue4_auto['ue4_max_error']:
 				num_acl_accuracy_wins += 1
 			if ue4_acl['compression_time'] < ue4_auto['compression_time']:
 				num_acl_speed_wins += 1
-			if ue4_acl['compressed_size'] < ue4_auto['compressed_size'] and ue4_acl['acl_max_error'] < ue4_auto['acl_max_error'] and ue4_acl['compression_time'] < ue4_auto['compression_time']:
+			if ue4_acl['compressed_size'] < ue4_auto['compressed_size'] and ue4_acl['ue4_max_error'] < ue4_auto['ue4_max_error'] and ue4_acl['compression_time'] < ue4_auto['compression_time']:
 				num_acl_wins += 1
 
 			lowers_error = ue4_acl['ue4_max_error'] < ue4_auto['ue4_max_error'];
@@ -353,7 +359,7 @@ if __name__ == "__main__":
 		raw_size = ue4_auto['total_raw_size']
 		ratio = float(ue4_auto['total_raw_size']) / float(ue4_auto['total_compressed_size'])
 		print('Total Automatic Compression:')
-		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [{:.4f}]'.format(bytes_to_mb(ue4_auto['total_compressed_size']), format_elapsed_time(ue4_auto['total_compression_time']), ratio, ue4_auto['max_error']))
+		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_auto['total_compressed_size']), format_elapsed_time(ue4_auto['total_compression_time']), ratio, ue4_auto['ue4_max_error'], ue4_auto['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_auto['worst_entry']['clip_name'], ue4_auto['worst_entry']['ue4_auto']['acl_compression_ratio'], ue4_auto['worst_entry']['ue4_auto']['acl_max_error']))
 		print()
 
@@ -362,7 +368,7 @@ if __name__ == "__main__":
 		raw_size = ue4_acl['total_raw_size']
 		ratio = float(ue4_acl['total_raw_size']) / float(ue4_acl['total_compressed_size'])
 		print('Total ACL Compression:')
-		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [{:.4f}]'.format(bytes_to_mb(ue4_acl['total_compressed_size']), format_elapsed_time(ue4_acl['total_compression_time']), ratio, ue4_acl['max_error']))
+		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_acl['total_compressed_size']), format_elapsed_time(ue4_acl['total_compression_time']), ratio, ue4_acl['ue4_max_error'], ue4_acl['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
 		print()
 
