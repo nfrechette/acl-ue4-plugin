@@ -14,6 +14,9 @@ import sjson
 def parse_argv():
 	options = {}
 	options['stats'] = ""
+	options['acl_stats'] = ""
+	options['ue4_stats'] = ""
+	options['dual_stat_inputs'] = False
 	options['csv_summary'] = False
 	options['csv_error'] = False
 	options['num_threads'] = 1
@@ -25,6 +28,14 @@ def parse_argv():
 		if value.startswith('-stats='):
 			options['stats'] = value[7:].replace('"', '')
 
+		# TODO: Strip trailing '/' or '\'
+		if value.startswith('-acl='):
+			options['acl_stats'] = value[5:].replace('"', '')
+
+		# TODO: Strip trailing '/' or '\'
+		if value.startswith('-ue4='):
+			options['ue4_stats'] = value[5:].replace('"', '')
+
 		if value == '-csv_summary':
 			options['csv_summary'] = True
 
@@ -34,10 +45,41 @@ def parse_argv():
 		if value.startswith('-parallel='):
 			options['num_threads'] = int(value[len('-parallel='):].replace('"', ''))
 
-	if options['stats'] == None:
-		print('Stat input directory not found')
+	has_stats_dir = (not options['stats'] == None) and (not len(options['stats']) == 0)
+	has_acl_stats_dir = (not options['acl_stats'] == None) and (not len(options['acl_stats']) == 0)
+	has_ue4_stats_dir = (not options['ue4_stats'] == None) and (not len(options['ue4_stats']) == 0)
+	if not has_stats_dir and not has_acl_stats_dir and not has_ue4_stats_dir:
+		print('A stats input directory must be provided either with `-stats=` or with both `-acl=` and `-ue4=`')
 		print_usage()
 		sys.exit(1)
+
+	if has_stats_dir and (has_acl_stats_dir or has_ue4_stats_dir):
+		print('`-stats=` cannot be used with `-acl=` or `-ue4=`')
+		print_usage()
+		sys.exit(1)
+
+	if not has_stats_dir and not (has_acl_stats_dir and has_ue4_stats_dir):
+		print('Both `-acl=` and `-ue4=` must be provided together')
+		print_usage()
+		sys.exit(1)
+
+	options['dual_stat_inputs'] = has_acl_stats_dir and has_ue4_stats_dir
+
+	if has_acl_stats_dir and has_ue4_stats_dir:
+		if not os.path.exists(options['acl_stats']) or not os.path.isdir(options['acl_stats']):
+			print('ACL stats input directory not found: {}'.format(options['acl_stats']))
+			print_usage()
+			sys.exit(1)
+
+		if not os.path.exists(options['ue4_stats']) or not os.path.isdir(options['ue4_stats']):
+			print('UE4 stats input directory not found: {}'.format(options['ue4_stats']))
+			print_usage()
+			sys.exit(1)
+	else:
+		if not os.path.exists(options['stats']) or not os.path.isdir(options['stats']):
+			print('Stats input directory not found: {}'.format(options['stats']))
+			print_usage()
+			sys.exit(1)
 
 	if options['num_threads'] <= 0:
 		print('-parallel switch argument must be greater than 0')
@@ -47,7 +89,7 @@ def parse_argv():
 	return options
 
 def print_usage():
-	print('Usage: python stat_parser.py -stats=<path to input directory for stats> [-csv_summary] [-csv_error]')
+	print('Usage: python stat_parser.py [-stats=<path to input directory for stats>] [-acl=<path to acl stats>] [-ue4=<path to ue4 stats>] [-csv_summary] [-csv_error] [-parallel=<num threads>]')
 
 def bytes_to_mb(size_in_bytes):
 	return size_in_bytes / (1024.0 * 1024.0)
@@ -60,53 +102,55 @@ def format_elapsed_time(elapsed_time):
 def sanitize_csv_entry(entry):
 	return entry.replace(', ', ' ').replace(',', '_')
 
-def output_csv_summary(stat_dir, stats):
+def output_csv_summary(stat_dir, merged_stats):
 	csv_filename = os.path.join(stat_dir, 'stats_summary.csv')
 	print('Generating CSV file {} ...'.format(csv_filename))
 	file = open(csv_filename, 'w')
 
+	stat_acl, stat_auto = merged_stats[0]
 	header = 'Clip Name, Raw Size'
-	if 'ue4_auto' in stats[0]:
+	if 'ue4_auto' in stat_auto:
 		header += ', Auto Size, Auto Ratio, Auto UE4 Error, Auto ACL Error'
-	if 'ue4_acl' in stats[0]:
+	if 'ue4_acl' in stat_acl:
 		header += ', ACL Size, ACL Ratio, ACL UE4 Error, ACL ACL Error'
 	print(header, file = file)
 
-	for stat in stats:
-		clip_name = stat['clip_name']
-		raw_size = stat['acl_raw_size']
+	for (stat_acl, stat_auto) in merged_stats:
+		clip_name = stat_acl['clip_name']
+		raw_size = stat_acl['acl_raw_size']
 		csv_line = '{}, {}'.format(clip_name, raw_size)
 
-		if 'ue4_auto' in stat:
-			auto_size = stat['ue4_auto']['compressed_size']
-			auto_ratio = stat['ue4_auto']['acl_compression_ratio']
-			auto_ue4_error = stat['ue4_auto']['ue4_max_error']
-			auto_acl_error = stat['ue4_auto']['acl_max_error']
+		if 'ue4_auto' in stat_auto:
+			auto_size = stat_auto['ue4_auto']['compressed_size']
+			auto_ratio = stat_auto['ue4_auto']['acl_compression_ratio']
+			auto_ue4_error = stat_auto['ue4_auto']['ue4_max_error']
+			auto_acl_error = stat_auto['ue4_auto']['acl_max_error']
 			csv_line += ', {}, {}, {}, {}'.format(auto_size, auto_ratio, auto_ue4_error, auto_acl_error)
 
-		if 'ue4_acl' in stat:
-			acl_size = stat['ue4_acl']['compressed_size']
-			acl_ratio = stat['ue4_acl']['acl_compression_ratio']
-			acl_ue4_error = stat['ue4_acl']['ue4_max_error']
-			acl_acl_error = stat['ue4_acl']['acl_max_error']
+		if 'ue4_acl' in stat_acl:
+			acl_size = stat_acl['ue4_acl']['compressed_size']
+			acl_ratio = stat_acl['ue4_acl']['acl_compression_ratio']
+			acl_ue4_error = stat_acl['ue4_acl']['ue4_max_error']
+			acl_acl_error = stat_acl['ue4_acl']['acl_max_error']
 			csv_line += ', {}, {}, {}, {}'.format(acl_size, acl_ratio, acl_ue4_error, acl_acl_error)
 
 		print(csv_line, file = file)
 
 	file.close()
 
-def output_csv_error(stat_dir, stats):
-	if 'ue4_auto' in stats[0] and 'error_per_frame_and_bone' in stats[0]['ue4_auto']:
+def output_csv_error(stat_dir, merged_stats):
+	stat_acl, stat_auto = merged_stats[0]
+	if 'ue4_auto' in stat_auto and 'error_per_frame_and_bone' in stat_auto['ue4_auto']:
 		csv_filename = os.path.join(stat_dir, 'stats_ue4_auto_error.csv')
 		print('Generating CSV file {} ...'.format(csv_filename))
 		file = open(csv_filename, 'w')
 
 		print('Clip Name, Key Frame, Bone Index, Error', file = file)
 
-		for stat in stats:
-			name = stat['clip_name']
+		for (_, stat_auto) in merged_stats:
+			name = stat_auto['clip_name']
 			key_frame = 0
-			for frame_errors in stat['ue4_auto']['error_per_frame_and_bone']:
+			for frame_errors in stat_auto['ue4_auto']['error_per_frame_and_bone']:
 				bone_index = 0
 				for bone_error in frame_errors:
 					print('{}, {}, {}, {}'.format(name, key_frame, bone_index, bone_error), file = file)
@@ -116,17 +160,17 @@ def output_csv_error(stat_dir, stats):
 
 		file.close()
 
-	if 'ue4_acl' in stats[0] and 'error_per_frame_and_bone' in stats[0]['ue4_acl']:
+	if 'ue4_acl' in stat_acl and 'error_per_frame_and_bone' in stat_acl['ue4_acl']:
 		csv_filename = os.path.join(stat_dir, 'stats_ue4_acl_error.csv')
 		print('Generating CSV file {} ...'.format(csv_filename))
 		file = open(csv_filename, 'w')
 
 		print('Clip Name, Key Frame, Bone Index, Error', file = file)
 
-		for stat in stats:
-			name = stat['clip_name']
+		for (stat_acl, _) in merged_stats:
+			name = stat_acl['clip_name']
 			key_frame = 0
-			for frame_errors in stat['ue4_acl']['error_per_frame_and_bone']:
+			for frame_errors in stat_acl['ue4_acl']['error_per_frame_and_bone']:
 				bone_index = 0
 				for bone_error in frame_errors:
 					print('{}, {}, {}, {}'.format(name, key_frame, bone_index, bone_error), file = file)
@@ -269,43 +313,76 @@ def parallel_parse_stats(options, stat_files):
 	except KeyboardInterrupt:
 		sys.exit(1)
 
-	return stats
+	return sorted(stats, key=lambda stat: stat['clip_name'])
+
+def get_stat_files(options):
+	if options['dual_stat_inputs']:
+		acl_stat_files = []
+		ue4_stat_files = []
+
+		for (dirpath, dirnames, filenames) in os.walk(options['acl_stats']):
+			for filename in filenames:
+				if not filename.endswith('.sjson'):
+					continue
+
+				stat_filename = os.path.join(dirpath, filename)
+				acl_stat_files.append(stat_filename)
+
+		for (dirpath, dirnames, filenames) in os.walk(options['ue4_stats']):
+			for filename in filenames:
+				if not filename.endswith('.sjson'):
+					continue
+
+				stat_filename = os.path.join(dirpath, filename)
+				ue4_stat_files.append(stat_filename)
+
+		acl_file_set = set([os.path.basename(file) for file in acl_stat_files])
+		ue4_file_set = set([os.path.basename(file) for file in ue4_stat_files])
+		if len(acl_file_set.intersection(ue4_file_set)) != len(acl_stat_files):
+			print('The input files for ACL and UE4 do not match, some are missing in one or the other')
+			sys.exit(1)
+
+		return (acl_stat_files, ue4_stat_files)
+	else:
+		stat_files = []
+
+		for (dirpath, dirnames, filenames) in os.walk(options['stats']):
+			for filename in filenames:
+				if not filename.endswith('.sjson'):
+					continue
+
+				stat_filename = os.path.join(dirpath, filename)
+				stat_files.append(stat_filename)
+
+		return (stat_files, stat_files)
 
 if __name__ == "__main__":
 	options = parse_argv()
 
-	stat_dir = options['stats']
+	acl_stat_files, ue4_stat_files = get_stat_files(options)
 
-	if not os.path.exists(stat_dir) or not os.path.isdir(stat_dir):
-		print('Stats input directory not found: {}'.format(stat_dir))
-		print_usage()
-		sys.exit(1)
-
-	stat_files = []
-
-	for (dirpath, dirnames, filenames) in os.walk(stat_dir):
-		for filename in filenames:
-			if not filename.endswith('.sjson'):
-				continue
-
-			stat_filename = os.path.join(dirpath, filename)
-			stat_files.append(stat_filename)
-
-	if len(stat_files) == 0:
+	if len(acl_stat_files) == 0:
+		print('No input clips found')
 		sys.exit(0)
 
 	aggregating_start_time = time.clock()
 
-	stats = parallel_parse_stats(options, stat_files)
+	acl_stats = parallel_parse_stats(options, acl_stat_files)
+	if options['dual_stat_inputs']:
+		ue4_stats = parallel_parse_stats(options, ue4_stat_files)
+	else:
+		ue4_stats = acl_stats
+
+	merged_stats = list(zip(acl_stats, ue4_stats))
 
 	aggregating_end_time = time.clock()
 	print('Parsed stats in {}'.format(format_elapsed_time(aggregating_end_time - aggregating_start_time)))
 
 	if options['csv_summary']:
-		output_csv_summary(stat_dir, stats)
+		output_csv_summary(os.getcwd(), merged_stats)
 
 	if options['csv_error']:
-		output_csv_error(stat_dir, stats)
+		output_csv_error(os.getcwd(), merged_stats)
 
 	print()
 	print('Stats per run type:')
@@ -315,20 +392,20 @@ if __name__ == "__main__":
 	num_acl_speed_wins = 0
 	num_acl_wins = 0
 	num_acl_auto_wins = 0
-	for stat in stats:
-		if 'ue4_auto' in stat:
-			ue4_auto = stat['ue4_auto']
+	for (stat_acl, stat_auto) in merged_stats:
+		if 'ue4_auto' in stat_auto:
+			ue4_auto = stat_auto['ue4_auto']
 			ue4_auto['desc'] = '{} {} {}'.format(ue4_auto['algorithm_name'], ue4_auto['rotation_format'], ue4_auto['translation_format'])
-			append_stats('ue4_auto', stat, ue4_auto, aggregate_results)
+			append_stats('ue4_auto', stat_auto, ue4_auto, aggregate_results)
 
-		if 'ue4_acl' in stat:
-			ue4_acl = stat['ue4_acl']
+		if 'ue4_acl' in stat_acl:
+			ue4_acl = stat_acl['ue4_acl']
 			ue4_acl['desc'] = ue4_acl['algorithm_name']
-			append_stats('ue4_acl', stat, ue4_acl, aggregate_results)
+			append_stats('ue4_acl', stat_acl, ue4_acl, aggregate_results)
 
-		if 'ue4_auto' in stat and 'ue4_acl' in stat:
-			ue4_auto = stat['ue4_auto']
-			ue4_acl = stat['ue4_acl']
+		if 'ue4_auto' in stat_auto and 'ue4_acl' in stat_acl:
+			ue4_auto = stat_auto['ue4_auto']
+			ue4_acl = stat_acl['ue4_acl']
 			if ue4_acl['compressed_size'] < ue4_auto['compressed_size']:
 				num_acl_size_wins += 1
 			if ue4_acl['ue4_max_error'] < ue4_auto['ue4_max_error']:
@@ -372,9 +449,10 @@ if __name__ == "__main__":
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
 		print()
 
+	num_clips = float(len(acl_stat_files))
 	print('Raw size: {:.2f} MB'.format(bytes_to_mb(raw_size)))
-	print('ACL was smaller for {} clips ({:.2f} %)'.format(num_acl_size_wins, float(num_acl_size_wins) / float(len(stats)) * 100.0))
-	print('ACL was more accurate for {} clips ({:.2f} %)'.format(num_acl_accuracy_wins, float(num_acl_accuracy_wins) / float(len(stats)) * 100.0))
-	print('ACL has faster compression for {} clips ({:.2f} %)'.format(num_acl_speed_wins, float(num_acl_speed_wins) / float(len(stats)) * 100.0))
-	print('ACL was smaller, better, faster for {} clips ({:.2f} %)'.format(num_acl_wins, float(num_acl_wins) / float(len(stats)) * 100.0))
-	print('ACL won with simulated auto {} clips ({:.2f} %)'.format(num_acl_auto_wins, float(num_acl_auto_wins) / float(len(stats)) * 100.0))
+	print('ACL was smaller for {} clips ({:.2f} %)'.format(num_acl_size_wins, float(num_acl_size_wins) / num_clips * 100.0))
+	print('ACL was more accurate for {} clips ({:.2f} %)'.format(num_acl_accuracy_wins, float(num_acl_accuracy_wins) / num_clips * 100.0))
+	print('ACL has faster compression for {} clips ({:.2f} %)'.format(num_acl_speed_wins, float(num_acl_speed_wins) / num_clips * 100.0))
+	print('ACL was smaller, better, faster for {} clips ({:.2f} %)'.format(num_acl_wins, float(num_acl_wins) / num_clips * 100.0))
+	print('ACL won with simulated auto {} clips ({:.2f} %)'.format(num_acl_auto_wins, float(num_acl_auto_wins) / num_clips * 100.0))
