@@ -1,6 +1,6 @@
 # Documentation
 
-## Legacy engine integration
+## Engine integration
 
 In order to use the ACL plugin in *Unreal Engine 4.20* and earlier, you will need to manually integrate a few engine changes. These changes can be found in the following *GitHub* branches:
 
@@ -63,3 +63,10 @@ ACL splits animation sequences into smaller segments and compresses those indepe
 Three boolean flags are also provided to control the per segment range reduction for debugging purposes.
 
 Two values control how segments are partitioned: *Ideal Num Key Frames Per Segment and Max Num Key Frames Per Segment*. ACL will attempt to have segments of the ideal number of key frames while never exceeding the maximum value provided. The default values are sensible and should be suitable for everyday use.
+
+## Performance metrics
+
+*  [Carnegie-Mellon University database performance](./Docs/cmu_performance.md)
+*  [Paragon database performance](./Docs/paragon_performance.md)
+*  [Matinee fight scene performance](./Docs/fight_scene_performance.md)
+*  [Decompression performance](./Docs/decompression_performance.md)

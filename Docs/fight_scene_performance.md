@@ -1,6 +1,6 @@
 # Matinee fight scene performance
 
-|               | ACL Plugin v0.1.0 | UE 4.19.2  |
+|               | ACL Plugin v0.1.0 | UE v4.19.2 |
 | -------               | --------  | --------   |
 | **Compressed size**   | 8.67 MB   | 23.67 MB   |
 | **Compression ratio** | 7.20 : 1  | 2.63 : 1   |

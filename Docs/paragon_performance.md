@@ -1,6 +1,6 @@
 # Paragon database performance
 
-|                   | ACL Plugin v0.1.0 | UE 4.19.2      |
+|                   | ACL Plugin v0.1.0 | UE v4.19.2     |
 | -------               | --------      | --------       |
 | **Compressed size**   | 226.02 MB     | 392.97 MB      |
 | **Compression ratio** | 18.92 : 1     | 10.88 : 1      |

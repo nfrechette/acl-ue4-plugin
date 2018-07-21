@@ -1,6 +1,6 @@
 # Carnegie-Mellon University database performance
 
-|                 | ACL Plugin v0.1.0 | UE 4.19.2     |
+|                 | ACL Plugin v0.1.0 | UE v4.19.2    |
 | -------                | --------   | --------      |
 | **Compressed size**    | 70.60 MB   | 99.94 MB      |
 | **Compression ratio**  | 20.25 : 1  | 14.30 : 1     |
