@@ -10,6 +10,10 @@ Note that in order to see these, you will first need to [request access](https:/
 
 The changes are fairly minimal and consist of a global registry for animation codecs that plugins can hook into as well as some engine bug fixes.
 
+## ACL plugin playground
+
+In order to test and play with the ACL Plugin, a playground was created where every single animation from the [animation starter pack](https://www.unrealengine.com/marketplace/animation-starter-pack) is playing simultaneously. A zip file can be found [here](https://drive.google.com/open?id=1m917lmF6rYCfIUAKA7wbRHl9vHNAR_6O). Note that you will need to run it with the above engine modifications as well as the ACL Plugin.
+
 ## Compression settings
 
 All units are in centimeters (the UE4 default), and as such if you use different units you will need to change the default thresholds and values to take this into account.
