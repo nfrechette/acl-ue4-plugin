@@ -66,7 +66,7 @@ Two values control how segments are partitioned: *Ideal Num Key Frames Per Segme
 
 ## Performance metrics
 
-*  [Carnegie-Mellon University database performance](./Docs/cmu_performance.md)
-*  [Paragon database performance](./Docs/paragon_performance.md)
-*  [Matinee fight scene performance](./Docs/fight_scene_performance.md)
-*  [Decompression performance](./Docs/decompression_performance.md)
+*  [Carnegie-Mellon University database performance](cmu_performance.md)
+*  [Paragon database performance](paragon_performance.md)
+*  [Matinee fight scene performance](fight_scene_performance.md)
+*  [Decompression performance](decompression_performance.md)
