@@ -4,19 +4,19 @@
 
 ![Matinee i7 Median Performance](Images/acl_plugin_decomp_i7_matinee.png)
 
-![Playground i7 Median Performance](images/acl_plugin_decomp_i7_playground.png)
+![Playground i7 Median Performance](Images/acl_plugin_decomp_i7_playground.png)
 
 ## Google Nexus 5X @ 1.8 GHz
 
 ![Matinee 5X Median Performance](Images/acl_plugin_decomp_5x_matinee.png)
 
-![Playground 5X Median Performance](images/acl_plugin_decomp_5x_playground.png)
+![Playground 5X Median Performance](Images/acl_plugin_decomp_5x_playground.png)
 
 ## Samsung S8 @ 2.3 GHz
 
 ![Matinee S8 Median Performance](Images/acl_plugin_decomp_s8_matinee.png)
 
-![Playground S8 Median Performance](images/acl_plugin_decomp_s8_playground.png)
+![Playground S8 Median Performance](Images/acl_plugin_decomp_s8_playground.png)
 
 ## Data and method used
 
