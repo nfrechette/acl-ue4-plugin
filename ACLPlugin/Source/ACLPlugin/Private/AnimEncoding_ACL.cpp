@@ -44,6 +44,40 @@ public:
 };
 
 /*
+ * The FTransform type does not support setting the members directly from vector types
+ * so we derive from it and expose that functionality.
+ */
+struct FACLTransform : public FTransform
+{
+	void SetRotationRaw(const acl::Quat_32& Rotation_)
+	{
+#if PLATFORM_ENABLE_VECTORINTRINSICS
+		Rotation = Rotation_;
+#else
+		acl::quat_unaligned_write(Rotation_, &Rotation.X);
+#endif
+	}
+
+	void SetTranslationRaw(const acl::Vector4_32& Translation_)
+	{
+#if PLATFORM_ENABLE_VECTORINTRINSICS
+		Translation = VectorSet_W0(Translation_);
+#else
+		acl::vector_unaligned_write3(Translation_, &Translation.X);
+#endif
+	}
+
+	void SetScale3DRaw(const acl::Vector4_32& Scale_)
+	{
+#if PLATFORM_ENABLE_VECTORINTRINSICS
+		Scale3D = VectorSet_W0(Scale_);
+#else
+		acl::vector_unaligned_write3(Scale_, &Scale3D.X);
+#endif
+	}
+};
+
+/*
  * Output pose writer that can selectively skip certain track types.
  */
 template<bool SkipRotations_, bool SkipTranslations_, bool SkipScales_>
@@ -53,57 +87,58 @@ struct UE4OutputWriter : acl::OutputWriter
 	static constexpr bool SkipTranslations = SkipTranslations_;
 	static constexpr bool SkipScales = SkipScales_;
 
-	FTransformArray& Atoms;
+	// Raw pointer for performance reasons, caller is responsible for ensuring data is valid
+	FACLTransform* Atoms;
 	const TArray<uint16, ACLMemStackAllocator>& TrackToAtomsMap;
 
 	UE4OutputWriter(FTransformArray& Atoms_, const TArray<uint16, ACLMemStackAllocator>& TrackToAtomsMap_)
-		: Atoms(Atoms_)
+		: Atoms(static_cast<FACLTransform*>(Atoms_.GetData()))
 		, TrackToAtomsMap(TrackToAtomsMap_)
 	{}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
-	void write_bone_rotation(int32_t bone_index, const acl::Quat_32& rotation)
+	void write_bone_rotation(uint16_t BoneIndex, const acl::Quat_32& Rotation)
 	{
 		if (SkipRotations_)
 			return;
 
-		const uint16 AtomIndex = TrackToAtomsMap[bone_index];
+		const uint16 AtomIndex = TrackToAtomsMap[BoneIndex];
 		if (AtomIndex == 0xFFFF)
 			return;
 
-		FTransform& BoneAtom = Atoms[AtomIndex];
-		BoneAtom.SetRotation(QuatCast(rotation));
+		FACLTransform& BoneAtom = Atoms[AtomIndex];
+		BoneAtom.SetRotationRaw(Rotation);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a translation value for a specified bone index
-	void write_bone_translation(int32_t bone_index, const acl::Vector4_32& translation)
+	void write_bone_translation(uint16_t BoneIndex, const acl::Vector4_32& Translation)
 	{
 		if (SkipTranslations_)
 			return;
 
-		const uint16 AtomIndex = TrackToAtomsMap[bone_index];
+		const uint16 AtomIndex = TrackToAtomsMap[BoneIndex];
 		if (AtomIndex == 0xFFFF)
 			return;
 
-		FTransform& BoneAtom = Atoms[AtomIndex];
-		BoneAtom.SetTranslation(VectorCast(translation));
+		FACLTransform& BoneAtom = Atoms[AtomIndex];
+		BoneAtom.SetTranslationRaw(Translation);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a scale value for a specified bone index
-	void write_bone_scale(int32_t bone_index, const acl::Vector4_32& scale)
+	void write_bone_scale(uint16_t BoneIndex, const acl::Vector4_32& Scale)
 	{
 		if (SkipScales_)
 			return;
 
-		const uint16 AtomIndex = TrackToAtomsMap[bone_index];
+		const uint16 AtomIndex = TrackToAtomsMap[BoneIndex];
 		if (AtomIndex == 0xFFFF)
 			return;
 
-		FTransform& BoneAtom = Atoms[AtomIndex];
-		BoneAtom.SetScale3D(VectorCast(scale));
+		FACLTransform& BoneAtom = Atoms[AtomIndex];
+		BoneAtom.SetScale3DRaw(Scale);
 	}
 };
 
@@ -216,18 +251,18 @@ static FORCEINLINE_DEBUGGABLE void GetPoseTracks(FTransformArray& Atoms, const B
 				WriterType::SkipTranslations ? nullptr : &Translation,
 				WriterType::SkipScales ? nullptr : &Scale);
 
-			FTransform& BoneAtom = Atoms[Pair.AtomIndex];
+			FACLTransform& BoneAtom = static_cast<FACLTransform&>(Atoms[Pair.AtomIndex]);
 			if (!WriterType::SkipRotations)
 			{
-				BoneAtom.SetRotation(QuatCast(Rotation));
+				BoneAtom.SetRotationRaw(Rotation);
 			}
 			else if (!WriterType::SkipTranslations)
 			{
-				BoneAtom.SetTranslation(VectorCast(Translation));
+				BoneAtom.SetTranslationRaw(Translation);
 			}
 			else if (!WriterType::SkipScales)
 			{
-				BoneAtom.SetScale3D(VectorCast(Scale));
+				BoneAtom.SetScale3DRaw(Scale);
 			}
 		}
 	}
@@ -238,10 +273,24 @@ static FORCEINLINE_DEBUGGABLE void GetPoseTracks(FTransformArray& Atoms, const B
 		TrackToAtomsMap.AddUninitialized(ACLBoneCount);
 		std::fill(TrackToAtomsMap.GetData(), TrackToAtomsMap.GetData() + ACLBoneCount, 0xFFFF);
 
+#if DO_CHECK
+		int32 MinAtomIndex = Atoms.Num();
+		int32 MaxAtomIndex = -1;
+#endif
+
 		for (const BoneTrackPair& Pair : DesiredPairs)
 		{
 			TrackToAtomsMap[Pair.TrackIndex] = (uint16)Pair.AtomIndex;
+
+#if DO_CHECK
+			MinAtomIndex = FMath::Min(MinAtomIndex, Pair.AtomIndex);
+			MaxAtomIndex = FMath::Max(MaxAtomIndex, Pair.AtomIndex);
+#endif
 		}
+
+		// Only assert once for performance reasons, when we write the pose, we won't perform the checks
+		checkf(Atoms.IsValidIndex(MinAtomIndex), TEXT("Invalid atom index: %d"), MinAtomIndex);
+		checkf(Atoms.IsValidIndex(MaxAtomIndex), TEXT("Invalid atom index: %d"), MaxAtomIndex);
 
 		WriterType PoseWriter(Atoms, TrackToAtomsMap);
 		Context.decompress_pose(PoseWriter);
