@@ -1,18 +1,18 @@
 # Decompression performance
 
-## Intel i7-6850K @ 3.8 GHz
+## Intel i7-6850K @ 3.8 GHz (x64)
 
 ![Matinee i7 Median Performance](Images/acl_plugin_decomp_i7_matinee.png)
 
 ![Playground i7 Median Performance](Images/acl_plugin_decomp_i7_playground.png)
 
-## Google Nexus 5X @ 1.8 GHz
+## Google Nexus 5X @ 1.8 GHz (armv7-a)
 
 ![Matinee 5X Median Performance](Images/acl_plugin_decomp_5x_matinee.png)
 
 ![Playground 5X Median Performance](Images/acl_plugin_decomp_5x_playground.png)
 
-## Samsung S8 @ 2.3 GHz
+## Samsung S8 @ 2.3 GHz (armv7-a)
 
 ![Matinee S8 Median Performance](Images/acl_plugin_decomp_s8_matinee.png)
 
