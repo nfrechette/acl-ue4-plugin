@@ -8,7 +8,7 @@ In order to use the ACL plugin in *Unreal Engine 4.20* and earlier, you will nee
 
 Note that in order to see these, you will first need to [request access](https://www.unrealengine.com/en-US/ue4-on-github) to the *Unreal Engine* source code.
 
-The changes are fairly minimal and consist of a global registry for animation codecs that plugins can hook into as well as some engine bug fixes.
+The changes are fairly minimal and consist of a global registry for animation codecs that plugins can hook into as well as some engine bug fixes. The branches themselves do not contain the ACL plugin. You will have to download the sources and place the `ACLPlugin` directory under `UE4 Root\Engine\Plugins`.
 
 ## ACL plugin playground
 
