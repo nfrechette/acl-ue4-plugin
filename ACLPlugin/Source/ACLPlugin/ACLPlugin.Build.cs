@@ -36,7 +36,7 @@ namespace UnrealBuildTool.Rules
 				new string[]
 				{
 					Path.Combine(ACLSDKDir, "acl/includes"),
-					Path.Combine(ACLSDKDir, "acl/external/sjson-cpp-0.4.0/includes"),
+					Path.Combine(ACLSDKDir, "acl/external/sjson-cpp/includes"),
 				}
 			);
 
