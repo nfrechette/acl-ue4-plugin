@@ -37,11 +37,11 @@ class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
 	GENERATED_UCLASS_BODY()
 
 	/** The default virtual vertex distance for normal bones. */
-	UPROPERTY(EditAnywhere, Category = Skeleton)
+	UPROPERTY(EditAnywhere, Category = Skeleton, meta = (ClampMin = "0"))
 	float DefaultVirtualVertexDistance;
 
 	/** The virtual vertex distance for bones that requires extra accuracy. */
-	UPROPERTY(EditAnywhere, Category = Skeleton)
+	UPROPERTY(EditAnywhere, Category = Skeleton, meta = (ClampMin = "0"))
 	float SafeVirtualVertexDistance;
 
 	/** The rotation format to use. */
@@ -57,19 +57,19 @@ class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
 	TEnumAsByte<ACLVectorFormat> ScaleFormat;
 
 	/** The error threshold to used when optimizing and compressing the animation sequence. */
-	UPROPERTY(EditAnywhere, Category = Clip)
+	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
 	float ErrorThreshold;
 
 	/** The threshold used to detect constant rotation tracks. */
-	UPROPERTY(EditAnywhere, Category = Clip)
+	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
 	float ConstantRotationThresholdAngle;
 
 	/** The threshold used to detect constant translation tracks. */
-	UPROPERTY(EditAnywhere, Category = Clip)
+	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
 	float ConstantTranslationThreshold;
 
 	/** The threshold used to detect constant scale tracks. */
-	UPROPERTY(EditAnywhere, Category = Clip)
+	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
 	float ConstantScaleThreshold;
 
 	/** Whether to enable per clip range reduction for rotations or not. */
@@ -101,11 +101,11 @@ class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
 	uint32 bSegmentRangeReduceScales : 1;
 
 	/** The ideal number of key frames to retain per segment for each track. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
+	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
 	uint16 IdealNumKeyFramesPerSegment;
 
 	/** The maximum number of key frames to retain per segment for each track. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
+	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
 	uint16 MaxNumKeyFramesPerSegment;
 
 protected:

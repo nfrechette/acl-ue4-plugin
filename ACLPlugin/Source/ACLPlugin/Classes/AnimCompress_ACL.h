@@ -37,19 +37,19 @@ class UAnimCompress_ACL : public UAnimCompress_ACLBase
 	GENERATED_UCLASS_BODY()
 
 	/** The default virtual vertex distance for normal bones. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
+	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float DefaultVirtualVertexDistance;
 
 	/** The virtual vertex distance for bones that requires extra accuracy. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
+	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float SafeVirtualVertexDistance;
 
 	/** The error threshold after which we fallback on a safer encoding. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
+	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float SafetyFallbackThreshold;
 
 	/** The error threshold to used when optimizing and compressing the animation sequence. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
+	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float ErrorThreshold;
 
 protected:
