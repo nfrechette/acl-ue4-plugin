@@ -161,21 +161,29 @@ static void ConvertClip(const acl::AnimationClip& ACLClip, const acl::RigidSkele
 static void SampleUE4Clip(const acl::RigidSkeleton& ACLSkeleton, USkeleton* UE4Skeleton, const UAnimSequence* UE4Clip, float SampleTime, acl::Transform_32* LossyPoseTransforms)
 {
 	const FReferenceSkeleton& RefSkeleton = UE4Skeleton->GetReferenceSkeleton();
+	const TArray<FTransform>& RefSkeletonPose = UE4Skeleton->GetRefLocalPoses();
 
-	uint16 NumBones = ACLSkeleton.get_num_bones();
+	const uint16 NumBones = ACLSkeleton.get_num_bones();
 	for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
 		const acl::RigidBone& ACLBone = ACLSkeleton.get_bone(BoneIndex);
-		FName BoneName(ACLBone.name.c_str());
-		int32 BoneTreeIndex = RefSkeleton.FindBoneIndex(BoneName);
-		int32 BoneTrackIndex = UE4Skeleton->GetAnimationTrackIndex(BoneTreeIndex, UE4Clip, false);
+		const FName BoneName(ACLBone.name.c_str());
+		const int32 BoneTreeIndex = RefSkeleton.FindBoneIndex(BoneName);
+		const int32 BoneTrackIndex = UE4Skeleton->GetAnimationTrackIndex(BoneTreeIndex, UE4Clip, false);
 
 		FTransform BoneAtom;
-		UE4Clip->GetBoneTransform(BoneAtom, BoneTrackIndex, SampleTime, false);
+		if (BoneTrackIndex >= 0)
+		{
+			UE4Clip->GetBoneTransform(BoneAtom, BoneTrackIndex, SampleTime, false);
+		}
+		else
+		{
+			BoneAtom = RefSkeletonPose[BoneTreeIndex];
+		}
 
-		acl::Quat_32 Rotation = QuatCast(BoneAtom.GetRotation());
-		acl::Vector4_32 Translation = VectorCast(BoneAtom.GetTranslation());
-		acl::Vector4_32 Scale = VectorCast(BoneAtom.GetScale3D());
+		const acl::Quat_32 Rotation = QuatCast(BoneAtom.GetRotation());
+		const acl::Vector4_32 Translation = VectorCast(BoneAtom.GetTranslation());
+		const acl::Vector4_32 Scale = VectorCast(BoneAtom.GetScale3D());
 		LossyPoseTransforms[BoneIndex] = acl::transform_set(Rotation, Translation, Scale);
 	}
 }
