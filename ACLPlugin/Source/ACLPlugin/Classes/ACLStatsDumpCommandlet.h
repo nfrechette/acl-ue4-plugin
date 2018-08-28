@@ -43,4 +43,20 @@ class UACLStatsDumpCommandlet : public UCommandlet
 
 public:
 	virtual int32 Main(const FString& Params) override;
+
+#if WITH_EDITOR
+	FString ACLRawDir;
+	FString UE4StatDir;
+
+	bool PerformExhaustiveDump;
+	bool TryAutomaticCompression;
+	bool TryACLCompression;
+
+	float MasterTolerance;
+
+	class UAnimCompress_Automatic* AutoCompressor;
+	class UAnimCompress_ACL* ACLCompressor;
+
+	const class UEnum* AnimFormatEnum;
+#endif
 };

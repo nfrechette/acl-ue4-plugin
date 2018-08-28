@@ -55,6 +55,11 @@ namespace UnrealBuildTool.Rules
 					"Engine",
 				}
 			);
+
+			if (Target.bBuildEditor)
+			{
+				PrivateDependencyModuleNames.Add("UnrealEd");
+			}
 		}
 	}
 }
