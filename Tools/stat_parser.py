@@ -94,6 +94,9 @@ def print_usage():
 def bytes_to_mb(size_in_bytes):
 	return size_in_bytes / (1024.0 * 1024.0)
 
+def bytes_to_kb(size_in_bytes):
+	return size_in_bytes / 1024.0
+
 def format_elapsed_time(elapsed_time):
 	hours, rem = divmod(elapsed_time, 3600)
 	minutes, seconds = divmod(rem, 60)
@@ -438,6 +441,7 @@ if __name__ == "__main__":
 		print('Total Automatic Compression:')
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_auto['total_compressed_size']), format_elapsed_time(ue4_auto['total_compression_time']), ratio, ue4_auto['ue4_max_error'], ue4_auto['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_auto['worst_entry']['clip_name'], ue4_auto['worst_entry']['ue4_auto']['acl_compression_ratio'], ue4_auto['worst_entry']['ue4_auto']['acl_max_error']))
+		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_auto['total_compression_time']))
 		print()
 
 	if 'ue4_acl' in aggregate_results:
@@ -447,6 +451,7 @@ if __name__ == "__main__":
 		print('Total ACL Compression:')
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_acl['total_compressed_size']), format_elapsed_time(ue4_acl['total_compression_time']), ratio, ue4_acl['ue4_max_error'], ue4_acl['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
+		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_acl['total_compression_time']))
 		print()
 
 	num_clips = float(len(acl_stat_files))
