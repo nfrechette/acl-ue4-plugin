@@ -1,4 +1,5 @@
 import multiprocessing
+import numpy
 import os
 import queue
 import time
@@ -253,6 +254,8 @@ def append_stats(permutation, clip_stats, run_stats, aggregate_results):
 def do_parse_stats(options, stat_queue, result_queue):
 	try:
 		stats = []
+		acl_error_values = []
+		ue4_error_values = []
 
 		while True:
 			stat_filename = stat_queue.get()
@@ -266,7 +269,16 @@ def do_parse_stats(options, stat_queue, result_queue):
 					file_data['clip_name'] = os.path.splitext(os.path.basename(stat_filename))[0].replace('_stats', '')
 
 					if not options['csv_error']:
-						file_data['error_per_frame_and_bone'] = []
+						# The sjson lib doesn't always return numbers as floats, sometimes as int but numpy doesn't like that
+						if 'ue4_acl' in file_data:
+							for frame_error_values in file_data['ue4_acl']['error_per_frame_and_bone']:
+								acl_error_values.extend([float(v) for v in frame_error_values])
+							file_data['ue4_acl']['error_per_frame_and_bone'] = []
+
+						if 'ue4_auto' in file_data:
+							for frame_error_values in file_data['ue4_auto']['error_per_frame_and_bone']:
+								ue4_error_values.extend([float(v) for v in frame_error_values])
+							file_data['ue4_auto']['error_per_frame_and_bone'] = []
 
 					stats.append(file_data)
 				except sjson.ParseException:
@@ -274,7 +286,12 @@ def do_parse_stats(options, stat_queue, result_queue):
 
 			result_queue.put(('progress', stat_filename))
 
-		result_queue.put(('done', stats))
+		results = {}
+		results['stats'] = stats
+		results['acl_error_values'] = acl_error_values
+		results['ue4_error_values'] = ue4_error_values
+
+		result_queue.put(('done', results))
 	except KeyboardInterrupt:
 		print('Interrupted')
 
@@ -304,7 +321,7 @@ def parallel_parse_stats(options, stat_files):
 					num_stat_file_processed += 1
 					print_progress(num_stat_file_processed, len(stat_files), 'Aggregating results:', '{} / {}'.format(num_stat_file_processed, len(stat_files)))
 				elif msg == 'done':
-					stats.extend(data)
+					stats.append(data)
 			except queue.Empty:
 				all_jobs_done = True
 				for job in jobs:
@@ -316,7 +333,7 @@ def parallel_parse_stats(options, stat_files):
 	except KeyboardInterrupt:
 		sys.exit(1)
 
-	return sorted(stats, key=lambda stat: stat['clip_name'])
+	return stats
 
 def get_stat_files(options):
 	if options['dual_stat_inputs']:
@@ -375,6 +392,22 @@ if __name__ == "__main__":
 		ue4_stats = parallel_parse_stats(options, ue4_stat_files)
 	else:
 		ue4_stats = acl_stats
+
+	acl_error_values = numpy.array([])
+	for result in acl_stats:
+		acl_error_values = numpy.append(acl_error_values, result['acl_error_values'])
+
+	ue4_error_values = numpy.array([])
+	for result in ue4_stats:
+		ue4_error_values = numpy.append(ue4_error_values, result['ue4_error_values'])
+
+	# Flatten our stats into a list and strip the error values
+	acl_stats = [ stat for result in acl_stats for stat in result['stats'] ]
+	ue4_stats = [ stat for result in ue4_stats for stat in result['stats'] ]
+
+	# Sort out stats by clip name so we can zip them in pairs
+	acl_stats.sort(key=lambda stat: stat['clip_name'])
+	ue4_stats.sort(key=lambda stat: stat['clip_name'])
 
 	merged_stats = list(zip(acl_stats, ue4_stats))
 
@@ -442,6 +475,7 @@ if __name__ == "__main__":
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_auto['total_compressed_size']), format_elapsed_time(ue4_auto['total_compression_time']), ratio, ue4_auto['ue4_max_error'], ue4_auto['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_auto['worst_entry']['clip_name'], ue4_auto['worst_entry']['ue4_auto']['acl_compression_ratio'], ue4_auto['worst_entry']['ue4_auto']['acl_max_error']))
 		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_auto['total_compression_time']))
+		print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(ue4_error_values, 99.0)))
 		print()
 
 	if 'ue4_acl' in aggregate_results:
@@ -452,6 +486,7 @@ if __name__ == "__main__":
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_acl['total_compressed_size']), format_elapsed_time(ue4_acl['total_compression_time']), ratio, ue4_acl['ue4_max_error'], ue4_acl['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
 		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_acl['total_compression_time']))
+		print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(acl_error_values, 99.0)))
 		print()
 
 	num_clips = float(len(acl_stat_files))
