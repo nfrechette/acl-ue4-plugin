@@ -24,10 +24,9 @@ if __name__ == "__main__":
 		if len(matches) > 0:
 			csv_filename = os.path.splitext(log_filename)[0] + '.csv'
 			with open(csv_filename, 'w') as csv_file:
-				print('Long Clip Name,Sample Time, Decompression Time (ms), Codec, Decompression Time (us), Clip Name', file = csv_file)
+				print('Long Clip Name,Sample Time, Decompression Time (us), Decompression Speed (MB/sec), Codec, Clip Name', file = csv_file)
 				for line in matches:
 					values = line.split(',')
-					duration_us = float(values[2]) * 1000.0
 					short_name = values[0].split('.')[1]
-					print('{},{},{}'.format(line, duration_us, short_name), file = csv_file)
+					print('{},{}'.format(line, short_name), file = csv_file)
 
