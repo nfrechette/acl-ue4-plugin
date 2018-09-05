@@ -376,6 +376,9 @@ def get_stat_files(options):
 
 		return (stat_files, stat_files)
 
+def percentile_rank(values, value):
+	return (values < value).mean() * 100.0
+
 if __name__ == "__main__":
 	options = parse_argv()
 
@@ -476,6 +479,7 @@ if __name__ == "__main__":
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_auto['worst_entry']['clip_name'], ue4_auto['worst_entry']['ue4_auto']['acl_compression_ratio'], ue4_auto['worst_entry']['ue4_auto']['acl_max_error']))
 		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_auto['total_compression_time']))
 		print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(ue4_error_values, 99.0)))
+		print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(ue4_error_values, 0.01)))
 		print()
 
 	if 'ue4_acl' in aggregate_results:
@@ -487,6 +491,7 @@ if __name__ == "__main__":
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
 		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_acl['total_compression_time']))
 		print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(acl_error_values, 99.0)))
+		print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(acl_error_values, 0.01)))
 		print()
 
 	num_clips = float(len(acl_stat_files))
