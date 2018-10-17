@@ -27,6 +27,7 @@
 #if WITH_EDITOR
 #include "Runtime/Core/Public/HAL/FileManagerGeneric.h"
 #include "Runtime/Core/Public/HAL/PlatformTime.h"
+#include "Runtime/CoreUObject/Public/UObject/UObjectIterator.h"
 #include "Runtime/Engine/Classes/Animation/AnimCompress_Automatic.h"
 #include "Runtime/Engine/Classes/Animation/Skeleton.h"
 #include "Runtime/Engine/Public/AnimationCompression.h"
@@ -43,6 +44,7 @@
 #include <acl/io/clip_reader.h>
 #include <acl/math/quat_32.h>
 #include <acl/math/transform_32.h>
+
 
 // Commandlet example inspired by: https://github.com/ue4plugins/CommandletPlugin
 // To run the commandlet, add to the commandline: "$(SolutionDir)$(ProjectName).uproject" -run=/Script/ACLPlugin.ACLStatsDump "-acl=<path/to/raw/acl/sjson/files/directory>" "-stats=<path/to/output/stats/directory>"

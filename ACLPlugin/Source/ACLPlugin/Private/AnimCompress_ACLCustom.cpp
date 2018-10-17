@@ -25,6 +25,19 @@
 #include "AnimCompress_ACLCustom.h"
 #include "Animation/AnimEncodingRegistry.h"
 
+#if WITH_EDITOR
+#include "AnimationCompression.h"
+#include "ACLImpl.h"
+
+#include <acl/algorithm/uniformly_sampled/encoder.h>
+#include <acl/algorithm/uniformly_sampled/decoder.h>
+#include <acl/compression/skeleton_error_metric.h>
+#include <acl/compression/utils.h>
+
+#include <sjson/writer.h>
+#include <acl/io/clip_writer.h>
+#endif
+
 UAnimCompress_ACLCustom::UAnimCompress_ACLCustom(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
