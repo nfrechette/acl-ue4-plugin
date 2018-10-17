@@ -26,6 +26,7 @@
 #include "Animation/AnimEncodingRegistry.h"
 
 #if WITH_EDITOR
+#include "AnimationCompression.h"
 #include "ACLImpl.h"
 
 #include <acl/algorithm/uniformly_sampled/encoder.h>
