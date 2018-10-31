@@ -60,6 +60,15 @@ namespace UnrealBuildTool.Rules
 			{
 				PrivateDependencyModuleNames.Add("UnrealEd");
 			}
+
+			if (Target.Platform == UnrealTargetPlatform.Linux)
+			{
+				// There appears to be a bug when cross-compiling Linux under Windows where the clang tool-chain used
+				// isn't fully C++11 compliant. The standard specifies that when the 'cinttypes' header is included
+				// the format macros are always defined unlike C which requires the following macro to be defined first.
+				// This fix should be required for UE 4.20 and earlier versions.
+				PrivateDefinitions.Add("__STDC_FORMAT_MACROS");
+			}
 		}
 	}
 }
