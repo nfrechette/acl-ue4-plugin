@@ -101,7 +101,7 @@ TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const U
 	{
 		const TArray<FRawAnimSequenceTrack>& RawTracks = AnimSeq->GetRawAnimationData();
 		const uint32 NumSamples = RefFrameIndex >= 0 ? 1 : AnimSeq->NumFrames;
-		const uint32 SampleRate = RefFrameIndex >= 0 ? 30 : FMath::TruncToInt(((AnimSeq->NumFrames - 1) / AnimSeq->SequenceLength) + 0.5f);
+		const uint32 SampleRate = RefFrameIndex >= 0 || AnimSeq->NumFrames <= 1 || AnimSeq->SequenceLength < 0.0001f ? 30 : FMath::TruncToInt(((AnimSeq->NumFrames - 1) / AnimSeq->SequenceLength) + 0.5f);
 		const uint32 FirstSampleIndex = RefFrameIndex >= 0 ? FMath::Min(RefFrameIndex, AnimSeq->NumFrames - 1) : 0;
 		const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*AnimSeq->GetPathName()));
 
