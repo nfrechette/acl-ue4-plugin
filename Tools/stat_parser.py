@@ -265,6 +265,10 @@ def do_parse_stats(options, stat_queue, result_queue):
 			with open(stat_filename, 'r') as file:
 				try:
 					file_data = sjson.loads(file.read())
+					if 'error' in file_data:
+						print('{} [{}]'.format(file_data['error'], stat_filename))
+						continue
+
 					file_data['filename'] = stat_filename
 					file_data['clip_name'] = os.path.splitext(os.path.basename(stat_filename))[0].replace('_stats', '')
 
