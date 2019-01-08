@@ -1,6 +1,7 @@
 import multiprocessing
 import numpy
 import os
+import platform
 import queue
 import time
 import sys
@@ -262,7 +263,12 @@ def do_parse_stats(options, stat_queue, result_queue):
 			if stat_filename is None:
 				break
 
-			with open(stat_filename, 'r') as file:
+			if platform.system() == 'Windows':
+				filename = '\\\\?\\{}'.format(stat_filename) # Long path prefix
+			else:
+				filename = stat_filename
+
+			with open(filename, 'r') as file:
 				try:
 					file_data = sjson.loads(file.read())
 					if 'error' in file_data:
