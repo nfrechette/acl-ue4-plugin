@@ -18,7 +18,7 @@ In order to test and play with the ACL Plugin, a playground was created where ev
 
 All units are in centimeters (the UE4 default), and as such if you use different units you will need to change the default thresholds and values to take this into account.
 
-ACL tries very hard to be as safe as possible and as such very few things require tuning. It is recommended to use the `Anim Compress ACL` compression settings which uses the optimal settings behind the scene. If you need more power or wish to explore, you can opt to use the `Anim Compress Custom ACL` compression settings which allow you to tweak everything.
+ACL tries very hard to be as safe as possible and as such very few things require tuning. It is recommended to use the `Anim Compress ACL` compression settings which uses the optimal settings behind the scene. If you need more power or wish to explore, you can opt to use the `Anim Compress Custom ACL` compression settings which allow you to tweak everything (note that the decompression performance of the custom codec can be slower than the others).
 
 ### Anim Compress ACL
 
@@ -63,6 +63,12 @@ ACL splits animation sequences into smaller segments and compresses those indepe
 Three boolean flags are also provided to control the per segment range reduction for debugging purposes.
 
 Two values control how segments are partitioned: *Ideal Num Key Frames Per Segment and Max Num Key Frames Per Segment*. ACL will attempt to have segments of the ideal number of key frames while never exceeding the maximum value provided. The default values are sensible and should be suitable for everyday use.
+
+## UE4 reports a high compression error, how come?
+
+In rare cases UE4 can report a high compression error with the ACL plugin. To better understand why, make sure to read [how error is measured](error_measurements.md).
+
+Note that a possible source of high error can come from this [issue](https://github.com/nfrechette/acl-ue4-plugin/issues/7).
 
 ## Performance metrics
 
