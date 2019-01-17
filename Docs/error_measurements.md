@@ -8,7 +8,7 @@ While both UE4 and ACL use [virtual vertices](http://nfrechette.github.io/2016/1
 
 ## Where the error is measured in space
 
-As previously mentioned, ACL uses **three** virtual vertices while UE4 uses just **one**. UE4 constructs this vertex with all three vector components equal to one of two values: 1cm or 100cm. Which value is used depends on whether the bone is in the list of end effectors: bones in the list use a higher value while those that do not use the lower value. Because all three components are equal, the virtual vertex distance is actually **?cm**.
+As previously mentioned, ACL uses **three** virtual vertices while UE4 uses just **one**. UE4 constructs this vertex with all three vector components equal to one of two values: **5cm** or **50cm**. Which value is used depends on whether the bone has a socket or is considered a *key end effector* (from the list in *UAnimationSettings::KeyEndEffectorsMatchNameArray*): regular bones use the lower value while these special bones use the higher value. Because all three components are equal, the virtual vertex distance is actually **8.66cm** or **86.6cm**.
 
 If our bone transform is made entirely of translation then that is sufficient. However, most bones will end up with some amount of rotation either directly animated or as a result of a parent bone contribution. As the rotation axis approaches our virtual vertex, the measured error will decrease in accuracy to the point where if they are colinear, the error contribution from the rotation will become entirely invisible: a point that lies on a rotation axis is never transformed by that rotation. In a worst case scenario, the rotation error could be infinite and we wouldn't be able to tell. For that reason, a single virtual vertex isn't sufficient.
 
@@ -16,9 +16,7 @@ If our bone transform is made entirely of translation and rotation then using tw
 
 However, once 3D scale enters the picture, two virtual vertices are no longer sufficient. As our scale approaches zero along an axis, the error it contributes will diminish to the point where it vanishes entirely at zero. Our two vertices form a plane. If one axis collapses to zero, that plane now folds into a line. Once our second axis collapses to zero, our line now becomes a point at zero. This makes the error contributed by our third axis entirely invisible. In order to avoid this issue, ACL uses a third perpendicular virtual vertex: as long as one axis has non-zero scale, its error will be visible.
 
-The ACL virtual vertices use slightly different values to determine the accuracy. They either have a distance of **?cm** for end effector bones or a distance of **?cm** for ordinary bones.
-
-**TODO: Add missing measurements and note about conservativeness**
+The ACL virtual vertices use slightly different values to determine the accuracy. They either have a distance of **100cm** for key end effector bones or a distance of **3cm** for ordinary bones. It uses a lower value for ordinary bones because its error function is more conservative but a higher value for the special bones just in case.
 
 ## Where the error is measured in time
 
@@ -33,5 +31,3 @@ By removing interpolation from the picture, ACL ensures a consistent and accurat
 ## Who to trust?
 
 If in doubt, it is best to trust the ACL error measurement. It is more accurate and very conservative. Unfortunately it isn't visible in the editor UI when compression is performed. In order to see it when compressing an animation sequence, simply switch to **verbose** the logging category for animation compression: `log AnimationCompression verbose` (in the console). If the error reported by ACL is unusually high, then it is possible that a bug was found and you are encouraged to log an issue and/or reach out. Note that the first thing I will ask if you report accuracy issues is what is the ACL reported error.
-
-**TODO: Double check log verbosity command line**
