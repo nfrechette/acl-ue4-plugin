@@ -494,7 +494,7 @@ struct CompressAnimationsFunctor
 			FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, Context.UE4BoneData);
 
 			TUniquePtr<acl::RigidSkeleton> ACLSkeleton = BuildACLSkeleton(Allocator, *UE4Clip, Context.UE4BoneData, StatsCommandlet->ACLCompressor->DefaultVirtualVertexDistance, StatsCommandlet->ACLCompressor->SafeVirtualVertexDistance);
-			TUniquePtr<acl::AnimationClip> ACLClip = BuildACLClip(Allocator, UE4Clip, *ACLSkeleton, -1, false);
+			TUniquePtr<acl::AnimationClip> ACLClip = BuildACLClip(Allocator, *UE4Clip, *ACLSkeleton, false);
 			TUniquePtr<acl::AnimationClip> ACLBaseClip = nullptr;
 
 			if (UE4Clip->IsValidAdditive())
@@ -518,23 +518,9 @@ struct CompressAnimationsFunctor
 					}
 				}
 
-				if (UE4Clip->RefPoseType == ABPT_RefPose)
-				{
-					ACLBaseClip = BuildACLClip(Allocator, nullptr, *ACLSkeleton, -1, false);
-				}
-				else if (UE4Clip->RefPoseType == ABPT_AnimScaled)
-				{
-					ACLBaseClip = BuildACLClip(Allocator, UE4Clip->RefPoseSeq, *ACLSkeleton, -1, false);
-				}
-				else if (UE4Clip->RefPoseType == ABPT_AnimFrame)
-				{
-					ACLBaseClip = BuildACLClip(Allocator, UE4Clip->RefPoseSeq, *ACLSkeleton, UE4Clip->RefFrameIndex, false);
-				}
+				ACLBaseClip = BuildACLClip(Allocator, *UE4Clip, *ACLSkeleton, true);
 
-				if (ACLBaseClip != nullptr)
-				{
-					ACLClip->set_additive_base(ACLBaseClip.Get(), acl::AdditiveClipFormat8::Additive1);
-				}
+				ACLClip->set_additive_base(ACLBaseClip.Get(), acl::AdditiveClipFormat8::Additive1);
 			}
 
 			Context.ACLClip = MoveTemp(ACLClip);

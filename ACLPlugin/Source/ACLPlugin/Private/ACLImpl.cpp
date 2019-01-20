@@ -25,6 +25,9 @@
 #include "ACLImpl.h"
 
 #if WITH_EDITOR
+#include "AnimationCompression.h"
+#include "AnimationUtils.h"
+
 acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format)
 {
 	switch (Format)
@@ -61,7 +64,7 @@ TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, con
 		const FBoneData& UE4Bone = BoneData[BoneIndex];
 		RigidBone& ACLBone = ACLSkeletonBones[BoneIndex];
 		ACLBone.name = String(AllocatorImpl, TCHAR_TO_ANSI(*UE4Bone.Name.ToString()));
-		ACLBone.bind_transform = transform_cast(transform_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), vector_set(1.0f)));
+		ACLBone.bind_transform = transform_cast(transform_set(quat_normalize(QuatCast(UE4Bone.Orientation)), VectorCast(UE4Bone.Position), vector_set(1.0f)));
 
 		// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
 		ACLBone.vertex_distance = (UE4Bone.bHasSocket || UE4Bone.bKeyEndEffector) ? SafeVirtualVertexDistance : DefaultVirtualVertexDistance;
@@ -89,94 +92,111 @@ static int32 FindAnimationTrackIndex(const UAnimSequence& AnimSeq, int32 BoneInd
 	return INDEX_NONE;
 }
 
-TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence* AnimSeq, const acl::RigidSkeleton& ACLSkeleton, int32 RefFrameIndex, bool IsAdditive)
+static bool IsAdditiveBakedIntoRaw(const UAnimSequence& AnimSeq)
+{
+	if (!AnimSeq.IsValidAdditive())
+	{
+		return true;	// Sequences that aren't additive don't need baking as they are already baked
+	}
+
+	if (AnimSeq.GetRawAnimationData().Num() == 0)
+	{
+		return true;	// Sequences with no raw data don't need baking and we can't tell if they are baked or not so assume that they are, it doesn't matter
+	}
+
+	if (AnimSeq.GetAdditiveBaseAnimationData().Num() != 0)
+	{
+		return true;	// Sequence has raw data and additive base data, it is baked
+	}
+
+	return false;	// Sequence has raw data but no additive base data, it isn't baked
+}
+
+TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const acl::RigidSkeleton& ACLSkeleton, bool bBuildAdditiveBase)
 {
 	using namespace acl;
 
+	const bool bIsAdditive = bBuildAdditiveBase ? false : AnimSeq.IsValidAdditive();
+	const bool bIsAdditiveBakedIntoRaw = IsAdditiveBakedIntoRaw(AnimSeq);
+	check(!bIsAdditive || bIsAdditiveBakedIntoRaw);
+	if (bIsAdditive && !bIsAdditiveBakedIntoRaw)
+	{
+		UE_LOG(LogAnimationCompression, Fatal, TEXT("Animation sequence is additive but it is not baked into the raw data, this is not supported."));
+		return TUniquePtr<acl::AnimationClip>();
+	}
+
+	// Ordinary non additive sequences only contain raw data returned by GetRawAnimationData().
+	//
+	// Additive sequences have their raw data baked with the raw additive base already taken out. At runtime,
+	// the additive sequence data returned by GetRawAnimationData() gets applied on top of the
+	// additive base sequence whose's data is returned by GetAdditiveBaseAnimationData(). In practice,
+	// at runtime the additive base might also be compressed and thus there might be some added noise but
+	// it typically isn't visible.
+	// The baked additive data should have the same number of frames as the current sequence but if we only care about a specific frame,
+	// we use it. When this happens, the additive base will contain that single frame repeated over and over: an animated static pose.
+	// To avoid wasting memory, we just grab the first frame.
+
+	const TArray<FRawAnimSequenceTrack>& RawTracks = bBuildAdditiveBase ? AnimSeq.GetAdditiveBaseAnimationData() : AnimSeq.GetRawAnimationData();
+	const uint32 NumSamples = bBuildAdditiveBase && (AnimSeq.RefPoseType == ABPT_RefPose || AnimSeq.RefPoseType == ABPT_AnimFrame) ? 1 : AnimSeq.NumFrames;
+	const bool bIsStaticPose = NumSamples <= 1 || AnimSeq.SequenceLength < 0.0001f;
+	const float SampleRateFloat = bIsStaticPose ? 30.0f : (float(AnimSeq.NumFrames - 1) / AnimSeq.SequenceLength);
+	const uint32 SampleRate = FMath::TruncToInt(SampleRateFloat + 0.5f);
+	const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*AnimSeq.GetPathName()));
+
 	// Additive animations have 0,0,0 scale as the default since we add it
-	const FVector UE4DefaultScale(IsAdditive ? 0.0f : 1.0f);
-	const Vector4_64 ACLDefaultScale = vector_set(IsAdditive ? 0.0 : 1.0);
+	const FVector UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
+	const Vector4_64 ACLDefaultScale = vector_set(bIsAdditive ? 0.0 : 1.0);
 
-	if (AnimSeq != nullptr)
+	if (!FMath::IsNearlyEqual(SampleRateFloat, float(SampleRate), 0.0001f))
 	{
-		const TArray<FRawAnimSequenceTrack>& RawTracks = AnimSeq->GetRawAnimationData();
-		const uint32 NumSamples = RefFrameIndex >= 0 ? 1 : AnimSeq->NumFrames;
-		const uint32 SampleRate = RefFrameIndex >= 0 || AnimSeq->NumFrames <= 1 || AnimSeq->SequenceLength < 0.0001f ? 30 : FMath::TruncToInt(((AnimSeq->NumFrames - 1) / AnimSeq->SequenceLength) + 0.5f);
-		const uint32 FirstSampleIndex = RefFrameIndex >= 0 ? FMath::Min(RefFrameIndex, AnimSeq->NumFrames - 1) : 0;
-		const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*AnimSeq->GetPathName()));
+		UE_LOG(LogAnimationCompression, Warning, TEXT("Animation sequence does not have an integral sample rate (%f) which is not supported by ACL. If you have issues, use a different codec."), SampleRateFloat);
+	}
 
-		TUniquePtr<AnimationClip> ACLClip = MakeUnique<AnimationClip>(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
+	TUniquePtr<AnimationClip> ACLClip = MakeUnique<AnimationClip>(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
 
-		AnimatedBone* ACLBones = ACLClip->get_bones();
-		const uint16 NumBones = ACLSkeleton.get_num_bones();
-		for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	AnimatedBone* ACLBones = ACLClip->get_bones();
+	const uint16 NumBones = ACLSkeleton.get_num_bones();
+	for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	{
+		const int32 TrackIndex = FindAnimationTrackIndex(AnimSeq, BoneIndex);
+
+		AnimatedBone& ACLBone = ACLBones[BoneIndex];
+
+		// We output bone data in UE4 track order. If a track isn't present, we will use the bind pose and strip it from the
+		// compressed stream.
+		ACLBone.output_index = TrackIndex >= 0 ? TrackIndex : -1;
+
+		if (TrackIndex >= 0)
 		{
-			const int32 TrackIndex = FindAnimationTrackIndex(*AnimSeq, BoneIndex);
+			// We have a track for this bone, use it
+			const FRawAnimSequenceTrack& RawTrack = RawTracks[TrackIndex];
 
-			AnimatedBone& ACLBone = ACLBones[BoneIndex];
-
-			// We output bone data in UE4 track order. If a track isn't present, we will use the bind pose and strip it from the
-			// compressed stream.
-			ACLBone.output_index = TrackIndex >= 0 ? TrackIndex : -1;
-
-			if (TrackIndex >= 0)
+			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
-				// We have a track for this bone, use it
-				const FRawAnimSequenceTrack& RawTrack = RawTracks[TrackIndex];
+				const FQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
+				ACLBone.rotation_track.set_sample(SampleIndex, quat_normalize(quat_cast(QuatCast(RotationSample))));
 
-				for (uint32 SampleIndex = FirstSampleIndex; SampleIndex < NumSamples; ++SampleIndex)
-				{
-					const FQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
-					ACLBone.rotation_track.set_sample(SampleIndex, quat_cast(QuatCast(RotationSample)));
+				const FVector& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
+				ACLBone.translation_track.set_sample(SampleIndex, vector_cast(VectorCast(TranslationSample)));
 
-					const FVector& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
-					ACLBone.translation_track.set_sample(SampleIndex, vector_cast(VectorCast(TranslationSample)));
-
-					const FVector& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
-					ACLBone.scale_track.set_sample(SampleIndex, vector_cast(VectorCast(ScaleSample)));
-				}
-			}
-			else
-			{
-				// No track data for this bone, it must be new. Use the bind pose instead
-				const RigidBone& ACLRigidBone = ACLSkeleton.get_bone(BoneIndex);
-
-				for (uint32 SampleIndex = FirstSampleIndex; SampleIndex < NumSamples; ++SampleIndex)
-				{
-					ACLBone.rotation_track.set_sample(SampleIndex, ACLRigidBone.bind_transform.rotation);
-					ACLBone.translation_track.set_sample(SampleIndex, ACLRigidBone.bind_transform.translation);
-					ACLBone.scale_track.set_sample(SampleIndex, ACLDefaultScale);
-				}
+				const FVector& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
+				ACLBone.scale_track.set_sample(SampleIndex, vector_cast(VectorCast(ScaleSample)));
 			}
 		}
-
-		return ACLClip;
-	}
-	else
-	{
-		// No animation sequence provided, use the bind pose instead
-		check(!IsAdditive);
-
-		const uint16 NumBones = ACLSkeleton.get_num_bones();
-		const uint32 NumSamples = 1;
-		const uint32 SampleRate = 30;
-		const String ClipName(AllocatorImpl, "Bind Pose");
-
-		TUniquePtr<AnimationClip> ACLClip = MakeUnique<AnimationClip>(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
-
-		AnimatedBone* ACLBones = ACLClip->get_bones();
-		for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+		else
 		{
-			// Get the bind transform and make sure it has no scale
-			const RigidBone& skel_bone = ACLSkeleton.get_bone(BoneIndex);
-			const Transform_64 bind_transform = transform_set(skel_bone.bind_transform.rotation, skel_bone.bind_transform.translation, ACLDefaultScale);
+			// No track data for this bone, it must be new. Use the bind pose instead
+			const RigidBone& ACLRigidBone = ACLSkeleton.get_bone(BoneIndex);
 
-			ACLBones[BoneIndex].rotation_track.set_sample(0, bind_transform.rotation);
-			ACLBones[BoneIndex].translation_track.set_sample(0, bind_transform.translation);
-			ACLBones[BoneIndex].scale_track.set_sample(0, bind_transform.scale);
+			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			{
+				ACLBone.rotation_track.set_sample(SampleIndex, ACLRigidBone.bind_transform.rotation);
+				ACLBone.translation_track.set_sample(SampleIndex, ACLRigidBone.bind_transform.translation);
+				ACLBone.scale_track.set_sample(SampleIndex, ACLDefaultScale);
+			}
 		}
-
-		return ACLClip;
 	}
+
+	return ACLClip;
 }
 #endif	// WITH_EDITOR

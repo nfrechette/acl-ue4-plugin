@@ -73,5 +73,5 @@ inline FTransform TransformCast(const acl::Transform_32& Input) { return FTransf
 acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format);
 acl::VectorFormat8 GetVectorFormat(ACLVectorFormat Format);
 TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const TArray<FBoneData>& BoneData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance);
-TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence* AnimSeq, const acl::RigidSkeleton& ACLSkeleton, int32 RefFrameIndex, bool IsAdditive);
+TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const acl::RigidSkeleton& ACLSkeleton, bool bBuildAdditiveBase);
 #endif // WITH_EDITOR

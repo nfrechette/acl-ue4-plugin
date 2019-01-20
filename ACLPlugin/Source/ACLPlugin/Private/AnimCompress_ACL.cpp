@@ -65,22 +65,16 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	ACLAllocator AllocatorImpl;
 
 	TUniquePtr<RigidSkeleton> ACLSkeleton = BuildACLSkeleton(AllocatorImpl, *AnimSeq, BoneData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance);
-	TUniquePtr<AnimationClip> ACLClip = BuildACLClip(AllocatorImpl, AnimSeq, *ACLSkeleton, -1, AnimSeq->IsValidAdditive());
+	TUniquePtr<AnimationClip> ACLClip = BuildACLClip(AllocatorImpl, *AnimSeq, *ACLSkeleton, false);
 	TUniquePtr<AnimationClip> ACLBaseClip = nullptr;
 
 	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLClip->get_raw_size());
 
 	if (AnimSeq->IsValidAdditive())
 	{
-		if (AnimSeq->RefPoseType == ABPT_RefPose)
-			ACLBaseClip = BuildACLClip(AllocatorImpl, nullptr, *ACLSkeleton, -1, false);
-		else if (AnimSeq->RefPoseType == ABPT_AnimScaled)
-			ACLBaseClip = BuildACLClip(AllocatorImpl, AnimSeq->RefPoseSeq, *ACLSkeleton, -1, false);
-		else if (AnimSeq->RefPoseType == ABPT_AnimFrame)
-			ACLBaseClip = BuildACLClip(AllocatorImpl, AnimSeq->RefPoseSeq, *ACLSkeleton, AnimSeq->RefFrameIndex, false);
+		ACLBaseClip = BuildACLClip(AllocatorImpl, *AnimSeq, *ACLSkeleton, true);
 
-		if (ACLBaseClip != nullptr)
-			ACLClip->set_additive_base(ACLBaseClip.Get(), AdditiveClipFormat8::Additive1);
+		ACLClip->set_additive_base(ACLBaseClip.Get(), AdditiveClipFormat8::Additive1);
 	}
 
 	OutputStats Stats;
@@ -187,7 +181,7 @@ void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
 	CompressionSettings Settings = get_default_compression_settings();
 	Settings.error_threshold = ErrorThreshold;
 
-	uint32 ForceRebuildVersion = 0;
+	uint32 ForceRebuildVersion = 1;
 	uint16 AlgorithmVersion = get_algorithm_version(AlgorithmType8::UniformlySampled);
 	uint32 SettingsHash = Settings.get_hash();
 
