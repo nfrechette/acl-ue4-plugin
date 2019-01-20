@@ -1,5 +1,14 @@
 # Significant changes per release
 
+## 0.2.2
+
+*  Fix additive animation sequences not being handled properly.
+*  Other minor fixes and changes.
+
+## 0.2.1
+
+*  Fix linux cross-compilation issue.
+
 ## 0.2.0
 
 *  Upgrading to ACL v1.1.0 which offers very large decompression performance improvements
