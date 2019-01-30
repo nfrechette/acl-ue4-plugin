@@ -184,14 +184,14 @@ void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
 
 	uint32 ForceRebuildVersion = 1;
 	uint16 AlgorithmVersion = get_algorithm_version(AlgorithmType8::UniformlySampled);
-	uint32 SettingsHash = Settings.get_hash();
-	
+	uint32 KeyEndEffectorsHash = 0;
+
 	for (const FString& MatchName : UAnimationSettings::Get()->KeyEndEffectorsMatchNameArray)
 	{
-		SettingsHash = hash_combine(SettingsHash, GetTypeHash(MatchName));
+		KeyEndEffectorsHash = hash_combine(KeyEndEffectorsHash, GetTypeHash(MatchName));
 	}
 	
 	Ar	<< SafetyFallbackThreshold << ErrorThreshold << DefaultVirtualVertexDistance << SafeVirtualVertexDistance
-		<< ForceRebuildVersion << AlgorithmVersion << SettingsHash;
+		<< ForceRebuildVersion << AlgorithmVersion << SettingsHash << KeyEndEffectorsHash;
 }
 #endif // WITH_EDITOR
