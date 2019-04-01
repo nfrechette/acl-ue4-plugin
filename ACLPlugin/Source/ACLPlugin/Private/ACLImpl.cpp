@@ -139,18 +139,12 @@ TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const U
 	const TArray<FRawAnimSequenceTrack>& RawTracks = bBuildAdditiveBase ? AnimSeq.GetAdditiveBaseAnimationData() : AnimSeq.GetRawAnimationData();
 	const uint32 NumSamples = bBuildAdditiveBase && (AnimSeq.RefPoseType == ABPT_RefPose || AnimSeq.RefPoseType == ABPT_AnimFrame) ? 1 : AnimSeq.NumFrames;
 	const bool bIsStaticPose = NumSamples <= 1 || AnimSeq.SequenceLength < 0.0001f;
-	const float SampleRateFloat = bIsStaticPose ? 30.0f : (float(AnimSeq.NumFrames - 1) / AnimSeq.SequenceLength);
-	const uint32 SampleRate = FMath::TruncToInt(SampleRateFloat + 0.5f);
+	const float SampleRate = bIsStaticPose ? 30.0f : (float(AnimSeq.NumFrames - 1) / AnimSeq.SequenceLength);
 	const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*AnimSeq.GetPathName()));
 
 	// Additive animations have 0,0,0 scale as the default since we add it
 	const FVector UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
 	const Vector4_64 ACLDefaultScale = vector_set(bIsAdditive ? 0.0 : 1.0);
-
-	if (!FMath::IsNearlyEqual(SampleRateFloat, float(SampleRate), 0.0001f))
-	{
-		UE_LOG(LogAnimationCompression, Warning, TEXT("Animation sequence does not have an integral sample rate (%f) which is not supported by ACL. If you have issues, use a different codec."), SampleRateFloat);
-	}
 
 	TUniquePtr<AnimationClip> ACLClip = MakeUnique<AnimationClip>(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
 
