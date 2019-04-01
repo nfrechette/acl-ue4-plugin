@@ -36,6 +36,10 @@ class UAnimCompress_ACL : public UAnimCompress_ACLBase
 {
 	GENERATED_UCLASS_BODY()
 
+	/** The compression level to use. Higher levels will be slower to compress but yield a lower memory footprint. */
+	UPROPERTY(EditAnywhere, Category = "ACL Options")
+	TEnumAsByte<ACLCompressionLevel> CompressionLevel;
+
 	/** The default virtual vertex distance for normal bones. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float DefaultVirtualVertexDistance;

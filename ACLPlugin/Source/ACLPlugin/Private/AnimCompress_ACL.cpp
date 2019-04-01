@@ -45,6 +45,8 @@ UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer
 	Description = TEXT("ACL");
 	bNeedsSkeleton = true;
 
+	CompressionLevel = ACLCL_Medium;
+
 	// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
 	// We use 100cm instead of 3cm. UE 4 usually uses 50cm (END_EFFECTOR_DUMMY_BONE_LENGTH_SOCKET) but
 	// we use a higher value anyway due to the fact that ACL has no error compensation and it is more aggressive.
@@ -81,6 +83,7 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	OutputStats Stats;
 
 	CompressionSettings Settings = get_default_compression_settings();
+	Settings.level = GetCompressionLevel(CompressionLevel);
 
 	TransformErrorMetric DefaultErrorMetric;
 	AdditiveTransformErrorMetric<AdditiveClipFormat8::Additive1> AdditiveErrorMetric;
@@ -180,6 +183,7 @@ void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
 	using namespace acl;
 
 	CompressionSettings Settings = get_default_compression_settings();
+	Settings.level = GetCompressionLevel(CompressionLevel);
 	Settings.error_threshold = ErrorThreshold;
 
 	uint32 ForceRebuildVersion = 1;

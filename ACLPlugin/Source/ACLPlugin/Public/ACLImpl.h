@@ -69,9 +69,12 @@ inline FTransform TransformCast(const acl::Transform_32& Input) { return FTransf
 
 #include <acl/compression/skeleton.h>
 #include <acl/compression/animation_clip.h>
+#include <acl/compression/compression_level.h>
 
 acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format);
 acl::VectorFormat8 GetVectorFormat(ACLVectorFormat Format);
+acl::CompressionLevel8 GetCompressionLevel(ACLCompressionLevel Level);
+
 TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const TArray<FBoneData>& BoneData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance);
 TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const acl::RigidSkeleton& ACLSkeleton, bool bBuildAdditiveBase);
 #endif // WITH_EDITOR

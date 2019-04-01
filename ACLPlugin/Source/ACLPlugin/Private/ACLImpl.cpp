@@ -33,9 +33,9 @@ acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format)
 	switch (Format)
 	{
 	default:
-	case ACLRotationFormat::ACLRF_Quat_128:			return acl::RotationFormat8::Quat_128;
-	case ACLRotationFormat::ACLRF_QuatDropW_96:		return acl::RotationFormat8::QuatDropW_96;
-	case ACLRotationFormat::ACLRF_QuatDropW_Variable:	return acl::RotationFormat8::QuatDropW_Variable;
+	case ACLRF_Quat_128:			return acl::RotationFormat8::Quat_128;
+	case ACLRF_QuatDropW_96:		return acl::RotationFormat8::QuatDropW_96;
+	case ACLRF_QuatDropW_Variable:	return acl::RotationFormat8::QuatDropW_Variable;
 	}
 }
 
@@ -44,8 +44,21 @@ acl::VectorFormat8 GetVectorFormat(ACLVectorFormat Format)
 	switch (Format)
 	{
 	default:
-	case ACLVectorFormat::ACLVF_Vector3_96:			return acl::VectorFormat8::Vector3_96;
-	case ACLVectorFormat::ACLVF_Vector3_Variable:		return acl::VectorFormat8::Vector3_Variable;
+	case ACLVF_Vector3_96:			return acl::VectorFormat8::Vector3_96;
+	case ACLVF_Vector3_Variable:	return acl::VectorFormat8::Vector3_Variable;
+	}
+}
+
+acl::CompressionLevel8 GetCompressionLevel(ACLCompressionLevel Level)
+{
+	switch (Level)
+	{
+	default:
+	case ACLCL_Lowest:	return acl::CompressionLevel8::Lowest;
+	case ACLCL_Low:		return acl::CompressionLevel8::Low;
+	case ACLCL_Medium:	return acl::CompressionLevel8::Medium;
+	case ACLCL_High:	return acl::CompressionLevel8::High;
+	case ACLCL_Highest:	return acl::CompressionLevel8::Highest;
 	}
 }
 

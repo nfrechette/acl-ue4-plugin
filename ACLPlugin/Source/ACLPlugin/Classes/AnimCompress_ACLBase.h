@@ -46,6 +46,17 @@ enum ACLVectorFormat
 	ACLVF_Vector3_Variable UMETA(DisplayName = "Vector3 Variable Bit Rate"),
 };
 
+/** An enum for ACL compression levels. */
+UENUM()
+enum ACLCompressionLevel
+{
+	ACLCL_Lowest UMETA(DisplayName = "Lowest"),
+	ACLCL_Low UMETA(DisplayName = "Low"),
+	ACLCL_Medium UMETA(DisplayName = "Medium"),
+	ACLCL_High UMETA(DisplayName = "High"),
+	ACLCL_Highest UMETA(DisplayName = "Highest"),
+};
+
 /** The base codec implementation for ACL support. */
 UCLASS(abstract, MinimalAPI)
 class UAnimCompress_ACLBase : public UAnimCompress
