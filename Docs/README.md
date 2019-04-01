@@ -2,7 +2,7 @@
 
 ## Engine integration
 
-In order to use the ACL plugin in *Unreal Engine 4.20* and earlier, you will need to manually integrate a few engine changes. These changes can be found in the following *GitHub* branches:
+In order to use the ACL plugin in *Unreal Engine 4.22* and earlier, you will need to manually integrate a few engine changes. These changes can be found in the following *GitHub* branches:
 
 * [4.19](https://github.com/nfrechette/UnrealEngine/tree/4.19-acl)
 
