@@ -32,20 +32,9 @@ namespace UnrealBuildTool.Rules
 		{
 			string ACLSDKDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../ThirdParty"));
 
-			PublicIncludePaths.AddRange(
-				new string[]
-				{
-					Path.Combine(ACLSDKDir, "acl/includes"),
-					Path.Combine(ACLSDKDir, "acl/external/sjson-cpp/includes"),
-				}
-			);
+			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/includes"));
 
-			PrivateIncludePaths.AddRange(
-				new string[]
-				{
-					"ACLPlugin/Private",
-				}
-			);
+			PrivateIncludePaths.Add("ACLPlugin/Private");
 
 			PublicDependencyModuleNames.AddRange(
 				new string[]
@@ -59,6 +48,8 @@ namespace UnrealBuildTool.Rules
 			if (Target.bBuildEditor)
 			{
 				PrivateDependencyModuleNames.Add("UnrealEd");
+
+				PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/external/sjson-cpp/includes"));
 			}
 
 			if (Target.Platform == UnrealTargetPlatform.Linux)
