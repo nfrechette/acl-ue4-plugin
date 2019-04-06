@@ -207,11 +207,11 @@ static void CalculateClipError(const acl::AnimationClip& ACLClip, const acl::Rig
 {
 	using namespace acl;
 
-	uint16 NumBones = ACLClip.get_num_bones();
-	float ClipDuration = ACLClip.get_duration();
-	float SampleRate = float(ACLClip.get_sample_rate());
-	uint32 NumSamples = calculate_num_samples(ClipDuration, SampleRate);
-	bool HasScale = UE4ClipHasScale(UE4Clip);
+	const uint16 NumBones = ACLClip.get_num_bones();
+	const float ClipDuration = ACLClip.get_duration();
+	const float SampleRate = ACLClip.get_sample_rate();
+	const uint32 NumSamples = calculate_num_samples(ClipDuration, SampleRate);
+	const bool HasScale = UE4ClipHasScale(UE4Clip);
 
 	TArray<Transform_32> RawPoseTransforms;
 	TArray<Transform_32> LossyPoseTransforms;
@@ -258,11 +258,11 @@ static void DumpClipDetailedError(const acl::AnimationClip& ACLClip, const acl::
 {
 	using namespace acl;
 
-	uint16 NumBones = ACLClip.get_num_bones();
-	float ClipDuration = ACLClip.get_duration();
-	float SampleRate = float(ACLClip.get_sample_rate());
-	uint32 NumSamples = calculate_num_samples(ClipDuration, SampleRate);
-	bool HasScale = UE4ClipHasScale(UE4Clip);
+	const uint16 NumBones = ACLClip.get_num_bones();
+	const float ClipDuration = ACLClip.get_duration();
+	const float SampleRate = ACLClip.get_sample_rate();
+	const uint32 NumSamples = calculate_num_samples(ClipDuration, SampleRate);
+	const bool HasScale = UE4ClipHasScale(UE4Clip);
 
 	TArray<Transform_32> RawPoseTransforms;
 	TArray<Transform_32> LossyPoseTransforms;
