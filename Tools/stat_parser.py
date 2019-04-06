@@ -305,7 +305,7 @@ def do_parse_stats(options, stat_queue, result_queue):
 	except KeyboardInterrupt:
 		print('Interrupted')
 
-def parallel_parse_stats(options, stat_files):
+def parallel_parse_stats(options, stat_files, label):
 	stat_queue = multiprocessing.Queue()
 	for stat_filename in stat_files:
 		stat_queue.put(stat_filename)
@@ -320,16 +320,22 @@ def parallel_parse_stats(options, stat_files):
 	for job in jobs:
 		job.start()
 
+	if options['dual_stat_inputs']:
+		label = ' {}'.format(label)
+	else:
+		label = ''	# No need for a label if we parse both together
+
+	num_stat_files = len(stat_files)
 	num_stat_file_processed = 0
 	stats = []
-	print_progress(num_stat_file_processed, len(stat_files), 'Aggregating results:', '{} / {}'.format(num_stat_file_processed, len(stat_files)))
+	print_progress(num_stat_file_processed, len(stat_files), 'Aggregating{} results:'.format(label), '{} / {}'.format(num_stat_file_processed, num_stat_files))
 	try:
 		while True:
 			try:
 				(msg, data) = result_queue.get(True, 1.0)
 				if msg == 'progress':
 					num_stat_file_processed += 1
-					print_progress(num_stat_file_processed, len(stat_files), 'Aggregating results:', '{} / {}'.format(num_stat_file_processed, len(stat_files)))
+					print_progress(num_stat_file_processed, len(stat_files), 'Aggregating{} results:'.format(label), '{} / {}'.format(num_stat_file_processed, num_stat_files))
 				elif msg == 'done':
 					stats.append(data)
 			except queue.Empty:
@@ -400,9 +406,9 @@ if __name__ == "__main__":
 
 	aggregating_start_time = time.clock()
 
-	acl_stats = parallel_parse_stats(options, acl_stat_files)
+	acl_stats = parallel_parse_stats(options, acl_stat_files, 'ACL')
 	if options['dual_stat_inputs']:
-		ue4_stats = parallel_parse_stats(options, ue4_stat_files)
+		ue4_stats = parallel_parse_stats(options, ue4_stat_files, 'UE4 Auto')
 	else:
 		ue4_stats = acl_stats
 
