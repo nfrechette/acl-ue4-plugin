@@ -6,11 +6,11 @@
 
 ![Playground i7 Median Performance](Images/acl_plugin_decomp_i7_playground.png)
 
-## Google Nexus 5X @ 1.8 GHz (arm64)
+## Google Pixel 3 @ 2.5 GHz (arm64)
 
-![Matinee 5X Median Performance](Images/acl_plugin_decomp_5x_matinee.png)
+![Matinee P3 Median Performance](Images/acl_plugin_decomp_p3_matinee.png)
 
-![Playground 5X Median Performance](Images/acl_plugin_decomp_5x_playground.png)
+![Playground P3 Median Performance](Images/acl_plugin_decomp_p3_playground.png)
 
 ## Samsung S8 @ 2.3 GHz (arm64)
 
