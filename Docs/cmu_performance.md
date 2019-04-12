@@ -1,20 +1,20 @@
 # Carnegie-Mellon University database performance
 
-|                 | ACL Plugin v0.2.0 | ACL Plugin v0.1.0 | UE v4.19.2    |
+|                 | ACL Plugin v0.3.0 | ACL Plugin v0.2.0 | UE v4.19.2    |
 | -------                | --------   | --------      | --------      |
-| **Compressed size**    | 70.64 MB | 70.60 MB   | 99.94 MB      |
-| **Compression ratio**  | 20.23 : 1 | 20.25 : 1  | 14.30 : 1     |
-| **Compression time**   | 31m 40.87s | 34m 30.51s | 1h 27m 40.15s |
-| **Compression speed**  | 770.01 KB/sec | 706.92 KB/sec | 278.26 KB/sec |
-| **Max ACL error**      | 0.0703 cm | 0.0703 cm  | 0.1520 cm     |
-| **Max UE4 error**      | 0.0722 cm | 0.0722 cm  | 0.0996 cm     |
-| **ACL Error 99<sup>th</sup> percentile** | 0.0089 cm | 0.0089 cm | 0.0271 cm |
-| **Samples below ACL error threshold** | 99.94 % | 99.94 % | 49.34 % |
+| **Compressed size**    | 74.42 MB | 70.64 MB | 99.94 MB      |
+| **Compression ratio**  | 19.21 : 1 | 20.23 : 1 | 14.30 : 1     |
+| **Compression time**   | 6m 24.59s | 31m 40.87s | 1h 27m 40.15s |
+| **Compression speed**  | 3805.81 KB/sec | 770.01 KB/sec | 278.26 KB/sec |
+| **Max ACL error**      | 0.0702 cm | 0.0703 cm | 0.1520 cm     |
+| **Max UE4 error**      | 0.0816 cm | 0.0722 cm | 0.0996 cm     |
+| **ACL Error 99<sup>th</sup> percentile** | 0.0088 cm | 0.0089 cm | 0.0271 cm |
+| **Samples below ACL error threshold** | 99.93 % | 99.94 % | 49.34 % |
 
 ACL was smaller for **2532** clips (**99.92 %**)  
-ACL was more accurate for **2486** clips (**98.11 %**)  
+ACL was more accurate for **2500** clips (**98.66 %**)  
 ACL has faster compression for **2534** clips (**100.00 %**)  
-ACL was smaller, better, and faster for **2484** clips (**98.03 %**)  
+ACL was smaller, better, and faster for **2498** clips (**98.58 %**)  
 
 Would the *ACL Plugin* have been included in the *Automatic Compression* permutations tried, it would have won for **2534** clips (**100.00 %**)
 
