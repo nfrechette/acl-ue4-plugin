@@ -1,13 +1,21 @@
 # Significant changes per release
 
+## 0.3.0
+
+*  Upgraded to ACL v1.2.0
+*  Added proper support for floating point sample rate
+*  Added exposure to the new compression level
+*  Invalidate the compressed data if the KeyEndEffectors array is changed
+*  Other minor fixes and improvements
+
 ## 0.2.2
 
-*  Fix additive animation sequences not being handled properly.
-*  Other minor fixes and changes.
+*  Fix additive animation sequences not being handled properly
+*  Other minor fixes and changes
 
 ## 0.2.1
 
-*  Fix linux cross-compilation issue.
+*  Fix linux cross-compilation issue
 
 ## 0.2.0
 
