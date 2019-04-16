@@ -68,8 +68,6 @@ Two values control how segments are partitioned: *Ideal Num Key Frames Per Segme
 
 In rare cases UE4 can report a high compression error with the ACL plugin. To better understand why, make sure to read [how error is measured](error_measurements.md).
 
-Note that a possible source of high error can come from this [issue](https://github.com/nfrechette/acl-ue4-plugin/issues/7).
-
 ## Performance metrics
 
 *  [Carnegie-Mellon University database performance](cmu_performance.md)
