@@ -36,6 +36,11 @@
 	#define ACL_ASSERT(expression, format, ...) checkf(expression, TEXT(format), #__VA_ARGS__)
 #endif
 
+#if PLATFORM_ENABLE_POPCNT_INTRINSIC || PLATFORM_XBOXONE || PLATFORM_PS4
+	// Enable usage of popcount instruction if present and requested
+	#define ACL_USE_POPCOUNT
+#endif
+
 #include <acl/core/error.h>
 #include <acl/core/iallocator.h>
 #include <acl/math/quat_32.h>
