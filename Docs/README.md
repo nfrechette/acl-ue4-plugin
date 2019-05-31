@@ -4,7 +4,10 @@
 
 In order to use the ACL plugin in *Unreal Engine 4.22* and earlier, you will need to manually integrate a few engine changes. These changes can be found in the following *GitHub* branches:
 
-* [4.19](https://github.com/nfrechette/UnrealEngine/tree/4.19-acl)
+*  **4.19.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.19-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/3.patch)
+*  4.20.x: Use 4.19.x for inspiration, few to no engine changes should conflict
+*  4.21.x: Use 4.22.x for inspiration, few to no engine changes should conflict
+*  **4.22.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.22-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/4.patch)
 
 Note that in order to see these, you will first need to [request access](https://www.unrealengine.com/en-US/ue4-on-github) to the *Unreal Engine* source code.
 
