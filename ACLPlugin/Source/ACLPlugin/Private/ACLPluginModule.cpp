@@ -39,9 +39,9 @@ private:
 
 IMPLEMENT_MODULE(FACLPlugin, ACLPlugin)
 
-static const FName NAME_ACLDefaultCodec("ACLDefault");
-static const FName NAME_ACLCustomCodec("ACLCustom");
-static const FName NAME_ACLSafetyFallbackCodec("ACLSafetyFallback");
+const FName NAME_ACLDefaultCodec("ACLDefault");
+const FName NAME_ACLCustomCodec("ACLCustom");
+const FName NAME_ACLSafetyFallbackCodec("ACLSafetyFallback");
 
 static AEFACLCompressionCodec_Default StaticCodec_Default;
 static AEFACLCompressionCodec_Safe StaticCodec_Safe;

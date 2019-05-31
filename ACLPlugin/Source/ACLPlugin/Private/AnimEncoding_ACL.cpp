@@ -195,9 +195,9 @@ static FORCEINLINE_DEBUGGABLE void GetBoneAtomImpl(FTransform& OutAtom, const UA
 	OutAtom = FTransform(QuatCast(Rotation), VectorCast(Translation), VectorCast(Scale));
 }
 
-void AEFACLCompressionCodec_Default::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
+void AEFACLCompressionCodec_Default::GetBoneAtom(FTransform& OutAtom, FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex)
 {
-	GetBoneAtomImpl<UE4DefaultDecompressionSettings>(OutAtom, Seq, TrackIndex, Time);
+	GetBoneAtomImpl<UE4DefaultDecompressionSettings>(OutAtom, *DecompContext.AnimSeq, TrackIndex, DecompContext.Time);
 }
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
@@ -293,62 +293,62 @@ static FORCEINLINE_DEBUGGABLE void GetPoseTracks(FTransformArray& Atoms, const B
 	}
 }
 
-void AEFACLCompressionCodec_Default::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Default::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
 {
-	GetPoseTracks<UE4DefaultDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, Seq, Time);
+	GetPoseTracks<UE4DefaultDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
 }
 
-void AEFACLCompressionCodec_Default::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Default::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
 {
-	GetPoseTracks<UE4DefaultDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, Seq, Time);
+	GetPoseTracks<UE4DefaultDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
 }
 
-void AEFACLCompressionCodec_Default::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Default::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
 {
-	GetPoseTracks<UE4DefaultDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, Seq, Time);
-}
-#endif
-
-void AEFACLCompressionCodec_Safe::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
-{
-	GetBoneAtomImpl<UE4SafeDecompressionSettings>(OutAtom, Seq, TrackIndex, Time);
-}
-
-#if USE_ANIMATION_CODEC_BATCH_SOLVER
-void AEFACLCompressionCodec_Safe::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
-{
-	GetPoseTracks<UE4SafeDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, Seq, Time);
-}
-
-void AEFACLCompressionCodec_Safe::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
-{
-	GetPoseTracks<UE4SafeDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, Seq, Time);
-}
-
-void AEFACLCompressionCodec_Safe::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
-{
-	GetPoseTracks<UE4SafeDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, Seq, Time);
+	GetPoseTracks<UE4DefaultDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
 }
 #endif
 
-void AEFACLCompressionCodec_Custom::GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time)
+void AEFACLCompressionCodec_Safe::GetBoneAtom(FTransform& OutAtom, FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex)
 {
-	GetBoneAtomImpl<UE4CustomDecompressionSettings>(OutAtom, Seq, TrackIndex, Time);
+	GetBoneAtomImpl<UE4SafeDecompressionSettings>(OutAtom, *DecompContext.AnimSeq, TrackIndex, DecompContext.Time);
 }
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
-void AEFACLCompressionCodec_Custom::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Safe::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
 {
-	GetPoseTracks<UE4CustomDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, Seq, Time);
+	GetPoseTracks<UE4SafeDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
 }
 
-void AEFACLCompressionCodec_Custom::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Safe::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
 {
-	GetPoseTracks<UE4CustomDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, Seq, Time);
+	GetPoseTracks<UE4SafeDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
 }
 
-void AEFACLCompressionCodec_Custom::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time)
+void AEFACLCompressionCodec_Safe::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
 {
-	GetPoseTracks<UE4CustomDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, Seq, Time);
+	GetPoseTracks<UE4SafeDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
+}
+#endif
+
+void AEFACLCompressionCodec_Custom::GetBoneAtom(FTransform& OutAtom, FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex)
+{
+	GetBoneAtomImpl<UE4CustomDecompressionSettings>(OutAtom, *DecompContext.AnimSeq, TrackIndex, DecompContext.Time);
+}
+
+#if USE_ANIMATION_CODEC_BATCH_SOLVER
+void AEFACLCompressionCodec_Custom::GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
+{
+	GetPoseTracks<UE4CustomDecompressionSettings, UE4RotationWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
+}
+
+void AEFACLCompressionCodec_Custom::GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
+{
+	GetPoseTracks<UE4CustomDecompressionSettings, UE4TranslationWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
+}
+
+void AEFACLCompressionCodec_Custom::GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext)
+{
+	GetPoseTracks<UE4CustomDecompressionSettings, UE4ScaleWriter>(Atoms, DesiredPairs, *DecompContext.AnimSeq, DecompContext.Time);
 }
 #endif

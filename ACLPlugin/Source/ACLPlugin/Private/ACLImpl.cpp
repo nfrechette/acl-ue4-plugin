@@ -150,9 +150,9 @@ TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const U
 	// To avoid wasting memory, we just grab the first frame.
 
 	const TArray<FRawAnimSequenceTrack>& RawTracks = bBuildAdditiveBase ? AnimSeq.GetAdditiveBaseAnimationData() : AnimSeq.GetRawAnimationData();
-	const uint32 NumSamples = bBuildAdditiveBase && (AnimSeq.RefPoseType == ABPT_RefPose || AnimSeq.RefPoseType == ABPT_AnimFrame) ? 1 : AnimSeq.NumFrames;
+	const uint32 NumSamples = bBuildAdditiveBase && (AnimSeq.RefPoseType == ABPT_RefPose || AnimSeq.RefPoseType == ABPT_AnimFrame) ? 1 : AnimSeq.GetRawNumberOfFrames();
 	const bool bIsStaticPose = NumSamples <= 1 || AnimSeq.SequenceLength < 0.0001f;
-	const float SampleRate = bIsStaticPose ? 30.0f : (float(AnimSeq.NumFrames - 1) / AnimSeq.SequenceLength);
+	const float SampleRate = bIsStaticPose ? 30.0f : (float(AnimSeq.GetRawNumberOfFrames() - 1) / AnimSeq.SequenceLength);
 	const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*AnimSeq.GetPathName()));
 
 	// Additive animations have 0,0,0 scale as the default since we add it

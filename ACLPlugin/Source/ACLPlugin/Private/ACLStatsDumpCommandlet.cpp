@@ -117,7 +117,7 @@ static void ConvertSkeleton(const acl::RigidSkeleton& ACLSkeleton, USkeleton* UE
 static void ConvertClip(const acl::AnimationClip& ACLClip, const acl::RigidSkeleton& ACLSkeleton, UAnimSequence* UE4Clip, USkeleton* UE4Skeleton)
 {
 	UE4Clip->SequenceLength = FGenericPlatformMath::Max<float>(ACLClip.get_duration(), MINIMUM_ANIMATION_LENGTH);
-	UE4Clip->NumFrames = ACLClip.get_num_samples();
+	UE4Clip->SetRawNumberOfFrame(ACLClip.get_num_samples());
 	UE4Clip->SetSkeleton(UE4Skeleton);
 
 	uint16 NumBones = ACLSkeleton.get_num_bones();
@@ -321,7 +321,8 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 {
 	const uint64 UE4StartTimeCycles = FPlatformTime::Cycles64();
 
-	const bool UE4Success = Context.AutoCompressor->Reduce(Context.UE4Clip, false);
+	FAnimCompressContext CompressContext(true, false);
+	const bool UE4Success = Context.AutoCompressor->Reduce(Context.UE4Clip, CompressContext, Context.UE4BoneData);
 
 	const uint64 UE4EndTimeCycles = FPlatformTime::Cycles64();
 
@@ -377,7 +378,8 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 {
 	const uint64 ACLStartTimeCycles = FPlatformTime::Cycles64();
 
-	const bool ACLSuccess = Context.ACLCompressor->Reduce(Context.UE4Clip, false);
+	FAnimCompressContext CompressContext(true, false);
+	const bool ACLSuccess = Context.ACLCompressor->Reduce(Context.UE4Clip, CompressContext, Context.UE4BoneData);
 
 	const uint64 ACLEndTimeCycles = FPlatformTime::Cycles64();
 
@@ -530,7 +532,7 @@ struct CompressAnimationsFunctor
 
 			{
 				Writer["duration"] = UE4Clip->SequenceLength;
-				Writer["num_samples"] = UE4Clip->NumFrames;
+				Writer["num_samples"] = UE4Clip->GetCompressedNumberOfFrames();
 				Writer["ue4_raw_size"] = Context.UE4RawSize;
 				Writer["acl_raw_size"] = Context.ACLRawSize;
 
@@ -569,7 +571,7 @@ UACLStatsDumpCommandlet::UACLStatsDumpCommandlet(const FObjectInitializer& Objec
 {
 	IsClient = false;
 	IsServer = false;
-	IsEditor = false;
+	IsEditor = true;
 	LogToConsole = true;
 	ShowErrorCount = true;
 }
@@ -623,6 +625,8 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 		// Use source directory
 		ACLRawDir = ParamsMap[TEXT("acl")];
 
+		UPackage* TempPackage = CreatePackage(nullptr, TEXT("/Temp/ACL"));
+
 		ACLAllocator Allocator;
 
 		FFileManagerGeneric FileManager;
@@ -641,17 +645,37 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 			UE4SJSONStreamWriter StreamWriter(StatWriter);
 			sjson::Writer Writer(StreamWriter);
 
-			std::unique_ptr<acl::AnimationClip, acl::Deleter<acl::AnimationClip>> ACLClip;
-			std::unique_ptr<acl::RigidSkeleton, acl::Deleter<acl::RigidSkeleton>> ACLSkeleton;
+			std::unique_ptr<acl::AnimationClip, acl::Deleter<acl::AnimationClip>> ACLClipRaw;
+			std::unique_ptr<acl::RigidSkeleton, acl::Deleter<acl::RigidSkeleton>> ACLSkeletonRaw;
 
-			const TCHAR* ErrorMsg = ReadACLClip(FileManager, ACLClipPath, Allocator, ACLClip, ACLSkeleton);
+			const TCHAR* ErrorMsg = ReadACLClip(FileManager, ACLClipPath, Allocator, ACLClipRaw, ACLSkeletonRaw);
 			if (ErrorMsg == nullptr)
 			{
-				USkeleton* UE4Skeleton = NewObject<USkeleton>(this, USkeleton::StaticClass());
-				ConvertSkeleton(*ACLSkeleton, UE4Skeleton);
+				USkeleton* UE4Skeleton = NewObject<USkeleton>(TempPackage, USkeleton::StaticClass());
+				ConvertSkeleton(*ACLSkeletonRaw, UE4Skeleton);
 
-				UAnimSequence* UE4Clip = NewObject<UAnimSequence>(this, UAnimSequence::StaticClass());
-				ConvertClip(*ACLClip, *ACLSkeleton, UE4Clip, UE4Skeleton);
+				UAnimSequence* UE4Clip = NewObject<UAnimSequence>(TempPackage, UAnimSequence::StaticClass());
+				ConvertClip(*ACLClipRaw, *ACLSkeletonRaw, UE4Clip, UE4Skeleton);
+
+				// Re-create the ACL clip/skeleton since they might differ slightly from the ones we had due to round-tripping (float64 arithmetic)
+
+				TArray<FBoneData> BoneData;
+				FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, BoneData);
+
+				// Same default values as ACL
+				const float DefaultVirtualVertexDistance = 3.0f;	// 3cm, suitable for ordinary characters
+				const float SafeVirtualVertexDistance = 100.0f;		// 100cm
+
+				TUniquePtr<acl::RigidSkeleton> ACLSkeleton = BuildACLSkeleton(Allocator, *UE4Clip, BoneData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance);
+				TUniquePtr<acl::AnimationClip> ACLClip = BuildACLClip(Allocator, *UE4Clip, *ACLSkeleton, false);
+				TUniquePtr<acl::AnimationClip> ACLBaseClip = nullptr;
+
+				if (UE4Clip->IsValidAdditive())
+				{
+					ACLBaseClip = BuildACLClip(Allocator, *UE4Clip, *ACLSkeleton, true);
+
+					ACLClip->set_additive_base(ACLBaseClip.Get(), acl::AdditiveClipFormat8::Additive1);
+				}
 
 				FCompressionContext Context;
 				Context.AutoCompressor = AutoCompressor;
@@ -659,16 +683,15 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 				Context.AnimFormatEnum = AnimFormatEnum;
 				Context.UE4Clip = UE4Clip;
 				Context.UE4Skeleton = UE4Skeleton;
-				Context.ACLClip = TUniquePtr<acl::AnimationClip>(ACLClip.release());
-				Context.ACLSkeleton = TUniquePtr<acl::RigidSkeleton>(ACLSkeleton.release());
-
-				FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, Context.UE4BoneData);
+				Context.ACLClip = MoveTemp(ACLClip);
+				Context.ACLSkeleton = MoveTemp(ACLSkeleton);
+				Context.UE4BoneData = MoveTemp(BoneData);
 
 				Context.ACLRawSize = Context.ACLClip->get_raw_size();
 				Context.UE4RawSize = UE4Clip->GetApproxRawSize();
 
 				Writer["duration"] = UE4Clip->SequenceLength;
-				Writer["num_samples"] = UE4Clip->NumFrames;
+				Writer["num_samples"] = UE4Clip->GetCompressedNumberOfFrames();
 				Writer["ue4_raw_size"] = Context.UE4RawSize;
 				Writer["acl_raw_size"] = Context.ACLRawSize;
 

@@ -90,7 +90,8 @@ class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
 
 	/** Whether to enable clip segmenting or not. */
 	UPROPERTY(EditAnywhere, Category = Segmenting)
-	uint32 bEnableSegmenting : 1;
+	//uint32 bEnableSegmenting : 1;		// TODO: Temporarily renamed to avoid conflict
+	uint32 EnableSegmenting : 1;
 
 	/** Whether to enable per segment range reduction for rotations or not. */
 	UPROPERTY(EditAnywhere, Category = Segmenting)
