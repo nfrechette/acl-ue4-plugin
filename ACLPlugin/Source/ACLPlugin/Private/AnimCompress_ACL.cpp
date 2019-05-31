@@ -29,6 +29,7 @@
 #include "AnimationCompression.h"
 #include "Animation/AnimationSettings.h"
 #include "ACLImpl.h"
+#include "AnimEncoding_ACL.h"
 
 #include <acl/algorithm/uniformly_sampled/encoder.h>
 #include <acl/algorithm/uniformly_sampled/decoder.h>
@@ -97,10 +98,6 @@ void UAnimCompress_ACL::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneDa
 	static volatile bool DumpClip = false;
 	if (DumpClip)
 		write_acl_clip(*ACLSkeleton, *ACLClip, AlgorithmType8::UniformlySampled, Settings, "D:\\acl_clip.acl.sjson");
-
-	// TODO: Move these somewhere more sensible so we can share them with the module that registers them
-	static const FName NAME_ACLDefaultCodec("ACLDefault");
-	static const FName NAME_ACLSafetyFallbackCodec("ACLSafetyFallback");
 
 	FName CodecFormat = NAME_ACLDefaultCodec;
 

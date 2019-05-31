@@ -46,12 +46,12 @@ public:
 class AEFACLCompressionCodec_Default final : public AEFACLCompressionCodec_Base
 {
 public:
-	virtual void GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time) override;
+	virtual void GetBoneAtom(FTransform& OutAtom, FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex) override;
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
-	virtual void GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
-	virtual void GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
-	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+	virtual void GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
+	virtual void GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
+	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
 #endif
 };
 
@@ -59,12 +59,12 @@ public:
 class AEFACLCompressionCodec_Safe final : public AEFACLCompressionCodec_Base
 {
 public:
-	virtual void GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time) override;
+	virtual void GetBoneAtom(FTransform& OutAtom, FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex) override;
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
-	virtual void GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
-	virtual void GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
-	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+	virtual void GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
+	virtual void GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
+	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
 #endif
 };
 
@@ -72,11 +72,17 @@ public:
 class AEFACLCompressionCodec_Custom final : public AEFACLCompressionCodec_Base
 {
 public:
-	virtual void GetBoneAtom(FTransform& OutAtom, const UAnimSequence& Seq, int32 TrackIndex, float Time) override;
+	virtual void GetBoneAtom(FTransform& OutAtom, FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex) override;
 
 #if USE_ANIMATION_CODEC_BATCH_SOLVER
-	virtual void GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
-	virtual void GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
-	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const UAnimSequence& Seq, float Time) override;
+	virtual void GetPoseRotations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
+	virtual void GetPoseTranslations(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
+	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
 #endif
 };
+
+//////////////////////////////////////////////////////////////////////////
+
+extern const FName NAME_ACLDefaultCodec;
+extern const FName NAME_ACLCustomCodec;
+extern const FName NAME_ACLSafetyFallbackCodec;

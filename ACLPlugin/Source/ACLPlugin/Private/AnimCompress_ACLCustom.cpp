@@ -28,6 +28,7 @@
 #if WITH_EDITOR
 #include "AnimationCompression.h"
 #include "ACLImpl.h"
+#include "AnimEncoding_ACL.h"
 
 #include <acl/algorithm/uniformly_sampled/encoder.h>
 #include <acl/algorithm/uniformly_sampled/decoder.h>
@@ -65,7 +66,8 @@ UAnimCompress_ACLCustom::UAnimCompress_ACLCustom(const FObjectInitializer& Objec
 	bClipRangeReduceTranslations = true;
 	bClipRangeReduceScales = true;
 
-	bEnableSegmenting = true;
+	//bEnableSegmenting = true;				// TODO: Temporarily renamed to avoid conflict
+	EnableSegmenting = true;
 	bSegmentRangeReduceRotations = true;
 	bSegmentRangeReduceTranslations = true;
 	bSegmentRangeReduceScales = true;
@@ -106,7 +108,8 @@ void UAnimCompress_ACLCustom::DoReduction(UAnimSequence* AnimSeq, const TArray<F
 	Settings.range_reduction |= bClipRangeReduceRotations ? RangeReductionFlags8::Rotations : RangeReductionFlags8::None;
 	Settings.range_reduction |= bClipRangeReduceTranslations ? RangeReductionFlags8::Translations : RangeReductionFlags8::None;
 	Settings.range_reduction |= bClipRangeReduceScales ? RangeReductionFlags8::Scales : RangeReductionFlags8::None;
-	Settings.segmenting.enabled = bEnableSegmenting != 0;
+	//Settings.segmenting.enabled = bEnableSegmenting != 0;		// TODO: Temporarily renamed to avoid conflict
+	Settings.segmenting.enabled = EnableSegmenting != 0;
 	Settings.segmenting.ideal_num_samples = IdealNumKeyFramesPerSegment;
 	Settings.segmenting.max_num_samples = MaxNumKeyFramesPerSegment;
 	Settings.segmenting.range_reduction |= bSegmentRangeReduceRotations ? RangeReductionFlags8::Rotations : RangeReductionFlags8::None;
@@ -128,9 +131,6 @@ void UAnimCompress_ACLCustom::DoReduction(UAnimSequence* AnimSeq, const TArray<F
 	static volatile bool DumpClip = false;
 	if (DumpClip)
 		write_acl_clip(*ACLSkeleton, *ACLClip, AlgorithmType8::UniformlySampled, Settings, "D:\\acl_clip.acl.sjson");
-
-	// TODO: Move this somewhere more sensible so we can share them with the module that registers them
-	static const FName NAME_ACLCustomCodec("ACLCustom");
 
 	CompressedClip* CompressedClipData = nullptr;
 	ErrorResult CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
@@ -179,7 +179,8 @@ void UAnimCompress_ACLCustom::PopulateDDCKey(FArchive& Ar)
 						MakeBitForFlag(bClipRangeReduceTranslations, 1) +
 						MakeBitForFlag(bClipRangeReduceScales, 2);
 
-	uint8 SegmentingFlags =	MakeBitForFlag(bEnableSegmenting, 0) +
+	//uint8 SegmentingFlags =	MakeBitForFlag(bEnableSegmenting, 0) +		// TODO: Temporarily renamed to avoid conflict
+	uint8 SegmentingFlags =	MakeBitForFlag(EnableSegmenting, 0) +
 							MakeBitForFlag(bSegmentRangeReduceRotations, 1) +
 							MakeBitForFlag(bSegmentRangeReduceTranslations, 2) +
 							MakeBitForFlag(bSegmentRangeReduceScales, 3);
