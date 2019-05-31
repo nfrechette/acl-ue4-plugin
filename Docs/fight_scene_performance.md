@@ -1,15 +1,15 @@
 # Matinee fight scene performance
 
-|               | ACL Plugin v0.3.0 | ACL Plugin v0.2.0 | UE v4.19.2 |
+|               | ACL Plugin v0.4.0 | ACL Plugin v0.3.0 | UE v4.22.2 |
 | -------               | --------  | -------               | -------               |
-| **Compressed size**   | 8.77 MB | 8.67 MB | 23.67 MB   |
-| **Compression ratio** | 7.11 : 1 | 7.20 : 1 | 2.63 : 1   |
-| **Compression time**  | 20.54s | 48.42s | 54m 03.18s |
-| **Compression speed** | 3110.30 KB/sec | 1319.21 KB/sec | 19.70 KB/sec |
-| **Max ACL error**     | 0.0641 cm | 0.0620 cm | 0.0671 cm  |
-| **Max UE4 error**     | 0.0617 cm | 0.0678 cm | 0.0672 cm  |
-| **ACL Error 99<sup>th</sup> percentile** | 0.0382 cm | 0.0255 cm | 0.0161 cm |
-| **Samples below ACL error threshold** | 94.52 % | 95.06 % | 94.22 % |
+| **Compressed size**   | 8.77 MB | 8.77 MB | 23.67 MB   |
+| **Compression ratio** | 7.11 : 1 | 7.11 : 1 | 2.63 : 1   |
+| **Compression time**  | 16.85s | 20.54s | 9m 36.65s |
+| **Compression speed** | 3790.85 KB/sec | 3110.30 KB/sec | 110.77 KB/sec |
+| **Max ACL error**     | 0.0588 cm | 0.0641 cm | 0.0426 cm |
+| **Max UE4 error**     | 0.0617 cm | 0.0617 cm | 0.0672 cm  |
+| **ACL Error 99<sup>th</sup> percentile** | 0.0382 cm | 0.0382 cm | 0.0161 cm |
+| **Samples below ACL error threshold** | 94.61 % | 94.52 % | 94.23 % |
 
 ACL was smaller for **1** clip (**20 %**)  
 ACL was more accurate for **2** clips (**40 %**)  

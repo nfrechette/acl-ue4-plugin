@@ -1,22 +1,22 @@
 # Paragon database performance
 
-|                   | ACL Plugin v0.3.0 | ACL Plugin v0.2.0 | UE v4.19.2     |
+|                   | ACL Plugin v0.4.0 | ACL Plugin v0.3.0 | UE v4.22.2   |
 | -------               | --------      | -------               | -------               |
-| **Compressed size**   | 234.76 MB | 226.09 MB | 392.97 MB      |
-| **Compression ratio** | 18.22 : 1 | 18.91 : 1 | 10.88 : 1      |
-| **Compression time**  | 30m 14.69s | 6h 4m 18.21s | 15h 10m 23.56s |
-| **Compression speed** | 2412.94 KB/sec | 200.32 KB/sec | 80.16 KB/sec |
-| **Max ACL error**     | 0.8623 cm | 0.8590 cm | 0.8619 cm      |
-| **Max UE4 error**     | 0.8601 cm | 0.8566 cm | 0.6424 cm      |
-| **ACL Error 99<sup>th</sup> percentile** | 0.0094 cm | 0.0116 cm | 0.0328 cm |
-| **Samples below ACL error threshold** | 99.19 % | 98.85 % | 84.88 % |
+| **Compressed size**   | 234.76 MB | 234.76 MB | 380.37 MB |
+| **Compression ratio** | 18.22 : 1 | 18.22 : 1 | 11.24 : 1   |
+| **Compression time**  | 23m 58.76s | 30m 14.69s | 2h 5m 11.22s |
+| **Compression speed** | 3043.42 KB/sec | 2412.94 KB/sec | 582.96 KB/sec |
+| **Max ACL error**     | 0.8623 cm | 0.8623 cm | 0.8619 cm      |
+| **Max UE4 error**     | 0.8601 cm | 0.8601 cm | 0.6424 cm      |
+| **ACL Error 99<sup>th</sup> percentile** | 0.0100 cm | 0.0094 cm | 0.0438 cm |
+| **Samples below ACL error threshold** | 99.00 % | 99.19 % | 81.75 % |
 
-ACL was smaller for **6361** clips (**97.00 %**)  
-ACL was more accurate for **5098** clips (**77.74 %**)  
-ACL has faster compression for **6558** clips (**100.00 %**)  
-ACL was smaller, better, and faster for **4966** clips (**75.72 %**)  
+ACL was smaller for **6343** clips (**96.72 %**)  
+ACL was more accurate for **5081** clips (**77.48 %**)  
+ACL has faster compression for **6514** clips (**99.33 %**)  
+ACL was smaller, better, and faster for **4911** clips (**74.89 %**)  
 
-Would the *ACL Plugin* have been included in the *Automatic Compression* permutations tried, it would have won for **6187** clips (**94.34 %**)
+Would the *ACL Plugin* have been included in the *Automatic Compression* permutations tried, it would have won for **6181** clips (**94.25 %**)
 
 ## Data and method used
 
