@@ -221,7 +221,7 @@ static void CalculateClipError(const acl::AnimationClip& ACLClip, const acl::Rig
 	const uint16 NumBones = ACLClip.get_num_bones();
 	const float ClipDuration = ACLClip.get_duration();
 	const float SampleRate = ACLClip.get_sample_rate();
-	const uint32 NumSamples = calculate_num_samples(ClipDuration, SampleRate);
+	const uint32 NumSamples = ACLClip.get_num_samples();
 	const bool HasScale = UE4ClipHasScale(UE4Clip);
 
 	TArray<Transform_32> RawPoseTransforms;
@@ -272,7 +272,7 @@ static void DumpClipDetailedError(const acl::AnimationClip& ACLClip, const acl::
 	const uint16 NumBones = ACLClip.get_num_bones();
 	const float ClipDuration = ACLClip.get_duration();
 	const float SampleRate = ACLClip.get_sample_rate();
-	const uint32 NumSamples = calculate_num_samples(ClipDuration, SampleRate);
+	const uint32 NumSamples = ACLClip.get_num_samples();
 	const bool HasScale = UE4ClipHasScale(UE4Clip);
 
 	TArray<Transform_32> RawPoseTransforms;
