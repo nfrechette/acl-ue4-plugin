@@ -68,22 +68,30 @@ private:
 static const TCHAR* ReadACLClip(FFileManagerGeneric& FileManager, const FString& ACLClipPath, acl::IAllocator& Allocator, std::unique_ptr<acl::AnimationClip, acl::Deleter<acl::AnimationClip>>& OutACLClip, std::unique_ptr<acl::RigidSkeleton, acl::Deleter<acl::RigidSkeleton>>& OutACLSkeleton)
 {
 	FArchive* Reader = FileManager.CreateFileReader(*ACLClipPath);
-	int64 Size = Reader->TotalSize();
+	const int64 Size = Reader->TotalSize();
 
-	TArray<char> RawSJSONData;
-	RawSJSONData.AddUninitialized((int32)Size);
+	// Allocate directly without a TArray to automatically manage the memory because some
+	// clips are larger than 2 GB
+	char* RawSJSONData = static_cast<char*>(GMalloc->Malloc(Size));
 
-	Reader->Serialize(RawSJSONData.GetData(), Size);
+	Reader->Serialize(RawSJSONData, Size);
 	Reader->Close();
 
-	acl::ClipReader ClipReader(Allocator, RawSJSONData.GetData(), Size);
+	acl::ClipReader ClipReader(Allocator, RawSJSONData, Size);
 
 	if (!ClipReader.read_skeleton(OutACLSkeleton))
+	{
+		GMalloc->Free(RawSJSONData);
 		return TEXT("Failed to read ACL RigidSkeleton from file");
+	}
 
 	if (!ClipReader.read_clip(OutACLClip, *OutACLSkeleton))
+	{
+		GMalloc->Free(RawSJSONData);
 		return TEXT("Failed to read ACL AnimationClip from file");
+	}
 
+	GMalloc->Free(RawSJSONData);
 	return nullptr;
 }
 
