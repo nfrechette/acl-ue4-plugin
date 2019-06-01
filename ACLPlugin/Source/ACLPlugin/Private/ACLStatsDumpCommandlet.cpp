@@ -185,19 +185,19 @@ static void SampleUE4Clip(const acl::RigidSkeleton& ACLSkeleton, USkeleton* UE4S
 		const int32 BoneTreeIndex = RefSkeleton.FindBoneIndex(BoneName);
 		const int32 BoneTrackIndex = UE4Skeleton->GetAnimationTrackIndex(BoneTreeIndex, UE4Clip, false);
 
-		FTransform BoneAtom;
+		FTransform BoneTransform;
 		if (BoneTrackIndex >= 0)
 		{
-			UE4Clip->GetBoneTransform(BoneAtom, BoneTrackIndex, SampleTime, false);
+			UE4Clip->GetBoneTransform(BoneTransform, BoneTrackIndex, SampleTime, false);
 		}
 		else
 		{
-			BoneAtom = RefSkeletonPose[BoneTreeIndex];
+			BoneTransform = RefSkeletonPose[BoneTreeIndex];
 		}
 
-		const acl::Quat_32 Rotation = QuatCast(BoneAtom.GetRotation());
-		const acl::Vector4_32 Translation = VectorCast(BoneAtom.GetTranslation());
-		const acl::Vector4_32 Scale = VectorCast(BoneAtom.GetScale3D());
+		const acl::Quat_32 Rotation = QuatCast(BoneTransform.GetRotation());
+		const acl::Vector4_32 Translation = VectorCast(BoneTransform.GetTranslation());
+		const acl::Vector4_32 Scale = VectorCast(BoneTransform.GetScale3D());
 		LossyPoseTransforms[BoneIndex] = acl::transform_set(Rotation, Translation, Scale);
 	}
 }
@@ -233,14 +233,14 @@ static void CalculateClipError(const acl::AnimationClip& ACLClip, const acl::Rig
 	float MaxError = 0.0f;
 	float WorstSampleTime = 0.0f;
 
-	TransformErrorMetric ErrorMetric;
+	const TransformErrorMetric ErrorMetric;
 
 	for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 	{
 		// Sample our streams and calculate the error
-		float SampleTime = min(float(SampleIndex) / SampleRate, ClipDuration);
+		const float SampleTime = min(float(SampleIndex) / SampleRate, ClipDuration);
 
-		ACLClip.sample_pose(SampleTime, RawPoseTransforms.GetData(), NumBones);
+		ACLClip.sample_pose(SampleTime, SampleRoundingPolicy::None, RawPoseTransforms.GetData(), NumBones);
 		SampleUE4Clip(ACLSkeleton, UE4Skeleton, UE4Clip, SampleTime, LossyPoseTransforms.GetData());
 
 		for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
@@ -280,16 +280,16 @@ static void DumpClipDetailedError(const acl::AnimationClip& ACLClip, const acl::
 	RawPoseTransforms.AddUninitialized(NumBones);
 	LossyPoseTransforms.AddUninitialized(NumBones);
 
-	TransformErrorMetric ErrorMetric;
+	const TransformErrorMetric ErrorMetric;
 
 	Writer["error_per_frame_and_bone"] = [&](sjson::ArrayWriter& Writer)
 	{
 		for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 		{
 			// Sample our streams and calculate the error
-			float SampleTime = min(float(SampleIndex) / SampleRate, ClipDuration);
+			const float SampleTime = min(float(SampleIndex) / SampleRate, ClipDuration);
 
-			ACLClip.sample_pose(SampleTime, RawPoseTransforms.GetData(), NumBones);
+			ACLClip.sample_pose(SampleTime, SampleRoundingPolicy::None, RawPoseTransforms.GetData(), NumBones);
 			SampleUE4Clip(ACLSkeleton, UE4Skeleton, UE4Clip, SampleTime, LossyPoseTransforms.GetData());
 
 			Writer.push_newline();
