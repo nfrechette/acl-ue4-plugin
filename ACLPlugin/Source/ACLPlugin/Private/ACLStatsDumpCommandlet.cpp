@@ -646,13 +646,24 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 		for (const FString& Filename : Files)
 		{
-			FString ACLClipPath = FPaths::Combine(*ACLRawDir, *Filename);
-			FString UE4StatPath = FPaths::Combine(*UE4StatDir, *Filename.Replace(TEXT(".acl.sjson"), TEXT("_stats.sjson"), ESearchCase::CaseSensitive));
+			const FString ACLClipPath = FPaths::Combine(*ACLRawDir, *Filename);
+			const FString UE4StatPath = FPaths::Combine(*UE4StatDir, *Filename.Replace(TEXT(".acl.sjson"), TEXT("_stats.sjson"), ESearchCase::CaseSensitive));
 
 			if (FileManager.FileExists(*UE4StatPath))
+			{
 				continue;
+			}
+
+			UE_LOG(LogAnimationCompression, Verbose, TEXT("Compressing: %s"), *Filename);
 
 			FArchive* StatWriter = FileManager.CreateFileWriter(*UE4StatPath);
+			if (StatWriter == nullptr)
+			{
+				// Opening the file handle can fail if the file path is too long on Windows. UE4 does not properly handle long paths
+				// and adding the \\?\ prefix manually doesn't work, UE4 mangles it when it normalizes the path.
+				continue;
+			}
+
 			UE4SJSONStreamWriter StreamWriter(StatWriter);
 			sjson::Writer Writer(StreamWriter);
 
