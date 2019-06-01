@@ -369,9 +369,9 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 			Writer["acl_max_error"] = MaxError;
 			Writer["acl_worst_bone"] = WorstBone;
 			Writer["acl_worst_time"] = WorstSampleTime;
-			Writer["rotation_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->CompressionScheme->RotationCompressionFormat).ToString());
-			Writer["translation_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->CompressionScheme->TranslationCompressionFormat).ToString());
-			Writer["scale_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->CompressionScheme->ScaleCompressionFormat).ToString());
+			Writer["rotation_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->RotationCompressionFormat).ToString());
+			Writer["translation_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->TranslationCompressionFormat).ToString());
+			Writer["scale_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->ScaleCompressionFormat).ToString());
 
 			if (PerformExhaustiveDump)
 			{
