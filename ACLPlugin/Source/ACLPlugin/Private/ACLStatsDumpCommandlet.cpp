@@ -128,7 +128,7 @@ static void ConvertClip(const acl::AnimationClip& ACLClip, const acl::RigidSkele
 	UE4Clip->SetRawNumberOfFrame(ACLClip.get_num_samples());
 	UE4Clip->SetSkeleton(UE4Skeleton);
 
-	uint16 NumBones = ACLSkeleton.get_num_bones();
+	const uint16 NumBones = ACLSkeleton.get_num_bones();
 	for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
 		const acl::RigidBone& ACLBone = ACLSkeleton.get_bone(BoneIndex);
@@ -139,29 +139,32 @@ static void ConvertClip(const acl::AnimationClip& ACLClip, const acl::RigidSkele
 		RawTrack.RotKeys.Empty();
 		RawTrack.ScaleKeys.Empty();
 
-		uint32 NumSamples = Bone.rotation_track.get_num_samples();
-		for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+		const uint32 NumRotationSamples = Bone.rotation_track.get_num_samples();
+		for (uint32 SampleIndex = 0; SampleIndex < NumRotationSamples; ++SampleIndex)
 		{
-			FQuat Rotation = QuatCast(acl::quat_normalize(acl::quat_cast(Bone.rotation_track.get_sample(SampleIndex))));
+			const FQuat Rotation = QuatCast(acl::quat_normalize(acl::quat_cast(Bone.rotation_track.get_sample(SampleIndex))));
 			RawTrack.RotKeys.Add(Rotation);
 		}
 
-		NumSamples = Bone.translation_track.get_num_samples();
-		for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+		const uint32 NumTranslationSamples = Bone.translation_track.get_num_samples();
+		for (uint32 SampleIndex = 0; SampleIndex < NumTranslationSamples; ++SampleIndex)
 		{
-			FVector Translation = VectorCast(acl::vector_cast(Bone.translation_track.get_sample(SampleIndex)));
+			const FVector Translation = VectorCast(acl::vector_cast(Bone.translation_track.get_sample(SampleIndex)));
 			RawTrack.PosKeys.Add(Translation);
 		}
 
-		NumSamples = Bone.scale_track.get_num_samples();
-		for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+		const uint32 NumScaleSamples = Bone.scale_track.get_num_samples();
+		for (uint32 SampleIndex = 0; SampleIndex < NumScaleSamples; ++SampleIndex)
 		{
-			FVector Scale = VectorCast(acl::vector_cast(Bone.scale_track.get_sample(SampleIndex)));
+			const FVector Scale = VectorCast(acl::vector_cast(Bone.scale_track.get_sample(SampleIndex)));
 			RawTrack.ScaleKeys.Add(Scale);
 		}
 
-		FName BoneName(ACLBone.name.c_str());
-		UE4Clip->AddNewRawTrack(BoneName, &RawTrack);
+		if (NumRotationSamples != 0 || NumTranslationSamples != 0 || NumScaleSamples != 0)
+		{
+			const FName BoneName(ACLBone.name.c_str());
+			UE4Clip->AddNewRawTrack(BoneName, &RawTrack);
+		}
 	}
 
 	UE4Clip->MarkRawDataAsModified();
