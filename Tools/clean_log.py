@@ -18,7 +18,7 @@ if __name__ == "__main__":
 		if len(matches) == 0:
 			matches = re.findall('^\[.+\]\[.+\]LogPlayLevel: \[.+\]\[.+\]LogAnimation: Warning: \[\[(.+)\]\].*', file_content, re.MULTILINE)
 		if len(matches) == 0:
-			matches = re.findall('^\[.+\]\[.+\]LogAnimation: Warning: \[\[(.+)\]\].*', file_content, re.MULTILINE)
+			matches = re.findall('\[.+\]\[.+\]LogAnimation: Warning: \[\[(.+)\]\].*', file_content, re.MULTILINE)
 
 		print('Found {} CSV lines'.format(len(matches)))
 		if len(matches) > 0:
