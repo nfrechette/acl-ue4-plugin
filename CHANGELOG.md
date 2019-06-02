@@ -1,5 +1,11 @@
 # Significant changes per release
 
+## 0.4.0
+
+*  Upgraded code to support UE 4.22
+*  Enable usage of popcount intrinsics
+*  Other minor fixes and improvements
+
 ## 0.3.0
 
 *  Upgraded to ACL v1.2.0
