@@ -185,8 +185,9 @@ def output_csv_error(stat_dir, merged_stats):
 
 		file.close()
 
-def print_progress(iteration, total, prefix='', suffix='', decimals = 1, bar_length = 50):
+def print_progress(iteration, total, prefix='', suffix='', decimals = 1, bar_length = 40):
 	# Taken from https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
+	# With minor tweaks
 	"""
 	Call in a loop to create terminal progress bar
 	@params:
@@ -202,11 +203,17 @@ def print_progress(iteration, total, prefix='', suffix='', decimals = 1, bar_len
 	filled_length = int(round(bar_length * iteration / float(total)))
 	bar = '█' * filled_length + '-' * (bar_length - filled_length)
 
-	sys.stdout.write('\r%s |%s| %s%s %s' % (prefix, bar, percents, '%', suffix)),
+	# We need to clear any previous line we might have to ensure we have no visual artifacts
+	# Note that if this function is called too quickly, the text might flicker
+	terminal_width = 80
+	sys.stdout.write('{}\r'.format(' ' * terminal_width))
+	sys.stdout.flush()
+
+	sys.stdout.write('%s |%s| %s%s %s\r' % (prefix, bar, percents, '%', suffix)),
+	sys.stdout.flush()
 
 	if iteration == total:
 		sys.stdout.write('\n')
-	sys.stdout.flush()
 
 def append_stats(permutation, clip_stats, run_stats, aggregate_results):
 	key = run_stats['desc']
