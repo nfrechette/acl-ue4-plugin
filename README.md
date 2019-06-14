@@ -10,7 +10,7 @@ Compared to **UE 4.22.2**, the ACL plugin compresses up to **2.7x smaller**, is 
 
 The documentation on how to use it can be found [here](./Docs/README.md) along with performance results.
 
-**NOTE: A refactor of the animation compression codecs scheduled for UE 4.23 will allow this plugin to be published on the Unreal Marketplace. Until then, it requires a few custom changes to the engine to work. The plugin code will be updated once the refactor becomes accessible to the public.**
+**NOTE: A refactor of the animation compression codecs within *Unreal Engine* is in the works and should be released soon. This will allow this plugin to be published on the Unreal Marketplace. Until then, it requires a few custom changes to the engine to work. The plugin code will be updated once the refactor becomes accessible to the public.**
 
 ## Getting started
 
