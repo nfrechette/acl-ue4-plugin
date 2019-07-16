@@ -21,6 +21,7 @@ def parse_argv():
 	options['dual_stat_inputs'] = False
 	options['csv_summary'] = False
 	options['csv_error'] = False
+	options['csv_kr'] = False
 	options['num_threads'] = 1
 
 	for i in range(1, len(sys.argv)):
@@ -43,6 +44,9 @@ def parse_argv():
 
 		if value == '-csv_error':
 			options['csv_error'] = True
+
+		if value == '-csv_kr':
+			options['csv_kr'] = True
 
 		if value.startswith('-parallel='):
 			options['num_threads'] = int(value[len('-parallel='):].replace('"', ''))
@@ -91,7 +95,7 @@ def parse_argv():
 	return options
 
 def print_usage():
-	print('Usage: python stat_parser.py [-stats=<path to input directory for stats>] [-acl=<path to acl stats>] [-ue4=<path to ue4 stats>] [-csv_summary] [-csv_error] [-parallel=<num threads>]')
+	print('Usage: python stat_parser.py [-stats=<path to input directory for stats>] [-acl=<path to acl stats>] [-ue4=<path to ue4 stats>] [-csv_summary] [-csv_error] [-csv_kr] [-parallel=<num threads>]')
 
 def bytes_to_mb(size_in_bytes):
 	return size_in_bytes / (1024.0 * 1024.0)
@@ -185,6 +189,36 @@ def output_csv_error(stat_dir, merged_stats):
 
 		file.close()
 
+def output_csv_kr(stat_dir, clip_drop_rates, pose_drop_rates, track_drop_rates):
+	csv_filename = os.path.join(stat_dir, 'stats_kr.csv')
+	print('Generating CSV file {} ...'.format(csv_filename))
+	file = open(csv_filename, 'w')
+
+	print('Dropped Per Clip, Dropped Per Pose, Dropped Per Track', file = file)
+
+	num_rows = max([len(clip_drop_rates), len(pose_drop_rates), len(track_drop_rates)])
+	values = [('', '', '')] * num_rows
+
+	for i in range(len(clip_drop_rates)):
+		clip_rate = clip_drop_rates[i]
+		_, pose_rate, track_rate = values[i]
+		values[i] = (clip_rate, pose_rate, track_rate)
+
+	for i in range(len(pose_drop_rates)):
+		pose_rate = pose_drop_rates[i]
+		clip_rate, _, track_rate = values[i]
+		values[i] = (clip_rate, pose_rate, track_rate)
+
+	for i in range(len(track_drop_rates)):
+		track_rate = track_drop_rates[i]
+		clip_rate, pose_rate, _ = values[i]
+		values[i] = (clip_rate, pose_rate, track_rate)
+
+	for (clip_rate, pose_rate, track_rate) in values:
+		print('{}, {}, {}'.format(clip_rate, pose_rate, track_rate), file = file)
+
+	file.close()
+
 def print_progress(iteration, total, prefix='', suffix='', decimals = 1, bar_length = 40):
 	# Taken from https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
 	# With minor tweaks
@@ -264,6 +298,10 @@ def do_parse_stats(options, stat_queue, result_queue):
 		stats = []
 		acl_error_values = []
 		ue4_error_values = []
+		ue4_keyreduction_data = {}
+		ue4_keyreduction_data['drop_rates'] = []
+		ue4_keyreduction_data['pose_drop_rates'] = []
+		ue4_keyreduction_data['track_drop_rates'] = []
 
 		while True:
 			stat_filename = stat_queue.get()
@@ -297,6 +335,18 @@ def do_parse_stats(options, stat_queue, result_queue):
 								ue4_error_values.extend([float(v) for v in frame_error_values])
 							file_data['ue4_auto']['error_per_frame_and_bone'] = []
 
+					if 'ue4_keyreduction' in file_data:
+						num_animated_keys = float(file_data['ue4_keyreduction']['total_num_animated_keys'])
+						if num_animated_keys > 2.001:
+							drop_rate = float(file_data['ue4_keyreduction']['total_num_dropped_animated_keys']) / num_animated_keys
+							ue4_keyreduction_data['drop_rates'].append(drop_rate)
+							ue4_keyreduction_data['pose_drop_rates'].extend([float(v) for v in file_data['ue4_keyreduction']['dropped_pose_keys']])
+							ue4_keyreduction_data['track_drop_rates'].extend([float(v) for v in file_data['ue4_keyreduction']['dropped_track_keys']])
+						else:
+							ue4_keyreduction_data['drop_rates'].append(0.0)
+							ue4_keyreduction_data['pose_drop_rates'].extend([0.0 for v in file_data['ue4_keyreduction']['dropped_pose_keys']])
+							ue4_keyreduction_data['track_drop_rates'].extend([0.0 for v in file_data['ue4_keyreduction']['dropped_track_keys']])
+
 					stats.append(file_data)
 				except sjson.ParseException:
 					print('Failed to parse SJSON file: {}'.format(stat_filename))
@@ -307,6 +357,7 @@ def do_parse_stats(options, stat_queue, result_queue):
 		results['stats'] = stats
 		results['acl_error_values'] = acl_error_values
 		results['ue4_error_values'] = ue4_error_values
+		results['ue4_keyreduction_data'] = ue4_keyreduction_data
 
 		result_queue.put(('done', results))
 	except KeyboardInterrupt:
@@ -427,6 +478,17 @@ if __name__ == "__main__":
 	for result in ue4_stats:
 		ue4_error_values = numpy.append(ue4_error_values, result['ue4_error_values'])
 
+	clip_drop_rates = numpy.array([])
+	pose_drop_rates = numpy.array([])
+	track_drop_rates = numpy.array([])
+	for result in acl_stats:
+		clip_drop_rates = numpy.append(clip_drop_rates, result['ue4_keyreduction_data']['drop_rates'])
+		pose_drop_rates = numpy.append(pose_drop_rates, result['ue4_keyreduction_data']['pose_drop_rates'])
+		track_drop_rates = numpy.append(track_drop_rates, result['ue4_keyreduction_data']['track_drop_rates'])
+	clip_drop_rates = numpy.sort(clip_drop_rates)
+	pose_drop_rates = numpy.sort(pose_drop_rates)
+	track_drop_rates = numpy.sort(track_drop_rates)
+
 	# Flatten our stats into a list and strip the error values
 	acl_stats = [ stat for result in acl_stats for stat in result['stats'] ]
 	ue4_stats = [ stat for result in ue4_stats for stat in result['stats'] ]
@@ -446,6 +508,9 @@ if __name__ == "__main__":
 	if options['csv_error']:
 		output_csv_error(os.getcwd(), merged_stats)
 
+	if options['csv_kr'] and len(clip_drop_rates) > 0:
+		output_csv_kr(os.getcwd(), clip_drop_rates, pose_drop_rates, track_drop_rates)
+
 	print()
 	print('Stats per run type:')
 	aggregate_results = {}
@@ -464,6 +529,11 @@ if __name__ == "__main__":
 			ue4_acl = stat_acl['ue4_acl']
 			ue4_acl['desc'] = ue4_acl['algorithm_name']
 			append_stats('ue4_acl', stat_acl, ue4_acl, aggregate_results)
+
+		if 'ue4_keyreduction' in stat_acl:
+			ue4_keyreduction = stat_acl['ue4_keyreduction']
+			ue4_keyreduction['desc'] = ue4_keyreduction['algorithm_name']
+			append_stats('ue4_keyreduction', stat_acl, ue4_keyreduction, aggregate_results)
 
 		if 'ue4_auto' in stat_auto and 'ue4_acl' in stat_acl:
 			ue4_auto = stat_auto['ue4_auto']
@@ -517,6 +587,18 @@ if __name__ == "__main__":
 		print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(acl_error_values, 0.01)))
 		print()
 
+	if 'ue4_keyreduction' in aggregate_results:
+		ue4_keyreduction = aggregate_results['ue4_keyreduction']
+		raw_size = ue4_keyreduction['total_raw_size']
+		ratio = float(ue4_keyreduction['total_raw_size']) / float(ue4_keyreduction['total_compressed_size'])
+		print('Total Key Reduction Compression:')
+		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_keyreduction['total_compressed_size']), format_elapsed_time(ue4_keyreduction['total_compression_time']), ratio, ue4_keyreduction['ue4_max_error'], ue4_keyreduction['acl_max_error']))
+		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_keyreduction['worst_entry']['clip_name'], ue4_keyreduction['worst_entry']['ue4_keyreduction']['acl_compression_ratio'], ue4_keyreduction['worst_entry']['ue4_keyreduction']['acl_max_error']))
+		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_keyreduction['total_compression_time']))
+		#print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(acl_error_values, 99.0)))
+		#print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(acl_error_values, 0.01)))
+		print()
+
 	num_clips = float(len(acl_stat_files))
 	print('Raw size: {:.2f} MB'.format(bytes_to_mb(raw_size)))
 	print('ACL was smaller for {} clips ({:.2f} %)'.format(num_acl_size_wins, float(num_acl_size_wins) / num_clips * 100.0))
@@ -524,3 +606,15 @@ if __name__ == "__main__":
 	print('ACL has faster compression for {} clips ({:.2f} %)'.format(num_acl_speed_wins, float(num_acl_speed_wins) / num_clips * 100.0))
 	print('ACL was smaller, better, faster for {} clips ({:.2f} %)'.format(num_acl_wins, float(num_acl_wins) / num_clips * 100.0))
 	print('ACL won with simulated auto {} clips ({:.2f} %)'.format(num_acl_auto_wins, float(num_acl_auto_wins) / num_clips * 100.0))
+
+	if len(clip_drop_rates) > 0:
+		print()
+		print('Key reduction clip avg drop rate: {:.2f} %'.format(numpy.average(clip_drop_rates) * 100.0))
+		print('Key reduction clip 50th percentile drop rate: {:.2f} %'.format(numpy.percentile(clip_drop_rates, 50.0) * 100.0))
+		print('Key reduction clip 90th percentile drop rate: {:.2f} %'.format(numpy.percentile(clip_drop_rates, 90.0) * 100.0))
+		print('Key reduction pose avg drop rate: {:.2f} %'.format(numpy.average(pose_drop_rates) * 100.0))
+		print('Key reduction pose 50th percentile drop rate: {:.2f} %'.format(numpy.percentile(pose_drop_rates, 50.0) * 100.0))
+		print('Key reduction pose 90th percentile drop rate: {:.2f} %'.format(numpy.percentile(pose_drop_rates, 90.0) * 100.0))
+		print('Key reduction track avg drop rate: {:.2f} %'.format(numpy.average(track_drop_rates) * 100.0))
+		print('Key reduction track 50th percentile drop rate: {:.2f} %'.format(numpy.percentile(track_drop_rates, 50.0) * 100.0))
+		print('Key reduction track 90th percentile drop rate: {:.2f} %'.format(numpy.percentile(track_drop_rates, 90.0) * 100.0))
