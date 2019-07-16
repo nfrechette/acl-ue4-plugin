@@ -29,8 +29,10 @@
 #include "Runtime/Core/Public/HAL/PlatformTime.h"
 #include "Runtime/CoreUObject/Public/UObject/UObjectIterator.h"
 #include "Runtime/Engine/Classes/Animation/AnimCompress_Automatic.h"
+#include "Runtime/Engine/Classes/Animation/AnimCompress_RemoveLinearKeys.h"
 #include "Runtime/Engine/Classes/Animation/Skeleton.h"
 #include "Runtime/Engine/Public/AnimationCompression.h"
+#include "Runtime/Engine/Public/AnimEncoding.h"
 #include "Editor/UnrealEd/Public/PackageHelperFunctions.h"
 
 #include "AnimCompress_ACL.h"
@@ -314,6 +316,7 @@ struct FCompressionContext
 {
 	UAnimCompress_Automatic* AutoCompressor;
 	UAnimCompress_ACL* ACLCompressor;
+	UAnimCompress_RemoveLinearKeys* KeyReductionCompressor;
 
 	const UEnum* AnimFormatEnum;
 
@@ -431,6 +434,306 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 			{
 				DumpClipDetailedError(*Context.ACLClip, *Context.ACLSkeleton, Context.UE4Clip, Context.UE4Skeleton, Writer);
 			}
+		};
+	}
+	else
+	{
+		Writer["error"] = "failed to compress UE4 clip";
+	}
+}
+
+static bool IsKeyDropped(const UAnimSequence& AnimSeq, const uint8* FrameTable, int32 NumKeys, float FrameRate, float SampleTime)
+{
+	if (AnimSeq.GetCompressedNumberOfFrames() > 0xFF)
+	{
+		const uint16* Frames = (const uint16*)FrameTable;
+		for (int32 KeyIndex = 0; KeyIndex < NumKeys; ++KeyIndex)
+		{
+			const float FrameTime = Frames[KeyIndex] / FrameRate;
+			if (FMath::IsNearlyEqual(FrameTime, SampleTime, 0.001f))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	else
+	{
+		const uint8* Frames = (const uint8*)FrameTable;
+		for (int32 KeyIndex = 0; KeyIndex < NumKeys; ++KeyIndex)
+		{
+			const float FrameTime = Frames[KeyIndex] / FrameRate;
+			if (FMath::IsNearlyEqual(FrameTime, SampleTime, 0.001f))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+}
+
+static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool PerformExhaustiveDump, sjson::Writer& Writer)
+{
+	if (Context.UE4Clip->GetRawNumberOfFrames() <= 1)
+	{
+		return;
+	}
+
+	const uint64 UE4StartTimeCycles = FPlatformTime::Cycles64();
+
+	FAnimCompressContext CompressContext(true, false);
+	const bool UE4Success = Context.KeyReductionCompressor->Reduce(Context.UE4Clip, CompressContext, Context.UE4BoneData);
+
+	const uint64 UE4EndTimeCycles = FPlatformTime::Cycles64();
+
+	const uint64 UE4ElapsedCycles = UE4EndTimeCycles - UE4StartTimeCycles;
+	const double UE4ElapsedTimeSec = FPlatformTime::ToSeconds64(UE4ElapsedCycles);
+
+	if (UE4Success)
+	{
+		AnimationErrorStats UE4ErrorStats;
+		FAnimationUtils::ComputeCompressionError(Context.UE4Clip, Context.UE4BoneData, UE4ErrorStats);
+
+		uint16 WorstBone;
+		float MaxError;
+		float WorstSampleTime;
+		CalculateClipError(*Context.ACLClip, *Context.ACLSkeleton, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+
+		const int32 CompressedSize = Context.UE4Clip->GetApproxCompressedSize();
+		const double UE4CompressionRatio = double(Context.UE4RawSize) / double(CompressedSize);
+		const double ACLCompressionRatio = double(Context.ACLRawSize) / double(CompressedSize);
+
+		Writer["ue4_keyreduction"] = [&](sjson::ObjectWriter& Writer)
+		{
+			Writer["algorithm_name"] = TCHAR_TO_ANSI(*Context.UE4Clip->CompressionScheme->GetClass()->GetName());
+			Writer["codec_name"] = TCHAR_TO_ANSI(*Context.UE4Clip->CompressedCodecFormat.ToString());
+			Writer["compressed_size"] = CompressedSize;
+			Writer["ue4_compression_ratio"] = UE4CompressionRatio;
+			Writer["acl_compression_ratio"] = ACLCompressionRatio;
+			Writer["compression_time"] = UE4ElapsedTimeSec;
+			Writer["ue4_max_error"] = UE4ErrorStats.MaxError;
+			Writer["ue4_avg_error"] = UE4ErrorStats.AverageError;
+			Writer["ue4_worst_bone"] = UE4ErrorStats.MaxErrorBone;
+			Writer["ue4_worst_time"] = UE4ErrorStats.MaxErrorTime;
+			Writer["acl_max_error"] = MaxError;
+			Writer["acl_worst_bone"] = WorstBone;
+			Writer["acl_worst_time"] = WorstSampleTime;
+			Writer["rotation_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->RotationCompressionFormat).ToString());
+			Writer["translation_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->TranslationCompressionFormat).ToString());
+			Writer["scale_format"] = TCHAR_TO_ANSI(*Context.AnimFormatEnum->GetDisplayNameTextByIndex(Context.UE4Clip->ScaleCompressionFormat).ToString());
+
+			if (PerformExhaustiveDump)
+			{
+				DumpClipDetailedError(*Context.ACLClip, *Context.ACLSkeleton, Context.UE4Clip, Context.UE4Skeleton, Writer);
+			}
+
+			// Number of animated keys before any key reduction for animated tracks (without constant/default tracks)
+			int32 TotalNumAnimatedKeys = 0;
+
+			// Number of animated keys dropped after key reduction for animated tracks (without constant/default tracks)
+			int32 TotalNumDroppedAnimatedKeys = 0;
+
+			// Number of animated tracks (not constant/default)
+			int32 NumAnimatedTracks = 0;
+
+			Writer["dropped_track_keys"] = [&](sjson::ArrayWriter& Writer)
+			{
+				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
+				const int32 NumTracks = RawTracks.Num();
+				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
+
+				const int32* TrackOffsets = Context.UE4Clip->CompressedTrackOffsets.GetData();
+				const FCompressedOffsetData& ScaleOffsets = Context.UE4Clip->CompressedScaleOffsets;
+
+				const AnimationCompressionFormat RotationFormat = Context.UE4Clip->RotationCompressionFormat;
+				const AnimationCompressionFormat TranslationFormat = Context.UE4Clip->TranslationCompressionFormat;
+				const AnimationCompressionFormat ScaleFormat = Context.UE4Clip->ScaleCompressionFormat;
+
+				// offset past Min and Range data
+				const int32 RotationStreamOffset = (RotationFormat == ACF_IntervalFixed32NoW) ? (sizeof(float) * 6) : 0;
+				const int32 TranslationStreamOffset = (TranslationFormat == ACF_IntervalFixed32NoW) ? (sizeof(float) * 6) : 0;
+				const int32 ScaleStreamOffset = (ScaleFormat == ACF_IntervalFixed32NoW) ? (sizeof(float) * 6) : 0;
+
+				for (int32 TrackIndex = 0; TrackIndex < NumTracks; ++TrackIndex)
+				{
+					const int32* TrackData = TrackOffsets + (TrackIndex * 4);
+					const int32 NumTransKeys = TrackData[1];
+
+					// Skip constant/default tracks
+					if (NumTransKeys > 1)
+					{
+						const int32 DroppedTransCount = NumSamples - NumTransKeys;
+						const float DroppedRatio = float(DroppedTransCount) / float(NumSamples);
+						Writer.push(DroppedRatio);
+
+						TotalNumAnimatedKeys += NumSamples;
+						TotalNumDroppedAnimatedKeys += DroppedTransCount;
+						NumAnimatedTracks++;
+					}
+
+					const int32 NumRotKeys = TrackData[3];
+
+					// Skip constant/default tracks
+					if (NumRotKeys > 1)
+					{
+						const int32 DroppedRotCount = NumSamples - NumRotKeys;
+						const float DroppedRatio = float(DroppedRotCount) / float(NumSamples);
+						Writer.push(DroppedRatio);
+
+						TotalNumAnimatedKeys += NumSamples;
+						TotalNumDroppedAnimatedKeys += DroppedRotCount;
+						NumAnimatedTracks++;
+					}
+
+					if (ScaleOffsets.IsValid())
+					{
+						const int32 NumScaleKeys = ScaleOffsets.GetOffsetData(TrackIndex, 1);
+
+						// Skip constant/default tracks
+						if (NumScaleKeys > 1)
+						{
+							const int32 DroppedScaleCount = NumSamples - NumScaleKeys;
+							const float DroppedRatio = float(DroppedScaleCount) / float(NumSamples);
+							Writer.push(DroppedRatio);
+
+							TotalNumAnimatedKeys += NumSamples;
+							TotalNumDroppedAnimatedKeys += DroppedScaleCount;
+							NumAnimatedTracks++;
+						}
+					}
+				}
+			};
+
+			Writer["total_num_animated_keys"] = TotalNumAnimatedKeys;
+			Writer["total_num_dropped_animated_keys"] = TotalNumDroppedAnimatedKeys;
+
+			Writer["dropped_pose_keys"] = [&](sjson::ArrayWriter& Writer)
+			{
+				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
+				const int32 NumTracks = RawTracks.Num();
+				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
+
+				const float FrameRate = (NumSamples - 1) / Context.UE4Clip->SequenceLength;
+
+				const uint8* ByteStream = Context.UE4Clip->CompressedByteStream.GetData();
+				const int32* TrackOffsets = Context.UE4Clip->CompressedTrackOffsets.GetData();
+				const FCompressedOffsetData& ScaleOffsets = Context.UE4Clip->CompressedScaleOffsets;
+
+				const AnimationCompressionFormat RotationFormat = Context.UE4Clip->RotationCompressionFormat;
+				const AnimationCompressionFormat TranslationFormat = Context.UE4Clip->TranslationCompressionFormat;
+				const AnimationCompressionFormat ScaleFormat = Context.UE4Clip->ScaleCompressionFormat;
+
+				// offset past Min and Range data
+				const int32 RotationStreamOffset = (RotationFormat == ACF_IntervalFixed32NoW) ? (sizeof(float) * 6) : 0;
+				const int32 TranslationStreamOffset = (TranslationFormat == ACF_IntervalFixed32NoW) ? (sizeof(float) * 6) : 0;
+				const int32 ScaleStreamOffset = (ScaleFormat == ACF_IntervalFixed32NoW) ? (sizeof(float) * 6) : 0;
+
+				for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+				{
+					const float SampleTime = float(SampleIndex) / FrameRate;
+
+					int32 DroppedRotCount = 0;
+					int32 DroppedTransCount = 0;
+					int32 DroppedScaleCount = 0;
+					for (int32 TrackIndex = 0; TrackIndex < NumTracks; ++TrackIndex)
+					{
+						const int32* TrackData = TrackOffsets + (TrackIndex * 4);
+
+						const int32 TransKeysOffset = TrackData[0];
+						const int32 NumTransKeys = TrackData[1];
+						const uint8* TransStream = ByteStream + TransKeysOffset;
+
+						const uint8* TransFrameTable = TransStream + TranslationStreamOffset + (NumTransKeys * CompressedTranslationStrides[TranslationFormat] * CompressedTranslationNum[TranslationFormat]);
+						TransFrameTable = Align(TransFrameTable, 4);
+
+						// Skip constant/default tracks
+						if (NumTransKeys > 1 && IsKeyDropped(*Context.UE4Clip, TransFrameTable, NumTransKeys, FrameRate, SampleTime))
+						{
+							DroppedTransCount++;
+						}
+
+						const int32 RotKeysOffset = TrackData[2];
+						const int32 NumRotKeys = TrackData[3];
+						const uint8* RotStream = ByteStream + RotKeysOffset;
+
+						const uint8* RotFrameTable = RotStream + RotationStreamOffset + (NumRotKeys * CompressedRotationStrides[RotationFormat] * CompressedRotationNum[RotationFormat]);
+						RotFrameTable = Align(RotFrameTable, 4);
+
+						// Skip constant/default tracks
+						if (NumRotKeys > 1 && IsKeyDropped(*Context.UE4Clip, RotFrameTable, NumRotKeys, FrameRate, SampleTime))
+						{
+							DroppedRotCount++;
+						}
+
+						if (ScaleOffsets.IsValid())
+						{
+							const int32 ScaleKeysOffset = ScaleOffsets.GetOffsetData(TrackIndex, 0);
+							const int32 NumScaleKeys = ScaleOffsets.GetOffsetData(TrackIndex, 1);
+							const uint8* ScaleStream = ByteStream + ScaleKeysOffset;
+
+							const uint8* ScaleFrameTable = ScaleStream + ScaleStreamOffset + (NumScaleKeys * CompressedScaleStrides[ScaleFormat] * CompressedScaleNum[ScaleFormat]);
+							ScaleFrameTable = Align(ScaleFrameTable, 4);
+
+							// Skip constant/default tracks
+							if (NumScaleKeys > 1 && IsKeyDropped(*Context.UE4Clip, ScaleFrameTable, NumScaleKeys, FrameRate, SampleTime))
+							{
+								DroppedScaleCount++;
+							}
+						}
+					}
+
+					const int32 TotalDroppedCount = DroppedRotCount + DroppedTransCount + DroppedScaleCount;
+					const float DropRatio = NumAnimatedTracks != 0 ? (float(TotalDroppedCount) / float(NumAnimatedTracks)) : 1.0f;
+					Writer.push(DropRatio);
+				}
+			};
+
+#if DO_CHECK && 0
+			{
+				// Double check our count
+				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
+				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
+				const int32 NumTracks = RawTracks.Num();
+				const int32* TrackOffsets = Context.UE4Clip->CompressedTrackOffsets.GetData();
+				const FCompressedOffsetData& ScaleOffsets = Context.UE4Clip->CompressedScaleOffsets;
+
+				int32 DroppedRotCount = 0;
+				int32 DroppedTransCount = 0;
+				int32 DroppedScaleCount = 0;
+				for (int32 TrackIndex = 0; TrackIndex < NumTracks; ++TrackIndex)
+				{
+					const int32* TrackData = TrackOffsets + (TrackIndex * 4);
+
+					const int32 NumTransKeys = TrackData[1];
+
+					// Skip constant/default tracks
+					if (NumTransKeys > 1)
+					{
+						DroppedTransCount += NumSamples - NumTransKeys;
+					}
+
+					const int32 NumRotKeys = TrackData[3];
+
+					// Skip constant/default tracks
+					if (NumRotKeys > 1)
+					{
+						DroppedRotCount += NumSamples - NumRotKeys;
+					}
+
+					if (ScaleOffsets.IsValid())
+					{
+						const int32 NumScaleKeys = ScaleOffsets.GetOffsetData(TrackIndex, 1);
+
+						// Skip constant/default tracks
+						if (NumScaleKeys > 1)
+						{
+							DroppedScaleCount += NumSamples - NumScaleKeys;
+						}
+					}
+				}
+				check(TotalNumDroppedKeys == (DroppedRotCount + DroppedTransCount + DroppedScaleCount));
+			}
+#endif
 		};
 	}
 	else
@@ -607,6 +910,9 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 	TryAutomaticCompression = !Switches.Contains(TEXT("noauto"));
 	TryACLCompression = !Switches.Contains(TEXT("noacl"));
 
+	const bool bTryKeyReductionRetarget = Switches.Contains(TEXT("keyreductionrt"));
+	const bool bTryKeyReduction = bTryKeyReductionRetarget || Switches.Contains(TEXT("keyreduction"));
+
 	MasterTolerance = 0.1f;	// 0.1cm is a sensible default for production use
 	if (ParamsMap.Contains(TEXT("MasterTolerance")))
 	{
@@ -620,6 +926,14 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 	ACLCompressor = NewObject<UAnimCompress_ACL>(this, UAnimCompress_ACL::StaticClass());
 	ACLCompressor->AddToRoot();
+
+	UAnimCompress_RemoveLinearKeys* KeyReductionCompressor = NewObject<UAnimCompress_RemoveLinearKeys>(this, UAnimCompress_RemoveLinearKeys::StaticClass());
+	KeyReductionCompressor->RotationCompressionFormat = ACF_Float96NoW;
+	KeyReductionCompressor->TranslationCompressionFormat = ACF_None;
+	KeyReductionCompressor->ScaleCompressionFormat = ACF_None;
+	KeyReductionCompressor->bActuallyFilterLinearKeys = true;
+	KeyReductionCompressor->bRetarget = bTryKeyReductionRetarget;
+	KeyReductionCompressor->AddToRoot();
 
 	AnimFormatEnum = FindObject<UEnum>(ANY_PACKAGE, TEXT("AnimationCompressionFormat"), true);
 
@@ -702,6 +1016,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 				FCompressionContext Context;
 				Context.AutoCompressor = AutoCompressor;
 				Context.ACLCompressor = ACLCompressor;
+				Context.KeyReductionCompressor = KeyReductionCompressor;
 				Context.AnimFormatEnum = AnimFormatEnum;
 				Context.UE4Clip = UE4Clip;
 				Context.UE4Skeleton = UE4Skeleton;
@@ -733,6 +1048,19 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 				if (TryACLCompression)
 				{
 					CompressWithACL(Context, PerformExhaustiveDump, Writer);
+				}
+
+				// Reset our anim sequence
+				UE4Clip->CompressedTrackOffsets.Empty();
+				UE4Clip->CompressedByteStream.Empty();
+				UE4Clip->CompressedScaleOffsets.Empty();
+				UE4Clip->TranslationCompressionFormat = ACF_None;
+				UE4Clip->RotationCompressionFormat = ACF_None;
+				UE4Clip->ScaleCompressionFormat = ACF_None;
+
+				if (bTryKeyReduction)
+				{
+					CompressWithUE4KeyReduction(Context, PerformExhaustiveDump, Writer);
 				}
 
 				UE4Clip->RecycleAnimSequence();
