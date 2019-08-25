@@ -51,6 +51,8 @@ public:
 	bool PerformExhaustiveDump;
 	bool TryAutomaticCompression;
 	bool TryACLCompression;
+	bool TryKeyReductionRetarget;
+	bool TryKeyReduction;
 
 	float MasterTolerance;
 

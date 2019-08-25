@@ -80,6 +80,6 @@ acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format);
 acl::VectorFormat8 GetVectorFormat(ACLVectorFormat Format);
 acl::CompressionLevel8 GetCompressionLevel(ACLCompressionLevel Level);
 
-TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const TArray<FBoneData>& BoneData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance);
-TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const acl::RigidSkeleton& ACLSkeleton, bool bBuildAdditiveBase);
+TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance);
+TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, const acl::RigidSkeleton& ACLSkeleton, bool bBuildAdditiveBase);
 #endif // WITH_EDITOR

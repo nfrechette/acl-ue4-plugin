@@ -23,10 +23,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "AnimCompress_ACLCustom.h"
-#include "Animation/AnimEncodingRegistry.h"
 
 #if WITH_EDITOR
 #include "AnimationCompression.h"
+#include "Animation/AnimCompressionTypes.h"
 #include "ACLImpl.h"
 #include "AnimEncoding_ACL.h"
 
@@ -76,24 +76,21 @@ UAnimCompress_ACLCustom::UAnimCompress_ACLCustom(const FObjectInitializer& Objec
 }
 
 #if WITH_EDITOR
-void UAnimCompress_ACLCustom::DoReduction(UAnimSequence* AnimSeq, const TArray<FBoneData>& BoneData)
+void UAnimCompress_ACLCustom::DoReduction(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
 	using namespace acl;
 
-	AnimSeq->KeyEncodingFormat = AKF_MAX;	// Legacy value, should not be used by the engine
-	AnimSeq->CompressionScheme = static_cast<UAnimCompress*>(StaticDuplicateObject(this, AnimSeq));
-
 	ACLAllocator AllocatorImpl;
 
-	TUniquePtr<RigidSkeleton> ACLSkeleton = BuildACLSkeleton(AllocatorImpl, *AnimSeq, BoneData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance);
-	TUniquePtr<AnimationClip> ACLClip = BuildACLClip(AllocatorImpl, *AnimSeq, *ACLSkeleton, false);
+	TUniquePtr<RigidSkeleton> ACLSkeleton = BuildACLSkeleton(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance);
+	TUniquePtr<AnimationClip> ACLClip = BuildACLClip(AllocatorImpl, CompressibleAnimData, *ACLSkeleton, false);
 	TUniquePtr<AnimationClip> ACLBaseClip = nullptr;
 
 	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLClip->get_raw_size());
 
-	if (AnimSeq->IsValidAdditive())
+	if (CompressibleAnimData.bIsValidAdditive)
 	{
-		ACLBaseClip = BuildACLClip(AllocatorImpl, *AnimSeq, *ACLSkeleton, true);
+		ACLBaseClip = BuildACLClip(AllocatorImpl, CompressibleAnimData, *ACLSkeleton, true);
 
 		ACLClip->set_additive_base(ACLBaseClip.Get(), AdditiveClipFormat8::Additive1);
 	}
@@ -137,9 +134,6 @@ void UAnimCompress_ACLCustom::DoReduction(UAnimSequence* AnimSeq, const TArray<F
 
 	if (!CompressionResult.empty())
 	{
-		AnimSeq->CompressedByteStream.Empty();
-		AnimSeq->CompressedCodecFormat = NAME_ACLCustomCodec;
-		FAnimEncodingRegistry::Get().SetInterfaceLinks(*AnimSeq);
 		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
 		return;
 	}
@@ -148,12 +142,12 @@ void UAnimCompress_ACLCustom::DoReduction(UAnimSequence* AnimSeq, const TArray<F
 
 	const uint32 CompressedClipDataSize = CompressedClipData->get_size();
 
-	AnimSeq->CompressedByteStream.Empty(CompressedClipDataSize);
-	AnimSeq->CompressedByteStream.AddUninitialized(CompressedClipDataSize);
-	memcpy(AnimSeq->CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
+	OutResult.CompressedByteStream.Empty(CompressedClipDataSize);
+	OutResult.CompressedByteStream.AddUninitialized(CompressedClipDataSize);
+	memcpy(OutResult.CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
 
-	AnimSeq->CompressedCodecFormat = NAME_ACLCustomCodec;
-	FAnimEncodingRegistry::Get().SetInterfaceLinks(*AnimSeq);
+	OutResult.KeyEncodingFormat = AKF_ACLCustom;
+	AnimationFormat_SetInterfaceLinks(OutResult);
 
 #if !NO_LOGGING
 	{
