@@ -2,16 +2,17 @@
 
 ## Engine integration
 
-In order to use the ACL plugin in *Unreal Engine 4.22* and earlier, you will need to manually integrate a few engine changes. These changes can be found in the following *GitHub* branches:
+In order to use the ACL plugin in *Unreal Engine 4.23* and earlier, you will need to manually integrate a few engine changes. These changes can be found in the following *GitHub* branches:
 
-*  **4.19.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.19-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/3.patch)
-*  4.20.x: Use 4.19.x for inspiration, few to no engine changes should conflict
-*  4.21.x: Use 4.22.x for inspiration, few to no engine changes should conflict
-*  **4.22.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.22-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/4.patch)
+*  **4.19.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.19-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/3.patch) (requires ACL plugin **v0.3 or earlier**)
+*  4.20.x: Use 4.19.x for inspiration, few to no engine changes should conflict (requires ACL plugin **v0.3 or earlier**)
+*  4.21.x: Use 4.22.x for inspiration, few to no engine changes should conflict (requires ACL plugin **v0.4**)
+*  **4.22.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.22-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/4.patch) (requires ACL plugin **v0.4**)
+*  **4.23.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.23-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/5.patch) (requires ACL plugin **v0.5**)
 
 Note that in order to see these, you will first need to [request access](https://www.unrealengine.com/en-US/ue4-on-github) to the *Unreal Engine* source code.
 
-The changes are fairly minimal and consist of a global registry for animation codecs that plugins can hook into as well as some engine bug fixes. The branches themselves do not contain the ACL plugin. You will have to download the sources and place the `ACLPlugin` directory under `UE4 Root\Engine\Plugins`.
+The changes are fairly minimal and consist of a global registry for animation codecs that plugins can hook into as well as some engine bug fixes. The branches themselves do not contain the ACL plugin. You will have to download the sources and place the `ACLPlugin` directory under `UE4 Root\Engine\Plugins` or your project's plugin directory.
 
 ## ACL plugin playground
 
