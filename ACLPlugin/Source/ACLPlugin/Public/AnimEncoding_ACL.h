@@ -38,8 +38,8 @@
 class AEFACLCompressionCodec_Base : public AnimEncoding
 {
 public:
-	virtual void ByteSwapIn(UAnimSequence& Seq, FMemoryReader& MemoryReader) override;
-	virtual void ByteSwapOut(UAnimSequence& Seq, TArray<uint8>& SerializedData, bool ForceByteSwapping) override;
+	virtual void ByteSwapIn(FUECompressedAnimData& CompressedData, FMemoryReader& MemoryReader) override;
+	virtual void ByteSwapOut(FUECompressedAnimData& CompressedData, FMemoryWriter& MemoryWriter) override;
 };
 
 /** The ACL default codec runtime implementation. */
@@ -80,9 +80,3 @@ public:
 	virtual void GetPoseScales(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, FAnimSequenceDecompressionContext& DecompContext) override;
 #endif
 };
-
-//////////////////////////////////////////////////////////////////////////
-
-extern const FName NAME_ACLDefaultCodec;
-extern const FName NAME_ACLCustomCodec;
-extern const FName NAME_ACLSafetyFallbackCodec;

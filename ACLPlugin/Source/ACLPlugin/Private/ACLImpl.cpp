@@ -27,6 +27,7 @@
 #if WITH_EDITOR
 #include "AnimationCompression.h"
 #include "AnimationUtils.h"
+#include "Animation/AnimCompressionTypes.h"
 
 acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format)
 {
@@ -62,11 +63,11 @@ acl::CompressionLevel8 GetCompressionLevel(ACLCompressionLevel Level)
 	}
 }
 
-TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const TArray<FBoneData>& BoneData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance)
+TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance)
 {
 	using namespace acl;
 
-	const int32 NumBones = BoneData.Num();
+	const int32 NumBones = CompressibleAnimData.BoneData.Num();
 
 	TArray<RigidBone> ACLSkeletonBones;
 	ACLSkeletonBones.Empty(NumBones);
@@ -74,7 +75,7 @@ TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, con
 
 	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
-		const FBoneData& UE4Bone = BoneData[BoneIndex];
+		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[BoneIndex];
 		RigidBone& ACLBone = ACLSkeletonBones[BoneIndex];
 		ACLBone.name = String(AllocatorImpl, TCHAR_TO_ANSI(*UE4Bone.Name.ToString()));
 		ACLBone.bind_transform = transform_cast(transform_set(quat_normalize(QuatCast(UE4Bone.Orientation)), VectorCast(UE4Bone.Position), vector_set(1.0f)));
@@ -89,9 +90,9 @@ TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, con
 	return MakeUnique<RigidSkeleton>(AllocatorImpl, ACLSkeletonBones.GetData(), NumBones);
 }
 
-static int32 FindAnimationTrackIndex(const UAnimSequence& AnimSeq, int32 BoneIndex)
+static int32 FindAnimationTrackIndex(const FCompressibleAnimData& CompressibleAnimData, int32 BoneIndex)
 {
-	const TArray<FTrackToSkeletonMap>& TrackToSkelMap = AnimSeq.GetRawTrackToSkeletonMapTable();
+	const TArray<FTrackToSkeletonMap>& TrackToSkelMap = CompressibleAnimData.TrackToSkeletonMapTable;
 	if (BoneIndex != INDEX_NONE)
 	{
 		for (int32 TrackIndex = 0; TrackIndex < TrackToSkelMap.Num(); ++TrackIndex)
@@ -105,19 +106,19 @@ static int32 FindAnimationTrackIndex(const UAnimSequence& AnimSeq, int32 BoneInd
 	return INDEX_NONE;
 }
 
-static bool IsAdditiveBakedIntoRaw(const UAnimSequence& AnimSeq)
+static bool IsAdditiveBakedIntoRaw(const FCompressibleAnimData& CompressibleAnimData)
 {
-	if (!AnimSeq.IsValidAdditive())
+	if (!CompressibleAnimData.bIsValidAdditive)
 	{
 		return true;	// Sequences that aren't additive don't need baking as they are already baked
 	}
 
-	if (AnimSeq.GetRawAnimationData().Num() == 0)
+	if (CompressibleAnimData.RawAnimationData.Num() == 0)
 	{
 		return true;	// Sequences with no raw data don't need baking and we can't tell if they are baked or not so assume that they are, it doesn't matter
 	}
 
-	if (AnimSeq.GetAdditiveBaseAnimationData().Num() != 0)
+	if (CompressibleAnimData.AdditiveBaseAnimationData.Num() != 0)
 	{
 		return true;	// Sequence has raw data and additive base data, it is baked
 	}
@@ -125,12 +126,12 @@ static bool IsAdditiveBakedIntoRaw(const UAnimSequence& AnimSeq)
 	return false;	// Sequence has raw data but no additive base data, it isn't baked
 }
 
-TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const UAnimSequence& AnimSeq, const acl::RigidSkeleton& ACLSkeleton, bool bBuildAdditiveBase)
+TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, const acl::RigidSkeleton& ACLSkeleton, bool bBuildAdditiveBase)
 {
 	using namespace acl;
 
-	const bool bIsAdditive = bBuildAdditiveBase ? false : AnimSeq.IsValidAdditive();
-	const bool bIsAdditiveBakedIntoRaw = IsAdditiveBakedIntoRaw(AnimSeq);
+	const bool bIsAdditive = bBuildAdditiveBase ? false : CompressibleAnimData.bIsValidAdditive;
+	const bool bIsAdditiveBakedIntoRaw = IsAdditiveBakedIntoRaw(CompressibleAnimData);
 	check(!bIsAdditive || bIsAdditiveBakedIntoRaw);
 	if (bIsAdditive && !bIsAdditiveBakedIntoRaw)
 	{
@@ -149,11 +150,11 @@ TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const U
 	// we use it. When this happens, the additive base will contain that single frame repeated over and over: an animated static pose.
 	// To avoid wasting memory, we just grab the first frame.
 
-	const TArray<FRawAnimSequenceTrack>& RawTracks = bBuildAdditiveBase ? AnimSeq.GetAdditiveBaseAnimationData() : AnimSeq.GetRawAnimationData();
-	const uint32 NumSamples = bBuildAdditiveBase && (AnimSeq.RefPoseType == ABPT_RefPose || AnimSeq.RefPoseType == ABPT_AnimFrame) ? 1 : AnimSeq.GetRawNumberOfFrames();
-	const bool bIsStaticPose = NumSamples <= 1 || AnimSeq.SequenceLength < 0.0001f;
-	const float SampleRate = bIsStaticPose ? 30.0f : (float(AnimSeq.GetRawNumberOfFrames() - 1) / AnimSeq.SequenceLength);
-	const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*AnimSeq.GetPathName()));
+	const TArray<FRawAnimSequenceTrack>& RawTracks = bBuildAdditiveBase ? CompressibleAnimData.AdditiveBaseAnimationData : CompressibleAnimData.RawAnimationData;
+	const uint32 NumSamples = CompressibleAnimData.NumFrames;
+	const bool bIsStaticPose = NumSamples <= 1 || CompressibleAnimData.SequenceLength < 0.0001f;
+	const float SampleRate = bIsStaticPose ? 30.0f : (float(CompressibleAnimData.NumFrames - 1) / CompressibleAnimData.SequenceLength);
+	const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*CompressibleAnimData.FullName));
 
 	// Additive animations have 0,0,0 scale as the default since we add it
 	const FVector UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
@@ -165,7 +166,7 @@ TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const U
 	const uint16 NumBones = ACLSkeleton.get_num_bones();
 	for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
-		const int32 TrackIndex = FindAnimationTrackIndex(AnimSeq, BoneIndex);
+		const int32 TrackIndex = FindAnimationTrackIndex(CompressibleAnimData, BoneIndex);
 
 		AnimatedBone& ACLBone = ACLBones[BoneIndex];
 

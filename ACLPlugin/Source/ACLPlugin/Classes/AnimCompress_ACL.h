@@ -59,7 +59,7 @@ class UAnimCompress_ACL : public UAnimCompress_ACLBase
 protected:
 	//~ Begin UAnimCompress Interface
 #if WITH_EDITOR
-	virtual void DoReduction(class UAnimSequence* AnimSeq, const TArray<class FBoneData>& BoneData) override;
+	virtual void DoReduction(const struct FCompressibleAnimData& CompressibleAnimData, struct FCompressibleAnimDataResult& OutResult) override;
 	virtual void PopulateDDCKey(FArchive& Ar) override;
 #endif // WITH_EDITOR
 	//~ Begin UAnimCompress Interface
