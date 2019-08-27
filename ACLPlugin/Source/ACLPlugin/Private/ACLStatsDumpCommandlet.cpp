@@ -974,9 +974,9 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 	UE4StatDir = ParamsMap[TEXT("stats")];
 
-	PerformExhaustiveDump = !Switches.Contains(TEXT("noerror"));
-	TryAutomaticCompression = !Switches.Contains(TEXT("noauto"));
-	TryACLCompression = !Switches.Contains(TEXT("noacl"));
+	PerformExhaustiveDump = Switches.Contains(TEXT("error"));
+	TryAutomaticCompression = Switches.Contains(TEXT("auto"));
+	TryACLCompression = Switches.Contains(TEXT("acl"));
 
 	TryKeyReductionRetarget = Switches.Contains(TEXT("keyreductionrt"));
 	TryKeyReduction = TryKeyReductionRetarget || Switches.Contains(TEXT("keyreduction"));
