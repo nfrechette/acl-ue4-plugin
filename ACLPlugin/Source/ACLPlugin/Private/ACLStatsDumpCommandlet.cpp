@@ -376,6 +376,8 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 		FMemory::Memcpy(CompressibleResult.CompressedScaleOffsets.OffsetData.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedScaleOffsets.OffsetData.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedScaleOffsets.OffsetData.Num() * sizeof(int32));
 		CompressibleResult.CompressedTrackOffsets.AddUninitialized(Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.Num());
 		FMemory::Memcpy(CompressibleResult.CompressedTrackOffsets.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.Num() * sizeof(int32));
+		CompressibleResult.CompressedByteStream.AddUninitialized(Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.Num());
+		FMemory::Memcpy(CompressibleResult.CompressedByteStream.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.Num());
 		CompressibleResult.KeyEncodingFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.KeyEncodingFormat;
 		CompressibleResult.RotationCompressionFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.RotationCompressionFormat;
 		CompressibleResult.TranslationCompressionFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.TranslationCompressionFormat;
@@ -454,6 +456,8 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 		FMemory::Memcpy(CompressibleResult.CompressedScaleOffsets.OffsetData.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedScaleOffsets.OffsetData.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedScaleOffsets.OffsetData.Num() * sizeof(int32));
 		CompressibleResult.CompressedTrackOffsets.AddUninitialized(Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.Num());
 		FMemory::Memcpy(CompressibleResult.CompressedTrackOffsets.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.Num() * sizeof(int32));
+		CompressibleResult.CompressedByteStream.AddUninitialized(Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.Num());
+		FMemory::Memcpy(CompressibleResult.CompressedByteStream.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.Num());
 		CompressibleResult.KeyEncodingFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.KeyEncodingFormat;
 		CompressibleResult.RotationCompressionFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.RotationCompressionFormat;
 		CompressibleResult.TranslationCompressionFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.TranslationCompressionFormat;
@@ -561,6 +565,8 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 		FMemory::Memcpy(CompressibleResult.CompressedScaleOffsets.OffsetData.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedScaleOffsets.OffsetData.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedScaleOffsets.OffsetData.Num() * sizeof(int32));
 		CompressibleResult.CompressedTrackOffsets.AddUninitialized(Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.Num());
 		FMemory::Memcpy(CompressibleResult.CompressedTrackOffsets.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedTrackOffsets.Num() * sizeof(int32));
+		CompressibleResult.CompressedByteStream.AddUninitialized(Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.Num());
+		FMemory::Memcpy(CompressibleResult.CompressedByteStream.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.GetData(), Context.UE4Clip->CompressedData.CompressedDataStructure.CompressedByteStream.Num());
 		CompressibleResult.KeyEncodingFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.KeyEncodingFormat;
 		CompressibleResult.RotationCompressionFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.RotationCompressionFormat;
 		CompressibleResult.TranslationCompressionFormat = Context.UE4Clip->CompressedData.CompressedDataStructure.TranslationCompressionFormat;
