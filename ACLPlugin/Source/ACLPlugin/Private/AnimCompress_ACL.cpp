@@ -35,9 +35,6 @@
 #include <acl/algorithm/uniformly_sampled/decoder.h>
 #include <acl/compression/skeleton_error_metric.h>
 #include <acl/compression/utils.h>
-
-#include <sjson/writer.h>
-#include <acl/io/clip_writer.h>
 #endif	// WITH_EDITOR
 
 UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer)
@@ -91,10 +88,6 @@ void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAni
 		Settings.error_metric = &DefaultErrorMetric;
 
 	Settings.error_threshold = ErrorThreshold;
-
-	static volatile bool DumpClip = false;
-	if (DumpClip)
-		write_acl_clip(*ACLSkeleton, *ACLClip, AlgorithmType8::UniformlySampled, Settings, "D:\\acl_clip.acl.sjson");
 
 	AnimationKeyFormat KeyFormat = AKF_ACLDefault;
 
