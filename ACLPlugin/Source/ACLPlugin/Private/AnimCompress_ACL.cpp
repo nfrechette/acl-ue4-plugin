@@ -102,7 +102,7 @@ void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAni
 
 		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context;
 		Context.initialize(*CompressedClipData);
-		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
+		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, *Settings.error_metric, Context);
 		if (bone_error.error >= SafetyFallbackThreshold)
 		{
 			UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
@@ -150,7 +150,7 @@ void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAni
 	{
 		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context;
 		Context.initialize(*CompressedClipData);
-		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, Settings, Context);
+		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, *Settings.error_metric, Context);
 
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
