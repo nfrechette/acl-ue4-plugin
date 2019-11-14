@@ -1009,7 +1009,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 	AnimFormatEnum = FindObject<UEnum>(ANY_PACKAGE, TEXT("AnimationCompressionFormat"), true);
 
-	if (!ParamsMap.Contains(TEXT("acl")))
+	if (!ParamsMap.Contains(TEXT("input")))
 	{
 		// No source directory, use the current project instead
 		ACLRawDir = TEXT("");
@@ -1020,7 +1020,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 	else
 	{
 		// Use source directory
-		ACLRawDir = ParamsMap[TEXT("acl")];
+		ACLRawDir = ParamsMap[TEXT("input")];
 
 		UPackage* TempPackage = CreatePackage(nullptr, TEXT("/Temp/ACL"));
 
