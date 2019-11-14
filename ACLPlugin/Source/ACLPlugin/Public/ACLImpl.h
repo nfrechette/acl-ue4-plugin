@@ -36,8 +36,8 @@
 	#define ACL_ASSERT(expression, format, ...) checkf(expression, TEXT(format), #__VA_ARGS__)
 #endif
 
-#if PLATFORM_ENABLE_POPCNT_INTRINSIC || PLATFORM_XBOXONE || PLATFORM_PS4 || PLATFORM_ENABLE_VECTORINTRINSICS_NEON
-	// Enable usage of popcount instruction if present and requested
+#if PLATFORM_PS4
+	// Enable usage of popcount instruction
 	#define ACL_USE_POPCOUNT
 #endif
 
