@@ -325,12 +325,12 @@ def do_parse_stats(options, stat_queue, result_queue):
 
 					if not options['csv_error']:
 						# The sjson lib doesn't always return numbers as floats, sometimes as int but numpy doesn't like that
-						if 'ue4_acl' in file_data:
+						if 'ue4_acl' in file_data and 'error_per_frame_and_bone' in file_data['ue4_acl']:
 							for frame_error_values in file_data['ue4_acl']['error_per_frame_and_bone']:
 								acl_error_values.extend([float(v) for v in frame_error_values])
 							file_data['ue4_acl']['error_per_frame_and_bone'] = []
 
-						if 'ue4_auto' in file_data:
+						if 'ue4_auto' in file_data and 'error_per_frame_and_bone' in file_data['ue4_auto']:
 							for frame_error_values in file_data['ue4_auto']['error_per_frame_and_bone']:
 								ue4_error_values.extend([float(v) for v in frame_error_values])
 							file_data['ue4_auto']['error_per_frame_and_bone'] = []
@@ -571,8 +571,9 @@ if __name__ == "__main__":
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_auto['total_compressed_size']), format_elapsed_time(ue4_auto['total_compression_time']), ratio, ue4_auto['ue4_max_error'], ue4_auto['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_auto['worst_entry']['clip_name'], ue4_auto['worst_entry']['ue4_auto']['acl_compression_ratio'], ue4_auto['worst_entry']['ue4_auto']['acl_max_error']))
 		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_auto['total_compression_time']))
-		print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(ue4_error_values, 99.0)))
-		print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(ue4_error_values, 0.01)))
+		if len(ue4_error_values) > 0:
+			print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(ue4_error_values, 99.0)))
+			print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(ue4_error_values, 0.01)))
 		print()
 
 	if 'ue4_acl' in aggregate_results:
@@ -583,8 +584,9 @@ if __name__ == "__main__":
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_acl['total_compressed_size']), format_elapsed_time(ue4_acl['total_compression_time']), ratio, ue4_acl['ue4_max_error'], ue4_acl['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
 		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_acl['total_compression_time']))
-		print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(acl_error_values, 99.0)))
-		print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(acl_error_values, 0.01)))
+		if len(acl_error_values) > 0:
+			print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(acl_error_values, 99.0)))
+			print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(acl_error_values, 0.01)))
 		print()
 
 	if 'ue4_keyreduction' in aggregate_results:
