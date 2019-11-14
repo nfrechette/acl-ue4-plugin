@@ -27,6 +27,9 @@ if __name__ == "__main__":
 				print('Long Clip Name,Sample Time, Decompression Time (us), Decompression Speed (MB/sec), Codec, Clip Name', file = csv_file)
 				for line in matches:
 					values = line.split(',')
-					short_name = values[0].split('.')[1]
+					if '.' in values[0]:
+						short_name = values[0].split('.')[1]
+					else:
+						short_name = values[0]
 					print('{},{}'.format(line, short_name), file = csv_file)
 
