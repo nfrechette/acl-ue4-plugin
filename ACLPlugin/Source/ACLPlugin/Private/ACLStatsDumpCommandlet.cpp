@@ -81,17 +81,21 @@ static const TCHAR* ReadACLClip(FFileManagerGeneric& FileManager, const FString&
 
 	acl::ClipReader ClipReader(Allocator, RawSJSONData, Size);
 
-	if (!ClipReader.read_skeleton(OutACLSkeleton))
+	if (ClipReader.get_file_type() != acl::sjson_file_type::raw_clip)
 	{
 		GMalloc->Free(RawSJSONData);
-		return TEXT("Failed to read ACL RigidSkeleton from file");
+		return TEXT("SJSON file isn't a raw clip");
 	}
 
-	if (!ClipReader.read_clip(OutACLClip, *OutACLSkeleton))
+	acl::sjson_raw_clip RawClip;
+	if (!ClipReader.read_raw_clip(RawClip))
 	{
 		GMalloc->Free(RawSJSONData);
-		return TEXT("Failed to read ACL AnimationClip from file");
+		return TEXT("Failed to read ACL raw clip from file");
 	}
+
+	OutACLSkeleton = MoveTemp(RawClip.skeleton);
+	OutACLClip = MoveTemp(RawClip.clip);
 
 	GMalloc->Free(RawSJSONData);
 	return nullptr;
