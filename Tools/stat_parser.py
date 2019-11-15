@@ -302,6 +302,8 @@ def do_parse_stats(options, stat_queue, result_queue):
 		ue4_keyreduction_data['drop_rates'] = []
 		ue4_keyreduction_data['pose_drop_rates'] = []
 		ue4_keyreduction_data['track_drop_rates'] = []
+		acl_compression_times = []
+		ue4_compression_times = []
 
 		while True:
 			stat_filename = stat_queue.get()
@@ -335,6 +337,12 @@ def do_parse_stats(options, stat_queue, result_queue):
 								ue4_error_values.extend([float(v) for v in frame_error_values])
 							file_data['ue4_auto']['error_per_frame_and_bone'] = []
 
+					if 'ue4_acl' in file_data:
+						acl_compression_times.append(file_data['ue4_acl']['compression_time'])
+
+					if 'ue4_auto' in file_data:
+						ue4_compression_times.append(file_data['ue4_auto']['compression_time'])
+
 					if 'ue4_keyreduction' in file_data:
 						num_animated_keys = float(file_data['ue4_keyreduction']['total_num_animated_keys'])
 						if num_animated_keys > 2.001:
@@ -358,6 +366,8 @@ def do_parse_stats(options, stat_queue, result_queue):
 		results['acl_error_values'] = acl_error_values
 		results['ue4_error_values'] = ue4_error_values
 		results['ue4_keyreduction_data'] = ue4_keyreduction_data
+		results['acl_compression_times'] = acl_compression_times
+		results['ue4_compression_times'] = ue4_compression_times
 
 		result_queue.put(('done', results))
 	except KeyboardInterrupt:
@@ -471,12 +481,16 @@ if __name__ == "__main__":
 		ue4_stats = acl_stats
 
 	acl_error_values = numpy.array([])
+	acl_compression_times = numpy.array([])
 	for result in acl_stats:
 		acl_error_values = numpy.append(acl_error_values, result['acl_error_values'])
+		acl_compression_times = numpy.append(acl_compression_times, result['acl_compression_times'])
 
 	ue4_error_values = numpy.array([])
+	ue4_compression_times = numpy.array([])
 	for result in ue4_stats:
 		ue4_error_values = numpy.append(ue4_error_values, result['ue4_error_values'])
+		ue4_compression_times = numpy.append(ue4_compression_times, result['ue4_compression_times'])
 
 	clip_drop_rates = numpy.array([])
 	pose_drop_rates = numpy.array([])
@@ -571,6 +585,7 @@ if __name__ == "__main__":
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_auto['total_compressed_size']), format_elapsed_time(ue4_auto['total_compression_time']), ratio, ue4_auto['ue4_max_error'], ue4_auto['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_auto['worst_entry']['clip_name'], ue4_auto['worst_entry']['ue4_auto']['acl_compression_ratio'], ue4_auto['worst_entry']['ue4_auto']['acl_max_error']))
 		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_auto['total_compression_time']))
+		print('Compression time 50, 85, 99th percentile: {:.3f}, {:.3f}, {:.3f} seconds'.format(numpy.percentile(ue4_compression_times, 50.0), numpy.percentile(ue4_compression_times, 85.0), numpy.percentile(ue4_compression_times, 99.0)))
 		if len(ue4_error_values) > 0:
 			print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(ue4_error_values, 99.0)))
 			print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(ue4_error_values, 0.01)))
@@ -584,6 +599,7 @@ if __name__ == "__main__":
 		print('Compressed {:.2f} MB, Elapsed {}, Ratio [{:.2f} : 1], Max error [UE4: {:.4f}, ACL: {:.4f}]'.format(bytes_to_mb(ue4_acl['total_compressed_size']), format_elapsed_time(ue4_acl['total_compression_time']), ratio, ue4_acl['ue4_max_error'], ue4_acl['acl_max_error']))
 		print('Least accurate: {} Ratio: {:.2f}, Error: {:.4f}'.format(ue4_acl['worst_entry']['clip_name'], ue4_acl['worst_entry']['ue4_acl']['acl_compression_ratio'], ue4_acl['worst_entry']['ue4_acl']['acl_max_error']))
 		print('Compression speed: {:.2f} KB/sec'.format(bytes_to_kb(raw_size) / ue4_acl['total_compression_time']))
+		print('Compression time 50, 85, 99th percentile: {:.3f}, {:.3f}, {:.3f} seconds'.format(numpy.percentile(acl_compression_times, 50.0), numpy.percentile(acl_compression_times, 85.0), numpy.percentile(acl_compression_times, 99.0)))
 		if len(acl_error_values) > 0:
 			print('Bone error 99th percentile: {:.4f}'.format(numpy.percentile(acl_error_values, 99.0)))
 			print('Error threshold percentile rank: {:.2f} (0.01)'.format(percentile_rank(acl_error_values, 0.01)))
