@@ -1,5 +1,12 @@
 # Significant changes per release
 
+## 0.5.0
+
+*  Upgraded code to support UE 4.23
+*  Upgraded to ACL v1.3.0
+*  Added linear key reduction stat reporting
+*  Other minor fixes and improvements
+
 ## 0.4.0
 
 *  Upgraded code to support UE 4.22
