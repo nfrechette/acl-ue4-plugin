@@ -1,22 +1,16 @@
 # Decompression performance
 
-## Intel i7-6850K @ 3.8 GHz (x64)
+## AMD Ryzen 2950X @ 3.5 GHz (x64)
 
-![Matinee i7 Median Performance](Images/acl_plugin_decomp_i7_matinee.png)
+![Matinee Ryzen Median Performance](Images/acl_plugin_decomp_ryzen_matinee.png)
 
-![Playground i7 Median Performance](Images/acl_plugin_decomp_i7_playground.png)
+![Playground Ryzen Median Performance](Images/acl_plugin_decomp_ryzen_playground.png)
 
 ## Google Pixel 3 @ 2.5 GHz (arm64)
 
 ![Matinee P3 Median Performance](Images/acl_plugin_decomp_p3_matinee.png)
 
 ![Playground P3 Median Performance](Images/acl_plugin_decomp_p3_playground.png)
-
-## Samsung S8 @ 2.3 GHz (arm64)
-
-![Matinee S8 Median Performance](Images/acl_plugin_decomp_s8_matinee.png)
-
-![Playground S8 Median Performance](Images/acl_plugin_decomp_s8_playground.png)
 
 ## Data and method used
 

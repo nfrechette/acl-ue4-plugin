@@ -1,22 +1,22 @@
 # Paragon database performance
 
-|                   | ACL Plugin v0.4.0 | ACL Plugin v0.3.0 | UE v4.22.2   |
+|                   | ACL Plugin v0.5.0 | ACL Plugin v0.4.0 | UE v4.23.1 |
 | -------               | --------      | -------               | -------               |
-| **Compressed size**   | 234.76 MB | 234.76 MB | 380.37 MB |
-| **Compression ratio** | 18.22 : 1 | 18.22 : 1 | 11.24 : 1   |
-| **Compression time**  | 23m 58.76s | 30m 14.69s | 2h 5m 11.22s |
-| **Compression speed** | 3043.42 KB/sec | 2412.94 KB/sec | 582.96 KB/sec |
-| **Max ACL error**     | 0.8623 cm | 0.8623 cm | 0.8619 cm      |
-| **Max UE4 error**     | 0.8601 cm | 0.8601 cm | 0.6424 cm      |
-| **ACL Error 99<sup>th</sup> percentile** | 0.0100 cm | 0.0094 cm | 0.0438 cm |
-| **Samples below ACL error threshold** | 99.00 % | 99.19 % | 81.75 % |
+| **Compressed size**   | 225.42 MB | 234.76 MB | 382.95 MB |
+| **Compression ratio** | 18.97 : 1 | 18.22 : 1 | 11.17 : 1 |
+| **Compression time**  | 11m 19.37s | 23m 58.76s | 1h 35m 42.69s |
+| **Compression speed** | 6445.27 KB/sec | 3043.42 KB/sec | 762.49 KB/sec |
+| **Max ACL error**     | 0.8623 cm | 0.8623 cm | 0.8625 cm    |
+| **Max UE4 error**     | 0.8601 cm | 0.8601 cm | 0.8601 cm  |
+| **ACL Error 99<sup>th</sup> percentile** | 0.0094 cm | 0.0100 cm | 0.0445 cm |
+| **Samples below ACL error threshold** | 99.20 % | 99.00 % | 81.63 % |
 
-ACL was smaller for **6343** clips (**96.72 %**)  
-ACL was more accurate for **5081** clips (**77.48 %**)  
-ACL has faster compression for **6514** clips (**99.33 %**)  
-ACL was smaller, better, and faster for **4911** clips (**74.89 %**)  
+ACL was smaller for **6367** clips (**97.09 %**)  
+ACL was more accurate for **5115** clips (**78.00 %**)  
+ACL has faster compression for **6555** clips (**99.95 %**)  
+ACL was smaller, better, and faster for **4985** clips (**76.01 %**)  
 
-Would the *ACL Plugin* have been included in the *Automatic Compression* permutations tried, it would have won for **6181** clips (**94.25 %**)
+Would the *ACL Plugin* have been included in the *Automatic Compression* permutations tried, it would have won for **6179** clips (**94.22 %**)
 
 ## Data and method used
 
@@ -27,7 +27,7 @@ Epic has permitted [Nicholas Frechette](https://github.com/nfrechette) to use th
 **Note: Epic has since released Paragon assets publicly in early 2018, once I get around to it, it will be extracted along with updated stats.**
 
 *  Number of clips: **6558**
-*  Total duration: **7h 00m 45.27s**
+*  Total duration: **7h 0m 45.27s**
 *  Raw size: **4276.11 MB** (10x float32 * num bones * num samples)
 
 The data set contains among other things:
