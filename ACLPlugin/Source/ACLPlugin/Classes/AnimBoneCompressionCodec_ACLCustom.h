@@ -26,28 +26,16 @@
 
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
-#include "Animation/AnimCompress.h"
-#include "AnimCompress_ACLBase.h"
-#include "AnimCompress_ACLCustom.generated.h"
+#include "AnimBoneCompressionCodec_ACLBase.h"
+#include "AnimBoneCompressionCodec_ACLCustom.generated.h"
 
 /** The custom codec implementation for ACL support with all features supported. */
 UCLASS(MinimalAPI, config = Engine, meta = (DisplayName = "Anim Compress ACL Custom"))
-class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
+class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACLBase
 {
 	GENERATED_UCLASS_BODY()
 
-	/** The default virtual vertex distance for normal bones. */
-	UPROPERTY(EditAnywhere, Category = Skeleton, meta = (ClampMin = "0"))
-	float DefaultVirtualVertexDistance;
-
-	/** The virtual vertex distance for bones that requires extra accuracy. */
-	UPROPERTY(EditAnywhere, Category = Skeleton, meta = (ClampMin = "0"))
-	float SafeVirtualVertexDistance;
-
-	/** The compression level to use. Higher levels will be slower to compress but yield a lower memory footprint. */
-	UPROPERTY(EditAnywhere, Category = Clip)
-	TEnumAsByte<ACLCompressionLevel> CompressionLevel;
-
+#if WITH_EDITORONLY_DATA
 	/** The rotation format to use. */
 	UPROPERTY(EditAnywhere, Category = Clip)
 	TEnumAsByte<ACLRotationFormat> RotationFormat;
@@ -59,10 +47,6 @@ class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
 	/** The scale format to use. */
 	UPROPERTY(EditAnywhere, Category = Clip)
 	TEnumAsByte<ACLVectorFormat> ScaleFormat;
-
-	/** The error threshold to used when optimizing and compressing the animation sequence. */
-	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
-	float ErrorThreshold;
 
 	/** The threshold used to detect constant rotation tracks. */
 	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
@@ -78,32 +62,31 @@ class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
 
 	/** Whether to enable per clip range reduction for rotations or not. */
 	UPROPERTY(EditAnywhere, Category = Clip)
-	uint32 bClipRangeReduceRotations : 1;
+	bool bClipRangeReduceRotations;
 
 	/** Whether to enable per clip range reduction for translations or not. */
 	UPROPERTY(EditAnywhere, Category = Clip)
-	uint32 bClipRangeReduceTranslations : 1;
+	bool bClipRangeReduceTranslations;
 
 	/** Whether to enable per clip range reduction for scales or not. */
 	UPROPERTY(EditAnywhere, Category = Clip)
-	uint32 bClipRangeReduceScales : 1;
+	bool bClipRangeReduceScales;
 
 	/** Whether to enable clip segmenting or not. */
 	UPROPERTY(EditAnywhere, Category = Segmenting)
-	//uint32 bEnableSegmenting : 1;		// TODO: Temporarily renamed to avoid conflict
-	uint32 EnableSegmenting : 1;
+	bool bEnableSegmenting;
 
 	/** Whether to enable per segment range reduction for rotations or not. */
 	UPROPERTY(EditAnywhere, Category = Segmenting)
-	uint32 bSegmentRangeReduceRotations : 1;
+	bool bSegmentRangeReduceRotations;
 
 	/** Whether to enable per segment range reduction for translations or not. */
 	UPROPERTY(EditAnywhere, Category = Segmenting)
-	uint32 bSegmentRangeReduceTranslations : 1;
+	bool bSegmentRangeReduceTranslations;
 
 	/** Whether to enable per segment range reduction for scales or not. */
 	UPROPERTY(EditAnywhere, Category = Segmenting)
-	uint32 bSegmentRangeReduceScales : 1;
+	bool bSegmentRangeReduceScales;
 
 	/** The ideal number of key frames to retain per segment for each track. */
 	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
@@ -113,11 +96,16 @@ class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
 	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
 	uint16 MaxNumKeyFramesPerSegment;
 
-protected:
-	//~ Begin UAnimCompress Interface
-#if WITH_EDITOR
-	virtual void DoReduction(const struct FCompressibleAnimData& CompressibleAnimData, struct FCompressibleAnimDataResult& OutResult) override;
+	//////////////////////////////////////////////////////////////////////////
+
+	// UAnimBoneCompressionCodec implementation
 	virtual void PopulateDDCKey(FArchive& Ar) override;
-#endif // WITH_EDITOR
-	//~ Begin UAnimCompress Interface
+
+	// UAnimBoneCompressionCodec_ACLBase implementation
+	virtual void GetCompressionSettings(acl::CompressionSettings& OutSettings) const override;
+#endif
+
+	// UAnimBoneCompressionCodec implementation
+	virtual void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms) const override;
+	virtual void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex, FTransform& OutAtom) const override;
 };

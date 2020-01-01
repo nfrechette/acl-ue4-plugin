@@ -70,7 +70,7 @@ inline acl::Transform_32 TransformCast(const FTransform& Input) { return acl::tr
 inline FTransform TransformCast(const acl::Transform_32& Input) { return FTransform(QuatCast(Input.rotation), VectorCast(Input.translation), VectorCast(Input.scale)); }
 
 #if WITH_EDITOR
-#include "AnimCompress_ACLBase.h"
+#include "AnimBoneCompressionCodec_ACLBase.h"
 
 #include <acl/compression/skeleton.h>
 #include <acl/compression/animation_clip.h>

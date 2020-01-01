@@ -22,27 +22,37 @@
 // SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "AnimCompress_ACL.h"
+#include "AnimBoneCompressionCodec_ACLBase.h"
+#include "Serialization/MemoryWriter.h"
+#include "Serialization/MemoryReader.h"
 
-#if WITH_EDITOR
-#include "AnimationCompression.h"
+#if WITH_EDITORONLY_DATA
+#include "AnimBoneCompressionCodec_ACLSafe.h"
 #include "Animation/AnimationSettings.h"
-#include "Animation/AnimCompressionTypes.h"
+
 #include "ACLImpl.h"
-#include "AnimEncoding_ACL.h"
 
 #include <acl/algorithm/uniformly_sampled/encoder.h>
 #include <acl/algorithm/uniformly_sampled/decoder.h>
 #include <acl/compression/skeleton_error_metric.h>
 #include <acl/compression/utils.h>
-#endif	// WITH_EDITOR
+#endif	// WITH_EDITORONLY_DATA
 
-UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer)
+bool FACLCompressedAnimData::IsValid() const
+{
+	if (CompressedByteStream.Num() == 0)
+	{
+		return false;
+	}
+
+	const acl::CompressedClip* CompressedClipData = reinterpret_cast<const acl::CompressedClip*>(CompressedByteStream.GetData());
+	return CompressedClipData->is_valid(false).empty();
+}
+
+UAnimBoneCompressionCodec_ACLBase::UAnimBoneCompressionCodec_ACLBase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	Description = TEXT("ACL");
-	bNeedsSkeleton = true;
-
+#if WITH_EDITORONLY_DATA
 	CompressionLevel = ACLCL_Medium;
 
 	// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
@@ -51,12 +61,12 @@ UAnimCompress_ACL::UAnimCompress_ACL(const FObjectInitializer& ObjectInitializer
 	DefaultVirtualVertexDistance = 3.0f;	// 3cm, suitable for ordinary characters
 	SafeVirtualVertexDistance = 100.0f;		// 100cm
 
-	SafetyFallbackThreshold = 1.0f;			// 1cm, should be very rarely exceeded
 	ErrorThreshold = 0.01f;					// 0.01cm, conservative enough for cinematographic quality
+#endif	// WITH_EDITORONLY_DATA
 }
 
-#if WITH_EDITOR
-void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
+#if WITH_EDITORONLY_DATA
+bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
 	using namespace acl;
 
@@ -75,22 +85,21 @@ void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAni
 		ACLClip->set_additive_base(ACLBaseClip.Get(), AdditiveClipFormat8::Additive1);
 	}
 
-	OutputStats Stats;
-
-	CompressionSettings Settings = get_default_compression_settings();
-	Settings.level = GetCompressionLevel(CompressionLevel);
+	CompressionSettings Settings;
+	GetCompressionSettings(Settings);
 
 	TransformErrorMetric DefaultErrorMetric;
 	AdditiveTransformErrorMetric<AdditiveClipFormat8::Additive1> AdditiveErrorMetric;
 	if (ACLBaseClip != nullptr)
+	{
 		Settings.error_metric = &AdditiveErrorMetric;
+	}
 	else
+	{
 		Settings.error_metric = &DefaultErrorMetric;
+	}
 
-	Settings.error_threshold = ErrorThreshold;
-
-	AnimationKeyFormat KeyFormat = AKF_ACLDefault;
-
+	OutputStats Stats;
 	CompressedClip* CompressedClipData = nullptr;
 	ErrorResult CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
 
@@ -98,41 +107,20 @@ void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAni
 	// This should be VERY rare with the default threshold
 	if (CompressionResult.empty())
 	{
-		checkSlow(CompressedClipData->is_valid(true).empty());
-
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context;
-		Context.initialize(*CompressedClipData);
-		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, *Settings.error_metric, Context);
-		if (bone_error.error >= SafetyFallbackThreshold)
+		const ACLSafetyFallbackResult FallbackResult = ExecuteSafetyFallback(AllocatorImpl, Settings, *ACLClip, *CompressedClipData, CompressibleAnimData, OutResult);
+		if (FallbackResult != ACLSafetyFallbackResult::Ignored)
 		{
-			UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
-			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm"), bone_error.error);
-
 			AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
 			CompressedClipData = nullptr;
 
-			// 99.999% of the time if we have accuracy issues, it comes from the rotations
-
-			// Fallback to full precision rotations
-			Settings.rotation_format = RotationFormat8::Quat_128;
-
-			// Disable rotation range reduction for clip and segments to make sure they remain at maximum precision
-			Settings.range_reduction &= ~RangeReductionFlags8::Rotations;
-			Settings.segmenting.range_reduction &= ~RangeReductionFlags8::Rotations;
-
-			// Disable constant rotation track detection
-			Settings.constant_rotation_threshold_angle = 0.0f;
-
-			KeyFormat = AKF_ACLSafe;
-
-			CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
+			return FallbackResult == ACLSafetyFallbackResult::Success;
 		}
 	}
 
 	if (!CompressionResult.empty())
 	{
-		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
-		return;
+		UE_LOG(LogAnimationCompression, Warning, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
+		return false;
 	}
 
 	checkSlow(CompressedClipData->is_valid(true).empty());
@@ -143,8 +131,11 @@ void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAni
 	OutResult.CompressedByteStream.AddUninitialized(CompressedClipDataSize);
 	memcpy(OutResult.CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
 
-	OutResult.KeyEncodingFormat = KeyFormat;
-	AnimationFormat_SetInterfaceLinks(OutResult);
+	OutResult.Codec = this;
+
+	OutResult.AnimData = AllocateAnimData();
+	OutResult.AnimData->CompressedNumberOfFrames = CompressibleAnimData.NumFrames;
+	OutResult.AnimData->Bind(OutResult.CompressedByteStream);
 
 #if !NO_LOGGING
 	{
@@ -158,29 +149,56 @@ void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAni
 #endif
 
 	AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
+	return true;
 }
 
-void UAnimCompress_ACL::PopulateDDCKey(FArchive& Ar)
+void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 {
 	Super::PopulateDDCKey(Ar);
 
-	using namespace acl;
+	uint32 ForceRebuildVersion = 0;
 
-	CompressionSettings Settings = get_default_compression_settings();
-	Settings.level = GetCompressionLevel(CompressionLevel);
-	Settings.error_threshold = ErrorThreshold;
+	Ar << ForceRebuildVersion << DefaultVirtualVertexDistance << SafeVirtualVertexDistance << ErrorThreshold;
+	Ar << CompressionLevel;
 
-	uint32 ForceRebuildVersion = 1;
-	uint16 AlgorithmVersion = get_algorithm_version(AlgorithmType8::UniformlySampled);
-	uint32 SettingsHash = Settings.get_hash();
-	uint32 KeyEndEffectorsHash = 0;
-
-	for (const FString& MatchName : UAnimationSettings::Get()->KeyEndEffectorsMatchNameArray)
+	// Add the end effector match name list since if it changes, we need to re-compress
+	const TArray<FString>& KeyEndEffectorsMatchNameArray = UAnimationSettings::Get()->KeyEndEffectorsMatchNameArray;
+	for (const FString& MatchName : KeyEndEffectorsMatchNameArray)
 	{
-		KeyEndEffectorsHash = hash_combine(KeyEndEffectorsHash, GetTypeHash(MatchName));
+		uint32 MatchNameHash = GetTypeHash(MatchName);
+		Ar << MatchNameHash;
 	}
-	
-	Ar	<< SafetyFallbackThreshold << ErrorThreshold << DefaultVirtualVertexDistance << SafeVirtualVertexDistance
-		<< ForceRebuildVersion << AlgorithmVersion << SettingsHash << KeyEndEffectorsHash;
 }
-#endif // WITH_EDITOR
+
+ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACLBase::ExecuteSafetyFallback(acl::IAllocator& Allocator, const acl::CompressionSettings& Settings, const acl::AnimationClip& RawClip, const acl::CompressedClip& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
+{
+	return ACLSafetyFallbackResult::Ignored;
+}
+#endif
+
+TUniquePtr<ICompressedAnimData> UAnimBoneCompressionCodec_ACLBase::AllocateAnimData() const
+{
+	return MakeUnique<FACLCompressedAnimData>();
+}
+
+void UAnimBoneCompressionCodec_ACLBase::ByteSwapIn(ICompressedAnimData& AnimData, TArrayView<uint8> CompressedData, FMemoryReader& MemoryStream) const
+{
+#if !PLATFORM_LITTLE_ENDIAN
+#error "ACL does not currently support big-endian platforms"
+#endif
+
+	// TODO: ACL does not support byte swapping
+	FACLCompressedAnimData& ACLAnimData = static_cast<FACLCompressedAnimData&>(AnimData);
+	MemoryStream.Serialize(ACLAnimData.CompressedByteStream.GetData(), ACLAnimData.CompressedByteStream.Num());
+}
+
+void UAnimBoneCompressionCodec_ACLBase::ByteSwapOut(ICompressedAnimData& AnimData, TArrayView<uint8> CompressedData, FMemoryWriter& MemoryStream) const
+{
+#if !PLATFORM_LITTLE_ENDIAN
+#error "ACL does not currently support big-endian platforms"
+#endif
+
+	// TODO: ACL does not support byte swapping
+	FACLCompressedAnimData& ACLAnimData = static_cast<FACLCompressedAnimData&>(AnimData);
+	MemoryStream.Serialize(ACLAnimData.CompressedByteStream.GetData(), ACLAnimData.CompressedByteStream.Num());
+}
