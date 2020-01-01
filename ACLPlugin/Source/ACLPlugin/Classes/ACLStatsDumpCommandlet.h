@@ -46,19 +46,22 @@ public:
 
 #if WITH_EDITOR
 	FString ACLRawDir;
-	FString UE4StatDir;
+	FString OutputDir;
 
 	bool PerformExhaustiveDump;
+	bool PerformCompression;
+	bool PerformClipExtraction;
 	bool TryAutomaticCompression;
 	bool TryACLCompression;
 	bool TryKeyReductionRetarget;
 	bool TryKeyReduction;
+	bool ResumeTask;
+	bool SkipAdditiveClips;
 
-	float MasterTolerance;
-
-	class UAnimCompress_Automatic* AutoCompressor;
-	class UAnimCompress_ACL* ACLCompressor;
-
-	const class UEnum* AnimFormatEnum;
+	class UAnimBoneCompressionSettings* AutoCompressionSettings;
+	class UAnimBoneCompressionSettings* ACLCompressionSettings;
+	class UAnimBoneCompressionSettings* KeyReductionCompressionSettings;
+	class UAnimBoneCompressionCodec_ACL* ACLCodec;
+	class UAnimCompress_RemoveLinearKeys* KeyReductionCodec;
 #endif
 };

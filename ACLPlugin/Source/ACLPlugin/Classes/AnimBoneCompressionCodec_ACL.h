@@ -26,41 +26,39 @@
 
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
-#include "Animation/AnimCompress.h"
-#include "AnimCompress_ACLBase.h"
-#include "AnimCompress_ACL.generated.h"
+#include "AnimBoneCompressionCodec_ACLBase.h"
+#include "AnimBoneCompressionCodec_ACL.generated.h"
 
 /** The default codec implementation for ACL support with the minimal set of exposed features for ease of use. */
-UCLASS(MinimalAPI, config = Engine)
-class UAnimCompress_ACL : public UAnimCompress_ACLBase
+UCLASS(MinimalAPI, config = Engine, meta = (DisplayName = "Anim Compress ACL"))
+class UAnimBoneCompressionCodec_ACL : public UAnimBoneCompressionCodec_ACLBase
 {
 	GENERATED_UCLASS_BODY()
 
-	/** The compression level to use. Higher levels will be slower to compress but yield a lower memory footprint. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	TEnumAsByte<ACLCompressionLevel> CompressionLevel;
+	UPROPERTY(EditAnywhere, Category = "ACL Options", Instanced, meta = (EditInline))
+	UAnimBoneCompressionCodec* SafetyFallbackCodec;
 
-	/** The default virtual vertex distance for normal bones. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
-	float DefaultVirtualVertexDistance;
-
-	/** The virtual vertex distance for bones that requires extra accuracy. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
-	float SafeVirtualVertexDistance;
-
+#if WITH_EDITORONLY_DATA
 	/** The error threshold after which we fallback on a safer encoding. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float SafetyFallbackThreshold;
 
-	/** The error threshold to used when optimizing and compressing the animation sequence. */
-	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
-	float ErrorThreshold;
+	//////////////////////////////////////////////////////////////////////////
+	// UObject implementation
+	virtual void PostInitProperties() override;
+	virtual void GetPreloadDependencies(TArray<UObject*>& OutDeps) override;
 
-protected:
-	//~ Begin UAnimCompress Interface
-#if WITH_EDITOR
-	virtual void DoReduction(const struct FCompressibleAnimData& CompressibleAnimData, struct FCompressibleAnimDataResult& OutResult) override;
+	// UAnimBoneCompressionCodec implementation
+	virtual bool IsCodecValid() const override;
 	virtual void PopulateDDCKey(FArchive& Ar) override;
-#endif // WITH_EDITOR
-	//~ Begin UAnimCompress Interface
+
+	// UAnimBoneCompressionCodec_ACLBase implementation
+	virtual void GetCompressionSettings(acl::CompressionSettings& OutSettings) const override;
+	virtual ACLSafetyFallbackResult ExecuteSafetyFallback(acl::IAllocator& Allocator, const acl::CompressionSettings& Settings, const acl::AnimationClip& RawClip, const acl::CompressedClip& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult);
+#endif
+
+	// UAnimBoneCompressionCodec implementation
+	virtual UAnimBoneCompressionCodec* GetCodec(const FString& DDCHandle);
+	virtual void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms) const override;
+	virtual void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex, FTransform& OutAtom) const override;
 };
