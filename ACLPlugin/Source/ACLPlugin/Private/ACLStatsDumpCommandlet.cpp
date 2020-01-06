@@ -1073,6 +1073,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 	TryKeyReduction = TryKeyReductionRetarget || Switches.Contains(TEXT("keyreduction"));
 	ResumeTask = Switches.Contains(TEXT("resume"));
 	SkipAdditiveClips = Switches.Contains(TEXT("noadditive")) || true;	// Disabled for now, TODO add support for it
+	const bool HasInput = ParamsMap.Contains(TEXT("input"));
 
 	if (PerformClipExtraction)
 	{
@@ -1112,7 +1113,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 		}
 	}
 
-	if (TryACLCompression)
+	if (TryACLCompression || !HasInput)
 	{
 		ACLCompressionSettings = NewObject<UAnimBoneCompressionSettings>(this, UAnimBoneCompressionSettings::StaticClass());
 		ACLCodec = NewObject<UAnimBoneCompressionCodec_ACL>(this, UAnimBoneCompressionCodec_ACL::StaticClass());
@@ -1136,7 +1137,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 	FFileManagerGeneric FileManager;
 	FileManager.MakeDirectory(*OutputDir, true);
 
-	if (!ParamsMap.Contains(TEXT("input")))
+	if (!HasInput)
 	{
 		// No source directory, use the current project instead
 		ACLRawDir = TEXT("");
