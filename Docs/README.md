@@ -10,11 +10,32 @@ In order to use the ACL plugin in *Unreal Engine 4.23* and earlier, you will nee
 *  **4.22.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.22-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/4.patch) (requires ACL plugin **v0.4**)
 *  **4.23.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.23-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/5.patch) (requires ACL plugin **v0.5**)
 *  4.24.x: Use 4.23.x for inspiration, few to no engine changes should conflict (requires ACL plugin **v0.5**)
-*  4.25.x: Use the [Unreal Engine Dev-Anim branch](https://github.com/EpicGames/UnrealEngine/tree/dev-anim), no further changes required (requires ACL plugin **develop branch**)
+*  [Unreal Engine Dev-Anim branch](https://github.com/EpicGames/UnrealEngine/tree/dev-anim): no further changes required (requires ACL plugin **develop branch**)
 
 Note that in order to see these, you will first need to [request access](https://www.unrealengine.com/en-US/ue4-on-github) to the *Unreal Engine* source code.
 
-The changes are fairly minimal and consist of a global registry for animation codecs that plugins can hook into as well as some engine bug fixes. The branches themselves do not contain the ACL plugin. You will have to download the sources and place the `ACLPlugin` directory under `UE4 Root\Engine\Plugins` or your project's plugin directory.
+### Integration details for UE 4.24 and earlier
+
+Some engine changes are required for the ACL plugin to work with these versions. The changes are minimal and consist of a global registry for animation codecs that plugins can hook into as well as exposing a few things needed. The branches in my fork of the Unreal Engine do not contain the ACL plugin. You will have to download a plugin release suitable for your engine version. Simply place the `ACLPlugin` directory under `UE4 Root\Engine\Plugins` or in the plugin directory of your project.
+
+### Integration details for the Dev-Anim branch
+
+The *Dev-Anim* branch contains a refactor of the animation compression codec interface in order to expose everything needed for plugins. This allows ACL to function out of the box and will later allow it to be published on the Unreal Marketplace. Here are the necessary steps in order to use the plugin directly from GitHub:
+
+*  Clone the *develop* branch and its sub-modules with: `git clone --recurse-submodules https://github.com/nfrechette/acl-ue4-plugin.git`
+*  Grab the `ACLPlugin` directory located here: [acl-ue4-plugin/ACLPlugin](../ACLPlugin) and copy it under `UE4 Root\Engine\Plugins` or in the plugin directory of your project.
+*  Update the UE4 solution with the `GenerateProjectFiles.bat` or the equivalent file for your OS. The ACL plugin contains code that needs to be built for the editor and the runtime.
+*  Open and build the editor.
+
+Once you start the editor, you should see the ACL Plugin in the plugin list under `Edit -> Plugins` in the top menu bar. ACL should be near the top, make sure it is enabled for your project and reload the editor if needed.
+
+The refactor converts the old system of codecs into a data driven asset much like other assets in the engine. Animation sequences reference a `Bone Compression Settings` asset that can be created in the content browser by right-clicking and selecting it under the `Animation` category. A compression settings asset is responsible for referencing a list of codecs to try when compression is requested. Each codec is tried in parallel and the best one is selected by the same heuristic that earlier engine releases relied on. The list of codecs that `Automatic Compression` used to reference can now be found in the default compression settings asset located under `Engine Content/Animation` (note that you will need enable the `Show Engine Content` option in the `View Options` to see it). It contains the same codecs that UE 4.24 uses.
+
+The ACL plugin also provides its own compression settings asset located in its plugin content folder (note that you will need to enable the `Show Plugin Content` option in the `View Options` to see it). It contains only the ACL codec and can be used out of the box in all your animation sequences.
+
+In order to change the default compression settings asset used, you will need to edit the `BaseEngine.ini` or the equivalent file in your project under the `[Animation.DefaultObjectSettings]` section.
+
+Feel free to create and use your own compression settings assets which can now be set per sequence. You could even add the ACL codec to the default asset and let it complete against the stock engine codecs.
 
 ## ACL plugin playground
 
@@ -52,7 +73,7 @@ The ACL [error metric](https://github.com/nfrechette/acl/blob/develop/docs/error
 
 ![Skeleton Compression Settings](Images/CompressionSettings_Custom_Clip.png)
 
-The ACL optimization algorithm will attempt to aggressively remove everything it can until the error exceeds a specified *Error Threshold*. For this reason, the threshold is very important and it should be very conservative. A default value of **0.01cm** is appropriate for cinematographic quality and most likely does not require any particular tuning. The error threshold works in conjunction with the virtual vertex distance since the error is measured on the virtual vertices.
+The ACL optimization algorithm will attempt to aggressively remove everything it can until the error exceeds a specified *Error Threshold*. For this reason, the threshold is very important and it should be very conservative. A default value of **0.01cm** is appropriate for cinematographic quality and most likely does not require any tuning. The error threshold works in conjunction with the virtual vertex distance since the error is measured on the virtual vertices.
 
 This plugin supports three rotation formats: *Quat Full Bit Rate, Quat Drop W Full Bit Rate, and Quat Drop W Variable Bit rate (default)*. The variable bit rate is almost always the best choice which is why it is the default. The other two options are used by the safety fallback and for debugging purposes.
 
