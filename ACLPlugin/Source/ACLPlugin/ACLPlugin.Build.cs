@@ -32,6 +32,8 @@ namespace UnrealBuildTool.Rules
 		{
 			string ACLSDKDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../ThirdParty"));
 
+			PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+
 			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/includes"));
 
 			PrivateIncludePaths.Add("ACLPlugin/Private");
