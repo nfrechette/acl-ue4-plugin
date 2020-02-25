@@ -30,7 +30,7 @@ namespace UnrealBuildTool.Rules
 	{
 		public ACLPlugin(ReadOnlyTargetRules Target) : base(Target)
 		{
-			string ACLSDKDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../ThirdParty"));
+			string ACLSDKDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../ThirdParty"));
 
 			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/includes"));
 

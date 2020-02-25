@@ -1,4 +1,3 @@
-[submodule "ACLPlugin/ThirdParty/acl"]
-	path = ACLPlugin/ThirdParty/acl
-	url = https://github.com/nfrechette/acl
-	branch = develop
+[submodule "ACLPlugin/Source/ThirdParty/acl"]
+	path = ACLPlugin/Source/ThirdParty/acl
+	url = https://github.com/nfrechette/acl.git
