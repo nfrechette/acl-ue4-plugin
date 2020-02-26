@@ -19,7 +19,8 @@
 		{
 			"Name": "ACLPlugin",
 			"Type": "Runtime",
-			"LoadingPhase": "PostConfigInit"
+			"LoadingPhase": "PostConfigInit",
+			"BlacklistPlatforms": []
 		}
 	]
 }
