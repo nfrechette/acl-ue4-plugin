@@ -10,12 +10,11 @@
 	"DocsURL": "https://github.com/nfrechette/acl-ue4-plugin",
 	"MarketplaceURL": "",
 	"SupportURL": "https://github.com/nfrechette/acl-ue4-plugin",
-	"EnabledByDefault" : true,
+	"EnabledByDefault": true,
 	"CanContainContent": true,
 	"IsBetaVersion": true,
 	"Installed": false,
-	"Modules" :
-	[
+	"Modules": [
 		{
 			"Name": "ACLPlugin",
 			"Type": "Runtime",
