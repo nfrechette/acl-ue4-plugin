@@ -1,6 +1,7 @@
 [![CLA assistant](https://cla-assistant.io/readme/badge/nfrechette/acl-ue4-plugin)](https://cla-assistant.io/nfrechette/acl-ue4-plugin)
 [![GitHub release](https://img.shields.io/github/release/nfrechette/acl-ue4-plugin.svg)](https://github.com/nfrechette/acl-ue4-plugin/releases)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/nfrechette/acl-ue4-plugin/master/LICENSE)
+![UE4](https://img.shields.io/badge/UE4-4.25+-orange)
 
 # Animation Compression Library Unreal Engine 4 Plugin
 
