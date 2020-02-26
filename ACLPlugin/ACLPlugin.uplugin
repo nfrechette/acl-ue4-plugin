@@ -13,7 +13,6 @@
 	"EnabledByDefault": true,
 	"CanContainContent": true,
 	"IsBetaVersion": true,
-	"Installed": false,
 	"Modules": [
 		{
 			"Name": "ACLPlugin",
