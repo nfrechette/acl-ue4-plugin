@@ -39,7 +39,7 @@ Feel free to create and use your own compression settings assets which can now b
 
 ## ACL plugin playground
 
-In order to test and play with the ACL Plugin, a playground was created where every single animation from the [animation starter pack](https://www.unrealengine.com/marketplace/animation-starter-pack) is playing simultaneously. A zip file can be found [here](https://drive.google.com/open?id=1m917lmF6rYCfIUAKA7wbRHl9vHNAR_6O). Note that you will need to run it with the above engine modifications as well as the ACL Plugin.
+In order to test and play with the ACL Plugin, a playground was created where every single animation from the [animation starter pack](https://www.unrealengine.com/marketplace/animation-starter-pack) is playing simultaneously. A zip file can be found [here](https://drive.google.com/open?id=1qHgKSbpFJEbJwvz-IzLiRc8Rewbj5lT_). Note that you will need to run it under UE 4.25 (or higher) with the ACL Plugin installed.
 
 ## Compression settings
 
