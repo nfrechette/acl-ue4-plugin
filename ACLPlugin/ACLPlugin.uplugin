@@ -12,7 +12,7 @@
 	"SupportURL": "https://github.com/nfrechette/acl-ue4-plugin",
 	"EnabledByDefault": true,
 	"CanContainContent": true,
-	"IsBetaVersion": true,
+	"IsBetaVersion": false,
 	"EngineVersion": "4.25.0",
 	"Modules": [
 		{
