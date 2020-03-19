@@ -6,7 +6,7 @@
 	"Description": "Use the Animation Compression Library (ACL) to compress AnimSequences.",
 	"Category": "Animation",
 	"CreatedBy": "Nicholas Frechette",
-	"CreatedByURL": "http://nfrechette.github.io/",
+	"CreatedByURL": "https://nfrechette.github.io/",
 	"DocsURL": "https://github.com/nfrechette/acl-ue4-plugin",
 	"MarketplaceURL": "",
 	"SupportURL": "https://github.com/nfrechette/acl-ue4-plugin",
