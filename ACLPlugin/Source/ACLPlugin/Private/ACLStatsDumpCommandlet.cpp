@@ -993,6 +993,9 @@ struct CompressAnimationsFunctor
 					continue;
 				}
 
+				// Make sure any pending async compression that might have started during load or construction is done
+				UE4Clip->WaitOnExistingCompression();
+
 				UE4SJSONStreamWriter StreamWriter(OutputWriter);
 				sjson::Writer Writer(StreamWriter);
 
@@ -1212,6 +1215,9 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 					ACLClip->set_additive_base(ACLBaseClip.Get(), acl::AdditiveClipFormat8::Additive1);
 				}
+
+				// Make sure any pending async compression that might have started during load or construction is done
+				UE4Clip->WaitOnExistingCompression();
 
 				FCompressionContext Context;
 				Context.AutoCompressor = AutoCompressionSettings;
