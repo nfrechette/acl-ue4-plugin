@@ -2,9 +2,9 @@
 
 ## AMD Ryzen 2950X @ 3.5 GHz (x64)
 
-![Matinee Ryzen Median Performance](Images/acl_plugin_decomp_ryzen_matinee.png)
+![Matinee Ryzen Median Performance](Images/acl_plugin_decomp_ryzen_matinee.svg)
 
-![Playground Ryzen Median Performance](Images/acl_plugin_decomp_ryzen_playground.png)
+![Playground Ryzen Median Performance](Images/acl_plugin_decomp_ryzen_playground.svg)
 
 ## Google Pixel 3 @ 2.5 GHz (arm64)
 
