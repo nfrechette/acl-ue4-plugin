@@ -8,13 +8,13 @@
 
 ## Google Pixel 3 @ 2.5 GHz (arm64)
 
-![Matinee P3 Median Performance](Images/acl_plugin_decomp_p3_matinee.png)
+![Matinee P3 Median Performance](Images/acl_plugin_decomp_p3_matinee.svg)
 
-![Playground P3 Median Performance](Images/acl_plugin_decomp_p3_playground.png)
+![Playground P3 Median Performance](Images/acl_plugin_decomp_p3_playground.svg)
 
 ## Observations
 
-A number of interesting things can be seen in the above graphs. ACL is *much* faster: ranging from **2x** to **5x**. The variance is also much lower as decompression performance remains consistent from frame to frame. As a result, fewer spikes can be seen with ACL..
+A number of interesting things can be seen in the above graphs. ACL is *much* faster: ranging from **2.4x** to **3.4x** on PC and **1.8x** to **5x** on mobile. The variance is also much lower as decompression performance remains consistent from frame to frame. As a result, fewer spikes can be seen with ACL..
 
 The Matinee fight scene also shows how UE4 searches for keys when linearly interpolating. The keys are split into two and the codec estimates if our desired keys are more likely to be in the first half or the second half. It then starts searching from that end towards the other. In the wild, most sequences are very short and such a heuristic is a reasonable choice over a more traditional binary search. However, the fight scene is very long at 2000 frames! The graphs highlights how decompressing early or late in the sequence is much faster than near the middle.
 
