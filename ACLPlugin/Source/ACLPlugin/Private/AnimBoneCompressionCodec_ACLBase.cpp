@@ -38,6 +38,8 @@
 #include <acl/compression/utils.h>
 #endif	// WITH_EDITORONLY_DATA
 
+#include <acl/core/compressed_clip.h>
+
 bool FACLCompressedAnimData::IsValid() const
 {
 	if (CompressedByteStream.Num() == 0)
