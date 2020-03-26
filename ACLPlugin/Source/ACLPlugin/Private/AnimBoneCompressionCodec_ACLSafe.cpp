@@ -23,7 +23,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "AnimBoneCompressionCodec_ACLSafe.h"
+
 #include "ACLDecompressionImpl.h"
+
+#if WITH_EDITORONLY_DATA
+#include <acl/compression/compression_settings.h>
+#endif
 
 UAnimBoneCompressionCodec_ACLSafe::UAnimBoneCompressionCodec_ACLSafe(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

@@ -26,6 +26,10 @@
 
 #include "ACLDecompressionImpl.h"
 
+#if WITH_EDITORONLY_DATA
+#include <acl/compression/compression_settings.h>
+#endif
+
 UAnimBoneCompressionCodec_ACLCustom::UAnimBoneCompressionCodec_ACLCustom(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
