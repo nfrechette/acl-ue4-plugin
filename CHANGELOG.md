@@ -1,5 +1,10 @@
 # Significant changes per release
 
+## 1.0.0
+
+*  Upgraded code to support UE 4.25 which can now be published on the Unreal Marketplace
+*  Other minor changes to meet the Unreal Marketplace guidelines
+
 ## 0.5.0
 
 *  Upgraded code to support UE 4.23
