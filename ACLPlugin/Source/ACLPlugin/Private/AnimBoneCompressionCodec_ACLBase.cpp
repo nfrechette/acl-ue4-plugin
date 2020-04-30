@@ -145,12 +145,12 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 		Context.initialize(*CompressedClipData);
 		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, *Settings.error_metric, Context);
 
-		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipDataSize);
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
 	}
 #endif
 
-	AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
+	AllocatorImpl.deallocate(CompressedClipData, CompressedClipDataSize);
 	return true;
 }
 
