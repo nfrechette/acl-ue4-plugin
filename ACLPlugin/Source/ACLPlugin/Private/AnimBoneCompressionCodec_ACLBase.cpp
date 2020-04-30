@@ -131,7 +131,7 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 	OutResult.CompressedByteStream.Empty(CompressedClipDataSize);
 	OutResult.CompressedByteStream.AddUninitialized(CompressedClipDataSize);
-	memcpy(OutResult.CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
+	FMemory::Memcpy(OutResult.CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
 
 	OutResult.Codec = this;
 
