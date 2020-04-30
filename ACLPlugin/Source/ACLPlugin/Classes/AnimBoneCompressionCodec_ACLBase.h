@@ -102,7 +102,7 @@ class UAnimBoneCompressionCodec_ACLBase : public UAnimBoneCompressionCodec
 	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float SafeVirtualVertexDistance;
 
-	/** The error threshold to used when optimizing and compressing the animation sequence. */
+	/** The error threshold to use when optimizing and compressing the animation sequence. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float ErrorThreshold;
 
