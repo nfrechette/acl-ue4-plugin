@@ -370,7 +370,7 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
-		FCompressibleAnimData CompressibleData(Context.UE4Clip, false);
+		FCompressibleAnimData CompressibleData(Context.UE4Clip, false, Context.AutoCompressor->MaxEndEffectorError);
 
 		FCompressibleAnimDataResult CompressibleResult;
 		CompressibleResult.CompressionScheme = Context.UE4Clip->CompressionScheme;
@@ -450,7 +450,7 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
-		FCompressibleAnimData CompressibleData(Context.UE4Clip, false);
+		FCompressibleAnimData CompressibleData(Context.UE4Clip, false, Context.AutoCompressor->MaxEndEffectorError);
 
 		FCompressibleAnimDataResult CompressibleResult;
 		CompressibleResult.CompressionScheme = Context.UE4Clip->CompressionScheme;
@@ -559,7 +559,7 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
-		FCompressibleAnimData CompressibleData(Context.UE4Clip, false);
+		FCompressibleAnimData CompressibleData(Context.UE4Clip, false, Context.AutoCompressor->MaxEndEffectorError);
 
 		FCompressibleAnimDataResult CompressibleResult;
 		CompressibleResult.CompressionScheme = Context.UE4Clip->CompressionScheme;
@@ -895,7 +895,7 @@ struct CompressAnimationsFunctor
 			Context.UE4Clip = UE4Clip;
 			Context.UE4Skeleton = UE4Skeleton;
 
-			FCompressibleAnimData CompressibleData(UE4Clip, false);
+			FCompressibleAnimData CompressibleData(UE4Clip, false, Context.AutoCompressor->MaxEndEffectorError);
 
 			TUniquePtr<acl::RigidSkeleton> ACLSkeleton = BuildACLSkeleton(Allocator, CompressibleData, StatsCommandlet->ACLCompressor->DefaultVirtualVertexDistance, StatsCommandlet->ACLCompressor->SafeVirtualVertexDistance);
 			TUniquePtr<acl::AnimationClip> ACLClip = BuildACLClip(Allocator, CompressibleData, *ACLSkeleton, false);
@@ -1071,7 +1071,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 				const float DefaultVirtualVertexDistance = 3.0f;	// 3cm, suitable for ordinary characters
 				const float SafeVirtualVertexDistance = 100.0f;		// 100cm
 
-				FCompressibleAnimData CompressibleData(UE4Clip, false);
+				FCompressibleAnimData CompressibleData(UE4Clip, false, MasterTolerance);
 
 				TUniquePtr<acl::RigidSkeleton> ACLSkeleton = BuildACLSkeleton(Allocator, CompressibleData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance);
 				TUniquePtr<acl::AnimationClip> ACLClip = BuildACLClip(Allocator, CompressibleData, *ACLSkeleton, false);
