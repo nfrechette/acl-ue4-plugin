@@ -102,6 +102,7 @@ Using the `Morph Target Source` isn't required but it does improve the compressi
 *  [Carnegie-Mellon University database performance](cmu_performance.md)
 *  [Paragon database performance](paragon_performance.md)
 *  [Matinee fight scene performance](fight_scene_performance.md)
+*  [A Boy and His Kite](a_boy_and_his_kite.md)
 *  [Decompression performance](decompression_performance.md)
 
 ## ACL Plugin playground
