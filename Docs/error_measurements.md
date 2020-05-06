@@ -4,7 +4,7 @@ Both UE4 and ACL measure the animation compression error differently. Although b
 
 ## How the error is measured
 
-While both UE4 and ACL use [virtual vertices](http://nfrechette.github.io/2016/11/01/anim_compression_accuracy/) in order to approximate the visual mesh, how they do so differs slightly: ACL uses **three** virtual vertices on *every* bone and UE4 uses a **single** virtual vertex on *leaf* bones. Due to the hierarchical nature of skeleton based animation data, testing leaf bones is a pretty good approximation but ACL goes one step further and tests every bone regardless. It does this because each bone might have its virtual vertices at different distances. In this respect, ACL is more conservative.
+While both UE4 and ACL use [virtual vertices](https://nfrechette.github.io/2016/11/01/anim_compression_accuracy/) in order to approximate the visual mesh, how they do so differs slightly: ACL uses **three** virtual vertices on *every* bone and UE4 uses a **single** virtual vertex on *leaf* bones. Due to the hierarchical nature of skeleton based animation data, testing leaf bones is a pretty good approximation but ACL goes one step further and tests every bone regardless. It does this because each bone might have its virtual vertices at different distances. In this respect, ACL is more conservative.
 
 ## Where the error is measured in space
 
