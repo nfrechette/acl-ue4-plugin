@@ -17,13 +17,15 @@ Once you start the editor, you should see the ACL Plugin in the plugin list unde
 
 Compression codecs are data driven much like other assets in the engine. Animation sequences reference a `Bone Compression Settings` asset that can be created in the content browser by right-clicking and selecting it under the `Animation` category. A compression settings asset is responsible for referencing a list of codecs to try when compression is requested. Each codec is tried in parallel and the best one is selected by the same heuristic that the old `Automatic Compression` relied on (in UE 4.24 and earlier). The list of codecs that `Automatic Compression` used to reference can now be found in the default compression settings asset located under `Engine Content/Animation` (note that you will need enable the `Show Engine Content` option in the `View Options` to see it). It contains the same codecs that UE 4.24 and earlier used.
 
-The ACL plugin also provides its own compression settings asset located in its plugin content folder (note that you will need to enable the `Show Plugin Content` option in the `View Options` to see it). It contains only the ACL codec and can be used out of the box in all your animation sequences.
+The ACL plugin also provides its own compression settings assets located in its plugin content folder (note that you will need to enable the `Show Plugin Content` option in the `View Options` to see it). It contains only the ACL codec and can be used out of the box in all your animation sequences.
 
 ### How to change the default compression codec
 
 In order to change the default compression settings asset used, you will need to edit the `BaseEngine.ini` or the equivalent file in your project under the `[Animation.DefaultObjectSettings]` section. The relevant entry is this one: `BoneCompressionSettings="/Engine/Animation/DefaultAnimBoneCompressionSettings"`. It points to an asset under *Engine Content*. You can change it to point to any other suitable asset of your choice. You can also modify that asset to add ACL.
 
-## Compression settings
+*The process is identical for the default curve compression codec.*
+
+## Bone compression settings
 
 All units are in centimeters (the UE4 default), and as such if you use different units you will need to change the default thresholds and values to take this into account.
 
@@ -79,9 +81,21 @@ Three boolean flags are also provided to control the per segment range reduction
 
 Two values control how segments are partitioned: *Ideal Num Key Frames Per Segment and Max Num Key Frames Per Segment*. ACL will attempt to have segments of the ideal number of key frames while never exceeding the maximum value provided. The default values are sensible and should be suitable for everyday use.
 
-## UE4 reports a high compression error, how come?
+### UE4 reports a high bone compression error, how come?
 
 In rare cases UE4 can report a high compression error with the ACL plugin. To better understand why, make sure to read [how error is measured](error_measurements.md).
+
+## Curve compression settings
+
+![Curve compression options](Images/CurveCompressionSettings_Default.jpg)
+
+The `Curve Compression Settings` assets behave more or less the same as they do with bones but there is only a single codec specified and used. ACL exposes a few options:
+
+* **Curve Precision**: This is the desired precision to retain for ordinary curves (**0.001** is the default).
+* **Morph Target Position Precision**: This is the desired precision of morph target curves in world space units (e.g. centimeters are used by default in UE4). This guarantees that morph target deformations meet the specified precision value (**0.01 cm** is the default). This is only enabled and used if a `Morph Target Source` is specified.
+* **Morph Target Source**: This is the skeletal mesh to lookup the morph targets from when compressing curves. If a curve is mapped to a morph target, the `Morph Target Position Precision` will be used and if it isn't, the `Curve Precision` will be used instead.
+
+Using the `Morph Target Source` isn't required but it does improve the compression ratio significantly. The reference to the skeletal mesh is stripped during cooking and it will not be used at runtime: it is only used during compression. The skeletal mesh does not have to match the real one used at runtime but ideally it has to reasonably approximate the morph target deformations. As such, a preview mesh is suitable here.
 
 ## Performance metrics
 
