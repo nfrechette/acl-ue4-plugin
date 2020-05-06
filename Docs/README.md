@@ -9,16 +9,13 @@ In order to use the ACL plugin in *Unreal Engine 4.23* and earlier, you will nee
 *  4.21.x: Use 4.22.x for inspiration, few to no engine changes should conflict (requires ACL plugin **v0.4**)
 *  **4.22.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.22-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/4.patch) (requires ACL plugin **v0.4**)
 *  **4.23.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.23-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/5.patch) (requires ACL plugin **v0.5**)
+*  **4.24.x:** [branch](https://github.com/nfrechette/UnrealEngine/tree/4.24-acl) - [patch](https://github.com/nfrechette/UnrealEngine/pull/6.patch) (requires ACL plugin **v0.6**)
 
 Note that in order to see these, you will first need to [request access](https://www.unrealengine.com/en-US/ue4-on-github) to the *Unreal Engine* source code.
 
 The changes are fairly minimal and consist of a global registry for animation codecs that plugins can hook into as well as some engine bug fixes. The branches themselves do not contain the ACL plugin. You will have to download the sources and place the `ACLPlugin` directory under `UE4 Root\Engine\Plugins` or your project's plugin directory.
 
-## ACL plugin playground
-
-In order to test and play with the ACL Plugin, a playground was created where every single animation from the [animation starter pack](https://www.unrealengine.com/marketplace/animation-starter-pack) is playing simultaneously. A zip file can be found [here](https://drive.google.com/open?id=1m917lmF6rYCfIUAKA7wbRHl9vHNAR_6O). Note that you will need to run it with the above engine modifications as well as the ACL Plugin.
-
-## Compression settings
+##  Bone compression settings
 
 All units are in centimeters (the UE4 default), and as such if you use different units you will need to change the default thresholds and values to take this into account.
 
@@ -68,9 +65,21 @@ Three boolean flags are also provided to control the per segment range reduction
 
 Two values control how segments are partitioned: *Ideal Num Key Frames Per Segment and Max Num Key Frames Per Segment*. ACL will attempt to have segments of the ideal number of key frames while never exceeding the maximum value provided. The default values are sensible and should be suitable for everyday use.
 
-## UE4 reports a high compression error, how come?
+### UE4 reports a high compression error, how come?
 
 In rare cases UE4 can report a high compression error with the ACL plugin. To better understand why, make sure to read [how error is measured](error_measurements.md).
+
+## Curve compression settings
+
+![Curve compression options](Images/CurveCompressionSettings_Default.jpg)
+
+The `Curve Compression Settings` assets behave more or less the same as they do with bones but there is only a single codec specified and used. ACL exposes a few options:
+
+* **Curve Precision**: This is the desired precision to retain for ordinary curves (**0.001** is the default).
+* **Morph Target Position Precision**: This is the desired precision of morph target curves in world space units (e.g. centimeters are used by default in UE4). This guarantees that morph target deformations meet the specified precision value (**0.01 cm** is the default). This is only enabled and used if a `Morph Target Source` is specified.
+* **Morph Target Source**: This is the skeletal mesh to lookup the morph targets from when compressing curves. If a curve is mapped to a morph target, the `Morph Target Position Precision` will be used and if it isn't, the `Curve Precision` will be used instead.
+
+Using the `Morph Target Source` isn't required but it does improve the compression ratio significantly. The reference to the skeletal mesh is stripped during cooking and it will not be used at runtime: it is only used during compression. The skeletal mesh does not have to match the real one used at runtime but ideally it has to reasonably approximate the morph target deformations. As such, a preview mesh is suitable here.
 
 ## Performance metrics
 
@@ -78,3 +87,7 @@ In rare cases UE4 can report a high compression error with the ACL plugin. To be
 *  [Paragon database performance](paragon_performance.md)
 *  [Matinee fight scene performance](fight_scene_performance.md)
 *  [Decompression performance](decompression_performance.md)
+
+## ACL plugin playground
+
+In order to test and play with the ACL Plugin, a playground was created where every single animation from the [animation starter pack](https://www.unrealengine.com/marketplace/animation-starter-pack) is playing simultaneously. A zip file can be found [here](https://drive.google.com/open?id=1m917lmF6rYCfIUAKA7wbRHl9vHNAR_6O). Note that you will need to run it with the above engine modifications as well as the ACL Plugin.
