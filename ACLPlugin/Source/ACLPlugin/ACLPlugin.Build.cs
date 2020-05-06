@@ -36,6 +36,7 @@ namespace UnrealBuildTool.Rules
 
 			PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
 			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/includes"));
+			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/external/rtm/includes"));
 
 			PrivateIncludePaths.Add("ACLPlugin/Private");
 
@@ -52,7 +53,6 @@ namespace UnrealBuildTool.Rules
 			{
 				PrivateDependencyModuleNames.Add("UnrealEd");
 
-				PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/external/rtm/includes"));	// Used by the commandlet only, for now
 				PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/external/sjson-cpp/includes"));
 			}
 
