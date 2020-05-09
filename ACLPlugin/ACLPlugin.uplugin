@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"Version": 4,
+	"Version": 100,
 	"VersionName": "1.0.0",
 	"FriendlyName": "Animation Compression Library",
 	"Description": "Use the Animation Compression Library (ACL) to compress AnimSequences.",
