@@ -8,7 +8,7 @@
 	"CreatedBy": "Nicholas Frechette",
 	"CreatedByURL": "https://nfrechette.github.io/",
 	"DocsURL": "https://github.com/nfrechette/acl-ue4-plugin",
-	"MarketplaceURL": "",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/993b51e29e9a48d0b3fb449645b82cb6",
 	"SupportURL": "https://github.com/nfrechette/acl-ue4-plugin",
 	"EnabledByDefault": true,
 	"CanContainContent": true,
