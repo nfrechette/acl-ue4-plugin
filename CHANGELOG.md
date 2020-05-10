@@ -4,6 +4,8 @@
 
 *  Upgraded code to support UE 4.25 which can now be published on the Unreal Marketplace
 *  Other minor changes to meet the Unreal Marketplace guidelines
+*  Add support for AnimSequence curve compression
+*  Upgraded to ACL v1.3.1
 
 ## 0.5.0
 
