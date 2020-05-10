@@ -1,5 +1,11 @@
 # Significant changes per release
 
+## 0.6.0
+
+*  Upgraded code to support UE 4.24
+*  Add support for AnimSequence curve compression
+*  Upgraded to ACL v1.3.1
+
 ## 0.5.0
 
 *  Upgraded code to support UE 4.23
