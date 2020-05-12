@@ -114,6 +114,14 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 	const TArray<float> MorphTargetMaxPositionDeltas = GetMorphTargetMaxPositionDeltas(AnimSeq, MorphTargetSource);
 
 	const int32 NumCurves = AnimSeq.RawCurveData.FloatCurves.Num();
+	if (NumCurves == 0)
+	{
+		// Nothing to compress
+		OutResult.CompressedBytes.Empty(0);
+		OutResult.Codec = this;
+		return true;
+	}
+
 	const int32 NumSamples = AnimSeq.NumFrames;
 	const float SequenceLength = AnimSeq.SequenceLength;
 
