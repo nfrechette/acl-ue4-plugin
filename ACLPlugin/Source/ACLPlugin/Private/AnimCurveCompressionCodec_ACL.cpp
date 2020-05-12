@@ -84,7 +84,6 @@ static TArray<float> GetMorphTargetMaxPositionDeltas(const FCompressibleAnimData
 		return MorphTargetMaxPositionDeltas;
 	}
 
-	int32 NumNonZero = 0;
 	for (int32 CurveIndex = 0; CurveIndex < NumCurves; ++CurveIndex)
 	{
 		float MaxDeltaPosition = 0.0f;
@@ -104,13 +103,8 @@ static TArray<float> GetMorphTargetMaxPositionDeltas(const FCompressibleAnimData
 			}
 		}
 
-		if (MaxDeltaPosition > 0.0f)
-			NumNonZero++;
-
 		MorphTargetMaxPositionDeltas[CurveIndex] = MaxDeltaPosition;
 	}
-
-	UE_LOG(LogAnimationCompression, Warning, TEXT("Num non zero blend weight curves: %d"), NumNonZero);
 
 	return MorphTargetMaxPositionDeltas;
 }
