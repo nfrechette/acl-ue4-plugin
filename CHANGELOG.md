@@ -1,5 +1,10 @@
 # Significant changes per release
 
+## 1.0.1
+
+*  Fix crash when using the curve compression codec and no curves are present
+*  Added ACL curve compression settings asset
+
 ## 1.0.0
 
 *  Upgraded code to support UE 4.25 which can now be published on the Unreal Marketplace
