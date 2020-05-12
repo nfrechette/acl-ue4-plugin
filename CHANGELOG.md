@@ -1,5 +1,10 @@
 # Significant changes per release
 
+## 0.6.1
+
+*  Fix crash when using the curve compression codec and no curves are present
+*  Minor cleanup
+
 ## 0.6.0
 
 *  Upgraded code to support UE 4.24
