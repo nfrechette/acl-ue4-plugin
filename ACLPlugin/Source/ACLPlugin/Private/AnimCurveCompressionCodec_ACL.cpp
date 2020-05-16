@@ -219,7 +219,7 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 }
 #endif // WITH_EDITORONLY_DATA
 
-struct UE4CurveDecompressionSettings : public acl::decompression_settings
+struct UE4CurveDecompressionSettings final : public acl::decompression_settings
 {
 	constexpr bool is_track_type_supported(acl::track_type8 type) const { return type == acl::track_type8::float1f; }
 };
