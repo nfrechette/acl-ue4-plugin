@@ -89,6 +89,29 @@ static double BytesToMB(SIZE_T NumBytes)
 	return (double)NumBytes / (1024.0 * 1024.0);
 }
 
+template<typename SizeType>
+static double Percentage(SizeType Part, SizeType Whole)
+{
+	return Whole != 0 ? (((double)Part / (double)Whole) * 100.0) : 0.0;
+}
+
+static SIZE_T GetCompressedBoneSize(const FCompressedAnimSequence& CompressedData)
+{
+	SIZE_T Size = CompressedData.CompressedTrackToSkeletonMapTable.GetAllocatedSize();
+	if (CompressedData.CompressedDataStructure)
+	{
+		Size += CompressedData.CompressedDataStructure->GetApproxCompressedSize();
+	}
+	return Size;
+}
+
+static SIZE_T GetCompressedCurveSize(const FCompressedAnimSequence& CompressedData)
+{
+	SIZE_T Size = CompressedData.CompressedCurveNames.GetAllocatedSize();
+	Size += CompressedData.CompressedCurveByteStream.GetAllocatedSize();
+	return Size;
+}
+
 void FACLPlugin::ListCodecs(const TArray<FString>& Args)
 {
 	// Turn off log times to make diffing easier
@@ -109,20 +132,21 @@ void FACLPlugin::ListCodecs(const TArray<FString>& Args)
 	{
 		int32 NumReferences = 0;
 		SIZE_T TotalSize = 0;
+		SIZE_T UsedSize = 0;
 		for (const UAnimSequence* AnimSeq : AnimSequences)
 		{
+			const SIZE_T Size = GetCompressedBoneSize(AnimSeq->CompressedData);
 			if (AnimSeq->BoneCompressionSettings == Settings)
 			{
 				NumReferences++;
-				TotalSize += AnimSeq->CompressedData.CompressedTrackToSkeletonMapTable.GetAllocatedSize();
-				if (AnimSeq->CompressedData.CompressedDataStructure)
-				{
-					TotalSize += AnimSeq->CompressedData.CompressedDataStructure->GetApproxCompressedSize();
-				}
+				UsedSize += Size;
 			}
+			TotalSize += Size;
 		}
 
-		UE_LOG(LogAnimationCompression, Log, TEXT("%s referenced by %d anim sequences (%.2f MB)"), *Settings->GetPathName(), NumReferences, BytesToMB(TotalSize));
+		UE_LOG(LogAnimationCompression, Log, TEXT("%s ..."), *Settings->GetPathName());
+		UE_LOG(LogAnimationCompression, Log, TEXT("    used by %d / %d (%.1f %%) anim sequences"), NumReferences, AnimSequences.Num(), Percentage(NumReferences, AnimSequences.Num()));
+		UE_LOG(LogAnimationCompression, Log, TEXT("    uses %.2f MB / %.2f MB (%.1f %%)"), BytesToMB(UsedSize), BytesToMB(TotalSize), Percentage(UsedSize, TotalSize));
 	}
 
 	UE_LOG(LogAnimationCompression, Log, TEXT("===== Bone Compression Codecs ====="));
@@ -130,27 +154,29 @@ void FACLPlugin::ListCodecs(const TArray<FString>& Args)
 	{
 		int32 NumReferences = 0;
 		SIZE_T TotalSize = 0;
+		SIZE_T UsedSize = 0;
 		for (const UAnimSequence* AnimSeq : AnimSequences)
 		{
+			const SIZE_T Size = GetCompressedBoneSize(AnimSeq->CompressedData);
 			if (AnimSeq->CompressedData.BoneCompressionCodec == Codec)
 			{
 				NumReferences++;
-				TotalSize += AnimSeq->CompressedData.CompressedTrackToSkeletonMapTable.GetAllocatedSize();
-				if (AnimSeq->CompressedData.CompressedDataStructure)
-				{
-					TotalSize += AnimSeq->CompressedData.CompressedDataStructure->GetApproxCompressedSize();
-				}
+				UsedSize += Size;
 			}
+			TotalSize += Size;
 		}
 
 		if (Codec->Description.IsEmpty())
 		{
-			UE_LOG(LogAnimationCompression, Log, TEXT("%s referenced by %d anim sequences (%.2f MB)"), *Codec->GetPathName(), NumReferences, BytesToMB(TotalSize));
+			UE_LOG(LogAnimationCompression, Log, TEXT("%s ..."), *Codec->GetPathName());
 		}
 		else
 		{
-			UE_LOG(LogAnimationCompression, Log, TEXT("%s (%s) referenced by %d anim sequences (%.2f MB)"), *Codec->GetPathName(), *Codec->Description, NumReferences, BytesToMB(TotalSize));
+			UE_LOG(LogAnimationCompression, Log, TEXT("%s (%s) ..."), *Codec->GetPathName(), *Codec->Description);
 		}
+
+		UE_LOG(LogAnimationCompression, Log, TEXT("    used by %d / %d (%.1f %%) anim sequences"), NumReferences, AnimSequences.Num(), Percentage(NumReferences, AnimSequences.Num()));
+		UE_LOG(LogAnimationCompression, Log, TEXT("    uses %.2f MB / %.2f MB (%.1f %%)"), BytesToMB(UsedSize), BytesToMB(TotalSize), Percentage(UsedSize, TotalSize));
 	}
 
 	UE_LOG(LogAnimationCompression, Log, TEXT("===== Curve Compression Setting Assets ====="));
@@ -158,17 +184,21 @@ void FACLPlugin::ListCodecs(const TArray<FString>& Args)
 	{
 		int32 NumReferences = 0;
 		SIZE_T TotalSize = 0;
+		SIZE_T UsedSize = 0;
 		for (const UAnimSequence* AnimSeq : AnimSequences)
 		{
+			const SIZE_T Size = GetCompressedCurveSize(AnimSeq->CompressedData);
 			if (AnimSeq->CurveCompressionSettings == Settings)
 			{
 				NumReferences++;
-				TotalSize += AnimSeq->CompressedData.CompressedCurveNames.GetAllocatedSize();
-				TotalSize += AnimSeq->CompressedData.CompressedCurveByteStream.GetAllocatedSize();
+				UsedSize += Size;
 			}
+			TotalSize += Size;
 		}
 
-		UE_LOG(LogAnimationCompression, Log, TEXT("%s referenced by %d anim sequences (%.2f MB)"), *Settings->GetPathName(), NumReferences, BytesToMB(TotalSize));
+		UE_LOG(LogAnimationCompression, Log, TEXT("%s ..."), *Settings->GetPathName());
+		UE_LOG(LogAnimationCompression, Log, TEXT("    used by %d / %d (%.1f %%) anim sequences"), NumReferences, AnimSequences.Num(), Percentage(NumReferences, AnimSequences.Num()));
+		UE_LOG(LogAnimationCompression, Log, TEXT("    uses %.2f MB / %.2f MB (%.1f %%)"), BytesToMB(UsedSize), BytesToMB(TotalSize), Percentage(UsedSize, TotalSize));
 	}
 
 	UE_LOG(LogAnimationCompression, Log, TEXT("===== Curve Compression Codecs ====="));
@@ -176,17 +206,21 @@ void FACLPlugin::ListCodecs(const TArray<FString>& Args)
 	{
 		int32 NumReferences = 0;
 		SIZE_T TotalSize = 0;
+		SIZE_T UsedSize = 0;
 		for (const UAnimSequence* AnimSeq : AnimSequences)
 		{
+			const SIZE_T Size = GetCompressedCurveSize(AnimSeq->CompressedData);
 			if (AnimSeq->CompressedData.CurveCompressionCodec == Codec)
 			{
 				NumReferences++;
-				TotalSize += AnimSeq->CompressedData.CompressedCurveNames.GetAllocatedSize();
-				TotalSize += AnimSeq->CompressedData.CompressedCurveByteStream.GetAllocatedSize();
+				UsedSize += Size;
 			}
+			TotalSize += Size;
 		}
 
-		UE_LOG(LogAnimationCompression, Log, TEXT("%s referenced by %d anim sequences (%.2f MB)"), *Codec->GetPathName(), NumReferences, BytesToMB(TotalSize));
+		UE_LOG(LogAnimationCompression, Log, TEXT("%s ..."), *Codec->GetPathName());
+		UE_LOG(LogAnimationCompression, Log, TEXT("    used by %d / %d (%.1f %%) anim sequences"), NumReferences, AnimSequences.Num(), Percentage(NumReferences, AnimSequences.Num()));
+		UE_LOG(LogAnimationCompression, Log, TEXT("    uses %.2f MB / %.2f MB (%.1f %%)"), BytesToMB(UsedSize), BytesToMB(TotalSize), Percentage(UsedSize, TotalSize));
 	}
 
 	LogAnimationCompression.SetVerbosity(OldVerbosity);
@@ -220,11 +254,7 @@ void FACLPlugin::ListAnimSequences(const TArray<FString>& Args)
 			UE_LOG(LogAnimationCompression, Log, TEXT("    uses bone codec %s (%s)"), *AnimSeq->CompressedData.BoneCompressionCodec->GetPathName(), *AnimSeq->CompressedData.BoneCompressionCodec->Description);
 		}
 
-		SIZE_T BoneDataSize = AnimSeq->CompressedData.CompressedTrackToSkeletonMapTable.GetAllocatedSize();
-		if (AnimSeq->CompressedData.CompressedDataStructure)
-		{
-			BoneDataSize += AnimSeq->CompressedData.CompressedDataStructure->GetApproxCompressedSize();
-		}
+		const SIZE_T BoneDataSize = GetCompressedBoneSize(AnimSeq->CompressedData);
 		UE_LOG(LogAnimationCompression, Log, TEXT("    has %.2f KB of bone data"), BytesToKB(BoneDataSize));
 
 #if WITH_EDITORONLY_DATA
@@ -236,8 +266,7 @@ void FACLPlugin::ListAnimSequences(const TArray<FString>& Args)
 
 		UE_LOG(LogAnimationCompression, Log, TEXT("    uses curve codec %s"), *AnimSeq->CompressedData.CurveCompressionCodec->GetPathName());
 
-		SIZE_T CurveDataSize = AnimSeq->CompressedData.CompressedCurveNames.GetAllocatedSize();
-		CurveDataSize += AnimSeq->CompressedData.CompressedCurveByteStream.GetAllocatedSize();
+		const SIZE_T CurveDataSize = GetCompressedCurveSize(AnimSeq->CompressedData);
 		UE_LOG(LogAnimationCompression, Log, TEXT("    has %.2f KB of curve data"), BytesToKB(CurveDataSize));
 
 		BoneDataTotalSize += BoneDataSize;
