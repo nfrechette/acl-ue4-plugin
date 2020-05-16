@@ -224,7 +224,7 @@ struct UE4CurveDecompressionSettings final : public acl::decompression_settings
 	constexpr bool is_track_type_supported(acl::track_type8 type) const { return type == acl::track_type8::float1f; }
 };
 
-struct UE4CurveWriter final : acl::track_writer
+struct UE4CurveWriter final : public acl::track_writer
 {
 	const TArray<FSmartName>& CompressedCurveNames;
 	FBlendedCurve& Curves;
@@ -266,7 +266,7 @@ void UAnimCurveCompressionCodec_ACL::DecompressCurves(const FCompressedAnimSeque
 	Context.decompress_tracks(TrackWriter);
 }
 
-struct UE4ScalarCurveWriter final : acl::track_writer
+struct UE4ScalarCurveWriter final : public acl::track_writer
 {
 	float SampleValue;
 
