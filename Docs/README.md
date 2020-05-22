@@ -107,4 +107,4 @@ Using the `Morph Target Source` isn't required but it does improve the compressi
 
 ## ACL Plugin playground
 
-In order to test and play with the ACL Plugin, a playground was created where every single animation from the [animation starter pack](https://www.unrealengine.com/marketplace/animation-starter-pack) is playing simultaneously. A zip file can be found [here](https://drive.google.com/open?id=1qHgKSbpFJEbJwvz-IzLiRc8Rewbj5lT_). Note that you will need to run it under UE 4.25 (or higher) with the ACL Plugin installed.
+In order to test and play with the ACL Plugin, a playground was created where every single animation from the [animation starter pack](https://www.unrealengine.com/marketplace/animation-starter-pack) is playing simultaneously. A zip file can be found [here](https://drive.google.com/open?id=16RjH5_HwdrjekeCwgNojsdGanbfzFD2H). Note that you will need to run it under UE 4.25 (or higher) with the ACL Plugin installed.
