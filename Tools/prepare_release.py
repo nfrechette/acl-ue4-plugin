@@ -22,11 +22,9 @@ if __name__ == "__main__":
 	# Remove catch2 and other third party dependencies we do not own or need
 	print('Removing what we don\'t need ...')
 	acl_root_dir = os.path.join(plugin_dst_dir, 'Source', 'ThirdParty', 'acl')
-	shutil.rmtree(os.path.join(acl_root_dir, '.github'))
 	shutil.rmtree(os.path.join(acl_root_dir, 'external', 'catch2'))
 
 	rtm_root_dir = os.path.join(acl_root_dir, 'external', 'rtm')
-	shutil.rmtree(os.path.join(rtm_root_dir, '.github'))
 	shutil.rmtree(os.path.join(rtm_root_dir, 'external', 'catch2'))
 
 	rtm_benchmark_dir = os.path.join(rtm_root_dir, 'external', 'benchmark')
@@ -35,7 +33,6 @@ if __name__ == "__main__":
 		sys.exit(1)
 
 	sjsoncpp_root_dir = os.path.join(acl_root_dir, 'external', 'sjson-cpp')
-	shutil.rmtree(os.path.join(sjsoncpp_root_dir, '.github'))
 	shutil.rmtree(os.path.join(sjsoncpp_root_dir, 'external', 'catch2'))
 
 	print('Zipping ACLPlugin ...')
