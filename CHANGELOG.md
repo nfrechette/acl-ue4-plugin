@@ -1,5 +1,11 @@
 # Significant changes per release
 
+## 1.0.2
+
+*  Changes required to meet the UE4 marketplace guidelines
+*  Added console commands to display animation codec usage statistics
+*  Minor fixes
+
 ## 1.0.1
 
 *  Fix crash when using the curve compression codec and no curves are present
