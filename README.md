@@ -12,7 +12,7 @@ Compared to **UE 4.25.0**, the ACL plugin compresses up to **2.8x smaller**, is 
 
 The documentation on how to use it can be found [here](./Docs/README.md) along with performance results.
 
-You can find the ACL plugin on the Unreal Marketplace [here (todo insert link)]().
+You can find the ACL plugin on the Unreal Marketplace [here](https://www.unrealengine.com/marketplace/en-US/product/animation-compression-library).
 
 ## Getting started
 
