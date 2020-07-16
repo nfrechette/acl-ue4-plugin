@@ -76,35 +76,6 @@ class UAnimCompress_ACLCustom : public UAnimCompress_ACLBase
 	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
 	float ConstantScaleThreshold;
 
-	/** Whether to enable per clip range reduction for rotations or not. */
-	UPROPERTY(EditAnywhere, Category = Clip)
-	uint32 bClipRangeReduceRotations : 1;
-
-	/** Whether to enable per clip range reduction for translations or not. */
-	UPROPERTY(EditAnywhere, Category = Clip)
-	uint32 bClipRangeReduceTranslations : 1;
-
-	/** Whether to enable per clip range reduction for scales or not. */
-	UPROPERTY(EditAnywhere, Category = Clip)
-	uint32 bClipRangeReduceScales : 1;
-
-	/** Whether to enable clip segmenting or not. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
-	//uint32 bEnableSegmenting : 1;		// TODO: Temporarily renamed to avoid conflict
-	uint32 EnableSegmenting : 1;
-
-	/** Whether to enable per segment range reduction for rotations or not. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
-	uint32 bSegmentRangeReduceRotations : 1;
-
-	/** Whether to enable per segment range reduction for translations or not. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
-	uint32 bSegmentRangeReduceTranslations : 1;
-
-	/** Whether to enable per segment range reduction for scales or not. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
-	uint32 bSegmentRangeReduceScales : 1;
-
 	/** The ideal number of key frames to retain per segment for each track. */
 	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
 	uint16 IdealNumKeyFramesPerSegment;

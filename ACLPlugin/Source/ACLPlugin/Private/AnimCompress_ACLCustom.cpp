@@ -30,13 +30,10 @@
 #include "ACLImpl.h"
 #include "AnimEncoding_ACL.h"
 
-#include <acl/algorithm/uniformly_sampled/encoder.h>
-#include <acl/algorithm/uniformly_sampled/decoder.h>
-#include <acl/compression/skeleton_error_metric.h>
-#include <acl/compression/utils.h>
-
-#include <sjson/writer.h>
-#include <acl/io/clip_writer.h>
+#include <acl/compression/compress.h>
+#include <acl/compression/transform_error_metrics.h>
+#include <acl/compression/track_error.h>
+#include <acl/decompression/decompress.h>
 #endif
 
 UAnimCompress_ACLCustom::UAnimCompress_ACLCustom(const FObjectInitializer& ObjectInitializer)
@@ -62,15 +59,6 @@ UAnimCompress_ACLCustom::UAnimCompress_ACLCustom(const FObjectInitializer& Objec
 	ConstantTranslationThreshold = 0.001f;				// 0.001cm, very conservative to be safe
 	ConstantScaleThreshold = 0.00001f;					// Very small value to be safe since scale is sensitive
 
-	bClipRangeReduceRotations = true;
-	bClipRangeReduceTranslations = true;
-	bClipRangeReduceScales = true;
-
-	//bEnableSegmenting = true;				// TODO: Temporarily renamed to avoid conflict
-	EnableSegmenting = true;
-	bSegmentRangeReduceRotations = true;
-	bSegmentRangeReduceTranslations = true;
-	bSegmentRangeReduceScales = true;
 	IdealNumKeyFramesPerSegment = 16;
 	MaxNumKeyFramesPerSegment = 31;
 }
@@ -78,59 +66,48 @@ UAnimCompress_ACLCustom::UAnimCompress_ACLCustom(const FObjectInitializer& Objec
 #if WITH_EDITOR
 void UAnimCompress_ACLCustom::DoReduction(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
-	using namespace acl;
-
 	ACLAllocator AllocatorImpl;
 
-	TUniquePtr<RigidSkeleton> ACLSkeleton = BuildACLSkeleton(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance);
-	TUniquePtr<AnimationClip> ACLClip = BuildACLClip(AllocatorImpl, CompressibleAnimData, *ACLSkeleton, false);
-	TUniquePtr<AnimationClip> ACLBaseClip = nullptr;
+	acl::track_array_qvvf ACLTracks = BuildACLTransformTrackArray(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, false);
+	acl::track_array_qvvf ACLBaseTracks;
 
-	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLClip->get_raw_size());
+	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLTracks.get_raw_size());
 
 	if (CompressibleAnimData.bIsValidAdditive)
-	{
-		ACLBaseClip = BuildACLClip(AllocatorImpl, CompressibleAnimData, *ACLSkeleton, true);
+		ACLBaseTracks = BuildACLTransformTrackArray(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, true);
 
-		ACLClip->set_additive_base(ACLBaseClip.Get(), AdditiveClipFormat8::Additive1);
-	}
+	acl::output_stats Stats;
 
-	OutputStats Stats;
-
-	CompressionSettings Settings;
+	acl::compression_settings Settings;
 	Settings.level = GetCompressionLevel(CompressionLevel);
 	Settings.rotation_format = GetRotationFormat(RotationFormat);
 	Settings.translation_format = GetVectorFormat(TranslationFormat);
 	Settings.scale_format = GetVectorFormat(ScaleFormat);
-	Settings.range_reduction |= bClipRangeReduceRotations ? RangeReductionFlags8::Rotations : RangeReductionFlags8::None;
-	Settings.range_reduction |= bClipRangeReduceTranslations ? RangeReductionFlags8::Translations : RangeReductionFlags8::None;
-	Settings.range_reduction |= bClipRangeReduceScales ? RangeReductionFlags8::Scales : RangeReductionFlags8::None;
-	//Settings.segmenting.enabled = bEnableSegmenting != 0;		// TODO: Temporarily renamed to avoid conflict
-	Settings.segmenting.enabled = EnableSegmenting != 0;
 	Settings.segmenting.ideal_num_samples = IdealNumKeyFramesPerSegment;
 	Settings.segmenting.max_num_samples = MaxNumKeyFramesPerSegment;
-	Settings.segmenting.range_reduction |= bSegmentRangeReduceRotations ? RangeReductionFlags8::Rotations : RangeReductionFlags8::None;
-	Settings.segmenting.range_reduction |= bSegmentRangeReduceTranslations ? RangeReductionFlags8::Translations : RangeReductionFlags8::None;
-	Settings.segmenting.range_reduction |= bSegmentRangeReduceScales ? RangeReductionFlags8::Scales : RangeReductionFlags8::None;
 
-	TransformErrorMetric DefaultErrorMetric;
-	AdditiveTransformErrorMetric<AdditiveClipFormat8::Additive1> AdditiveErrorMetric;
-	if (ACLBaseClip != nullptr)
+	acl::qvvf_transform_error_metric DefaultErrorMetric;
+	acl::additive_qvvf_transform_error_metric<acl::additive_clip_format8::additive1> AdditiveErrorMetric;
+	if (ACLBaseTracks.get_num_tracks() != 0)
 		Settings.error_metric = &AdditiveErrorMetric;
 	else
 		Settings.error_metric = &DefaultErrorMetric;
 
-	Settings.constant_rotation_threshold_angle = ConstantRotationThresholdAngle;
-	Settings.constant_translation_threshold = ConstantTranslationThreshold;
-	Settings.constant_scale_threshold = ConstantScaleThreshold;
-	Settings.error_threshold = ErrorThreshold;
+	// Set our thresholds
+	for (acl::track_qvvf& Track : ACLTracks)
+	{
+		acl::track_desc_transformf& Desc = Track.get_description();
+		
+		Desc.constant_rotation_threshold_angle = ConstantRotationThresholdAngle;
+		Desc.constant_translation_threshold = ConstantTranslationThreshold;
+		Desc.constant_scale_threshold = ConstantScaleThreshold;
+		Desc.precision = ErrorThreshold;
+	}
 
-	static volatile bool DumpClip = false;
-	if (DumpClip)
-		write_acl_clip(*ACLSkeleton, *ACLClip, AlgorithmType8::UniformlySampled, Settings, "D:\\acl_clip.acl.sjson");
+	const acl::additive_clip_format8 AdditiveFormat = acl::additive_clip_format8::additive0;
 
-	CompressedClip* CompressedClipData = nullptr;
-	ErrorResult CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
+	acl::compressed_tracks* CompressedTracks = nullptr;
+	acl::error_result CompressionResult = acl::compress_track_list(AllocatorImpl, ACLTracks, Settings, ACLBaseTracks, AdditiveFormat, CompressedTracks, Stats);
 
 	if (!CompressionResult.empty())
 	{
@@ -138,53 +115,40 @@ void UAnimCompress_ACLCustom::DoReduction(const FCompressibleAnimData& Compressi
 		return;
 	}
 
-	checkSlow(CompressedClipData->is_valid(true).empty());
+	checkSlow(CompressedTracks->is_valid(true).empty());
 
-	const uint32 CompressedClipDataSize = CompressedClipData->get_size();
+	const uint32 CompressedClipDataSize = CompressedTracks->get_size();
 
 	OutResult.CompressedByteStream.Empty(CompressedClipDataSize);
 	OutResult.CompressedByteStream.AddUninitialized(CompressedClipDataSize);
-	memcpy(OutResult.CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
+	memcpy(OutResult.CompressedByteStream.GetData(), CompressedTracks, CompressedClipDataSize);
 
 	OutResult.KeyEncodingFormat = AKF_ACLCustom;
 	AnimationFormat_SetInterfaceLinks(OutResult);
 
 #if !NO_LOGGING
 	{
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context;
-		Context.initialize(*CompressedClipData);
-		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, *Settings.error_metric, Context);
+		acl::decompression_context<acl::debug_transform_decompression_settings> Context;
+		Context.initialize(*CompressedTracks);
+		const acl::track_error TrackError = acl::calculate_compression_error(AllocatorImpl, ACLTracks, Context, *Settings.error_metric, ACLBaseTracks);
 
-		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData->get_size());
-		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedTracks->get_size());
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), TrackError.error, TrackError.index, TrackError.sample_time);
 	}
 #endif
 
-	AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
+	AllocatorImpl.deallocate(CompressedTracks, CompressedTracks->get_size());
 }
 
 void UAnimCompress_ACLCustom::PopulateDDCKey(FArchive& Ar)
 {
 	Super::PopulateDDCKey(Ar);
 
-	using namespace acl;
-
-	uint8 ClipFlags =	MakeBitForFlag(bClipRangeReduceRotations, 0) +
-						MakeBitForFlag(bClipRangeReduceTranslations, 1) +
-						MakeBitForFlag(bClipRangeReduceScales, 2);
-
-	//uint8 SegmentingFlags =	MakeBitForFlag(bEnableSegmenting, 0) +		// TODO: Temporarily renamed to avoid conflict
-	uint8 SegmentingFlags =	MakeBitForFlag(EnableSegmenting, 0) +
-							MakeBitForFlag(bSegmentRangeReduceRotations, 1) +
-							MakeBitForFlag(bSegmentRangeReduceTranslations, 2) +
-							MakeBitForFlag(bSegmentRangeReduceScales, 3);
-
 	uint32 ForceRebuildVersion = 1;
-	uint16 AlgorithmVersion = get_algorithm_version(AlgorithmType8::UniformlySampled);
+	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::algorithm_type8::uniformly_sampled);
 
 	Ar	<< CompressionLevel << RotationFormat << TranslationFormat << ScaleFormat
 		<< DefaultVirtualVertexDistance << SafeVirtualVertexDistance
-		<< ClipFlags << SegmentingFlags
 		<< IdealNumKeyFramesPerSegment << MaxNumKeyFramesPerSegment
 		<< ErrorThreshold << ConstantRotationThresholdAngle << ConstantTranslationThreshold << ConstantScaleThreshold
 		<< ForceRebuildVersion << AlgorithmVersion;
