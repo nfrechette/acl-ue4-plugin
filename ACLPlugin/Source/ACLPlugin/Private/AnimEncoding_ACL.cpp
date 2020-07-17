@@ -145,7 +145,7 @@ using UE4TranslationPoseWriter = UE4OutputPoseWriter<true, false, true>;
 using UE4ScalePoseWriter = UE4OutputPoseWriter<true, true, false>;
 
 /*
-* Output track writer that can selectively skip certain track types.
+* Output track writer for a single track.
 */
 struct UE4OutputTrackWriter final : public acl::track_writer
 {
