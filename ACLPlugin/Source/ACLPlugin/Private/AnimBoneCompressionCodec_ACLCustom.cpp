@@ -20,56 +20,35 @@ UAnimBoneCompressionCodec_ACLCustom::UAnimBoneCompressionCodec_ACLCustom(const F
 	ConstantTranslationThreshold = 0.001f;				// 0.001cm, very conservative to be safe
 	ConstantScaleThreshold = 0.00001f;					// Very small value to be safe since scale is sensitive
 
-	bClipRangeReduceRotations = true;
-	bClipRangeReduceTranslations = true;
-	bClipRangeReduceScales = true;
-
-	bEnableSegmenting = true;
-	bSegmentRangeReduceRotations = true;
-	bSegmentRangeReduceTranslations = true;
-	bSegmentRangeReduceScales = true;
 	IdealNumKeyFramesPerSegment = 16;
 	MaxNumKeyFramesPerSegment = 31;
 #endif	// WITH_EDITORONLY_DATA
 }
 
 #if WITH_EDITORONLY_DATA
-void UAnimBoneCompressionCodec_ACLCustom::GetCompressionSettings(acl::CompressionSettings& OutSettings) const
+void UAnimBoneCompressionCodec_ACLCustom::GetCompressionSettings(acl::compression_settings& OutSettings) const
 {
 	using namespace acl;
 
-	OutSettings = acl::CompressionSettings();
+	OutSettings = acl::compression_settings();
 	OutSettings.rotation_format = GetRotationFormat(RotationFormat);
 	OutSettings.translation_format = GetVectorFormat(TranslationFormat);
 	OutSettings.scale_format = GetVectorFormat(ScaleFormat);
 	OutSettings.level = GetCompressionLevel(CompressionLevel);
 
-	OutSettings.range_reduction |= bClipRangeReduceRotations ? RangeReductionFlags8::Rotations : RangeReductionFlags8::None;
-	OutSettings.range_reduction |= bClipRangeReduceTranslations ? RangeReductionFlags8::Translations : RangeReductionFlags8::None;
-	OutSettings.range_reduction |= bClipRangeReduceScales ? RangeReductionFlags8::Scales : RangeReductionFlags8::None;
-
-	OutSettings.segmenting.enabled = bEnableSegmenting != 0;
 	OutSettings.segmenting.ideal_num_samples = IdealNumKeyFramesPerSegment;
 	OutSettings.segmenting.max_num_samples = MaxNumKeyFramesPerSegment;
-	OutSettings.segmenting.range_reduction |= bSegmentRangeReduceRotations ? RangeReductionFlags8::Rotations : RangeReductionFlags8::None;
-	OutSettings.segmenting.range_reduction |= bSegmentRangeReduceTranslations ? RangeReductionFlags8::Translations : RangeReductionFlags8::None;
-	OutSettings.segmenting.range_reduction |= bSegmentRangeReduceScales ? RangeReductionFlags8::Scales : RangeReductionFlags8::None;
-
-	OutSettings.constant_rotation_threshold_angle = ConstantRotationThresholdAngle;
-	OutSettings.constant_translation_threshold = ConstantTranslationThreshold;
-	OutSettings.constant_scale_threshold = ConstantScaleThreshold;
-	OutSettings.error_threshold = ErrorThreshold;
 }
 
 void UAnimBoneCompressionCodec_ACLCustom::PopulateDDCKey(FArchive& Ar)
 {
 	Super::PopulateDDCKey(Ar);
 
-	acl::CompressionSettings Settings;
+	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
 	uint32 ForceRebuildVersion = 0;
-	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::AlgorithmType8::UniformlySampled);
+	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::algorithm_type8::uniformly_sampled);
 	uint32 SettingsHash = Settings.get_hash();
 
 	Ar	<< ForceRebuildVersion << AlgorithmVersion << SettingsHash;

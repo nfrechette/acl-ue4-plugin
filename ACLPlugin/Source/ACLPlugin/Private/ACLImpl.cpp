@@ -7,65 +7,38 @@
 #include "AnimationUtils.h"
 #include "Animation/AnimCompressionTypes.h"
 
-acl::RotationFormat8 GetRotationFormat(ACLRotationFormat Format)
+acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format)
 {
 	switch (Format)
 	{
 	default:
-	case ACLRF_Quat_128:			return acl::RotationFormat8::Quat_128;
-	case ACLRF_QuatDropW_96:		return acl::RotationFormat8::QuatDropW_96;
-	case ACLRF_QuatDropW_Variable:	return acl::RotationFormat8::QuatDropW_Variable;
+	case ACLRF_Quat_128:			return acl::rotation_format8::quatf_full;
+	case ACLRF_QuatDropW_96:		return acl::rotation_format8::quatf_drop_w_full;
+	case ACLRF_QuatDropW_Variable:	return acl::rotation_format8::quatf_drop_w_full;
 	}
 }
 
-acl::VectorFormat8 GetVectorFormat(ACLVectorFormat Format)
+acl::vector_format8 GetVectorFormat(ACLVectorFormat Format)
 {
 	switch (Format)
 	{
 	default:
-	case ACLVF_Vector3_96:			return acl::VectorFormat8::Vector3_96;
-	case ACLVF_Vector3_Variable:	return acl::VectorFormat8::Vector3_Variable;
+	case ACLVF_Vector3_96:			return acl::vector_format8::vector3f_full;
+	case ACLVF_Vector3_Variable:	return acl::vector_format8::vector3f_variable;
 	}
 }
 
-acl::CompressionLevel8 GetCompressionLevel(ACLCompressionLevel Level)
+acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Level)
 {
 	switch (Level)
 	{
 	default:
-	case ACLCL_Lowest:	return acl::CompressionLevel8::Lowest;
-	case ACLCL_Low:		return acl::CompressionLevel8::Low;
-	case ACLCL_Medium:	return acl::CompressionLevel8::Medium;
-	case ACLCL_High:	return acl::CompressionLevel8::High;
-	case ACLCL_Highest:	return acl::CompressionLevel8::Highest;
+	case ACLCL_Lowest:	return acl::compression_level8::lowest;
+	case ACLCL_Low:		return acl::compression_level8::low;
+	case ACLCL_Medium:	return acl::compression_level8::medium;
+	case ACLCL_High:	return acl::compression_level8::high;
+	case ACLCL_Highest:	return acl::compression_level8::highest;
 	}
-}
-
-TUniquePtr<acl::RigidSkeleton> BuildACLSkeleton(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance)
-{
-	using namespace acl;
-
-	const int32 NumBones = CompressibleAnimData.BoneData.Num();
-
-	TArray<RigidBone> ACLSkeletonBones;
-	ACLSkeletonBones.Empty(NumBones);
-	ACLSkeletonBones.AddDefaulted(NumBones);
-
-	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
-	{
-		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[BoneIndex];
-		RigidBone& ACLBone = ACLSkeletonBones[BoneIndex];
-		ACLBone.name = String(AllocatorImpl, TCHAR_TO_ANSI(*UE4Bone.Name.ToString()));
-		ACLBone.bind_transform = transform_cast(transform_set(quat_normalize(QuatCast(UE4Bone.Orientation)), VectorCast(UE4Bone.Position), vector_set(1.0f)));
-
-		// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
-		ACLBone.vertex_distance = (UE4Bone.bHasSocket || UE4Bone.bKeyEndEffector) ? SafeVirtualVertexDistance : DefaultVirtualVertexDistance;
-
-		const int32 ParentBoneIndex = UE4Bone.GetParent();
-		ACLBone.parent_index = ParentBoneIndex >= 0 ? safe_static_cast<uint16_t>(ParentBoneIndex) : acl::k_invalid_bone_index;
-	}
-
-	return MakeUnique<RigidSkeleton>(AllocatorImpl, ACLSkeletonBones.GetData(), NumBones);
 }
 
 static int32 FindAnimationTrackIndex(const FCompressibleAnimData& CompressibleAnimData, int32 BoneIndex)
@@ -104,17 +77,15 @@ static bool IsAdditiveBakedIntoRaw(const FCompressibleAnimData& CompressibleAnim
 	return false;	// Sequence has raw data but no additive base data, it isn't baked
 }
 
-TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, const acl::RigidSkeleton& ACLSkeleton, bool bBuildAdditiveBase)
+acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase)
 {
-	using namespace acl;
-
 	const bool bIsAdditive = bBuildAdditiveBase ? false : CompressibleAnimData.bIsValidAdditive;
 	const bool bIsAdditiveBakedIntoRaw = IsAdditiveBakedIntoRaw(CompressibleAnimData);
 	check(!bIsAdditive || bIsAdditiveBakedIntoRaw);
 	if (bIsAdditive && !bIsAdditiveBakedIntoRaw)
 	{
 		UE_LOG(LogAnimationCompression, Fatal, TEXT("Animation sequence is additive but it is not baked into the raw data, this is not supported."));
-		return TUniquePtr<acl::AnimationClip>();
+		return acl::track_array_qvvf();
 	}
 
 	// Ordinary non additive sequences only contain raw data returned by GetRawAnimationData().
@@ -132,25 +103,35 @@ TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const F
 	const uint32 NumSamples = CompressibleAnimData.NumFrames;
 	const bool bIsStaticPose = NumSamples <= 1 || CompressibleAnimData.SequenceLength < 0.0001f;
 	const float SampleRate = bIsStaticPose ? 30.0f : (float(CompressibleAnimData.NumFrames - 1) / CompressibleAnimData.SequenceLength);
-	const String ClipName(AllocatorImpl, TCHAR_TO_ANSI(*CompressibleAnimData.FullName));
+	const int32 NumBones = CompressibleAnimData.BoneData.Num();
 
 	// Additive animations have 0,0,0 scale as the default since we add it
 	const FVector UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
-	const Vector4_64 ACLDefaultScale = vector_set(bIsAdditive ? 0.0 : 1.0);
+	const rtm::vector4f ACLDefaultScale = rtm::vector_set(bIsAdditive ? 0.0f : 1.0f);
 
-	TUniquePtr<AnimationClip> ACLClip = MakeUnique<AnimationClip>(AllocatorImpl, ACLSkeleton, NumSamples, SampleRate, ClipName);
+	acl::track_array_qvvf Tracks(AllocatorImpl, NumBones);
+	Tracks.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*CompressibleAnimData.FullName)));
 
-	AnimatedBone* ACLBones = ACLClip->get_bones();
-	const uint16 NumBones = ACLSkeleton.get_num_bones();
-	for (uint16 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
-		const int32 TrackIndex = FindAnimationTrackIndex(CompressibleAnimData, BoneIndex);
+		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[BoneIndex];
 
-		AnimatedBone& ACLBone = ACLBones[BoneIndex];
+		acl::track_desc_transformf Desc;
+
+		// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
+		Desc.shell_distance = (UE4Bone.bHasSocket || UE4Bone.bKeyEndEffector) ? SafeVirtualVertexDistance : DefaultVirtualVertexDistance;
+
+		const int32 ParentBoneIndex = UE4Bone.GetParent();
+		Desc.parent_index = ParentBoneIndex >= 0 ? ParentBoneIndex : acl::k_invalid_track_index;
+
+		const int32 TrackIndex = FindAnimationTrackIndex(CompressibleAnimData, BoneIndex);
 
 		// We output bone data in UE4 track order. If a track isn't present, we will use the bind pose and strip it from the
 		// compressed stream.
-		ACLBone.output_index = TrackIndex >= 0 ? TrackIndex : -1;
+		Desc.output_index = TrackIndex >= 0 ? TrackIndex : acl::k_invalid_track_index;
+
+		acl::track_qvvf Track = acl::track_qvvf::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
+		Track.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*UE4Bone.Name.ToString())));
 
 		if (TrackIndex >= 0)
 		{
@@ -160,29 +141,28 @@ TUniquePtr<acl::AnimationClip> BuildACLClip(ACLAllocator& AllocatorImpl, const F
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				const FQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
-				ACLBone.rotation_track.set_sample(SampleIndex, quat_normalize(quat_cast(QuatCast(RotationSample))));
+				Track[SampleIndex].rotation = QuatCast(RotationSample);
+
 
 				const FVector& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
-				ACLBone.translation_track.set_sample(SampleIndex, vector_cast(VectorCast(TranslationSample)));
+				Track[SampleIndex].translation = VectorCast(TranslationSample);
 
 				const FVector& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
-				ACLBone.scale_track.set_sample(SampleIndex, vector_cast(VectorCast(ScaleSample)));
+				Track[SampleIndex].scale = VectorCast(ScaleSample);
 			}
 		}
 		else
 		{
 			// No track data for this bone, it must be new. Use the bind pose instead
-			const RigidBone& ACLRigidBone = ACLSkeleton.get_bone(BoneIndex);
+			const rtm::qvvf BindTransform = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), ACLDefaultScale);
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
-			{
-				ACLBone.rotation_track.set_sample(SampleIndex, ACLRigidBone.bind_transform.rotation);
-				ACLBone.translation_track.set_sample(SampleIndex, ACLRigidBone.bind_transform.translation);
-				ACLBone.scale_track.set_sample(SampleIndex, ACLDefaultScale);
-			}
+				Track[SampleIndex] = BindTransform;
 		}
+
+		Tracks[BoneIndex] = MoveTemp(Track);
 	}
 
-	return ACLClip;
+	return Tracks;
 }
 #endif	// WITH_EDITOR

@@ -7,8 +7,8 @@
 
 #include "ACLImpl.h"
 
-#include <acl/algorithm/uniformly_sampled/decoder.h>
-#include <acl/compression/utils.h>
+#include <acl/compression/track_error.h>
+#include <acl/decompression/decompress.h>
 #endif	// WITH_EDITORONLY_DATA
 
 #include "ACLDecompressionImpl.h"
@@ -53,31 +53,26 @@ bool UAnimBoneCompressionCodec_ACL::IsCodecValid() const
 	return SafetyFallbackCodec != nullptr ? SafetyFallbackCodec->IsCodecValid() : true;
 }
 
-void UAnimBoneCompressionCodec_ACL::GetCompressionSettings(acl::CompressionSettings& OutSettings) const
+void UAnimBoneCompressionCodec_ACL::GetCompressionSettings(acl::compression_settings& OutSettings) const
 {
-	using namespace acl;
-
-	OutSettings = get_default_compression_settings();
+	OutSettings = acl::get_default_compression_settings();
 
 	OutSettings.level = GetCompressionLevel(CompressionLevel);
-	OutSettings.error_threshold = ErrorThreshold;
 }
 
-ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACL::ExecuteSafetyFallback(acl::IAllocator& Allocator, const acl::CompressionSettings& Settings, const acl::AnimationClip& RawClip, const acl::CompressedClip& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
+ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACL::ExecuteSafetyFallback(acl::iallocator& Allocator, const acl::compression_settings& Settings, const acl::track_array_qvvf& RawClip, const acl::track_array_qvvf& BaseClip, const acl::compressed_tracks& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
-	using namespace acl;
-
 	if (SafetyFallbackCodec != nullptr && SafetyFallbackThreshold > 0.0f)
 	{
 		checkSlow(CompressedClipData.is_valid(true).empty());
 
-		uniformly_sampled::DecompressionContext<UE4DefaultDecompressionSettings> Context;
+		acl::decompression_context<UE4DefaultDecompressionSettings> Context;
 		Context.initialize(CompressedClipData);
-		const BoneError bone_error = calculate_compressed_clip_error(Allocator, RawClip, *Settings.error_metric, Context);
-		if (bone_error.error >= SafetyFallbackThreshold)
+		const acl::track_error TrackError = acl::calculate_compression_error(Allocator, RawClip, Context, *Settings.error_metric, BaseClip);
+		if (TrackError.error >= SafetyFallbackThreshold)
 		{
 			UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData.get_size());
-			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm"), bone_error.error);
+			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm"), TrackError.error);
 
 			// Just use the safety fallback
 			return SafetyFallbackCodec->Compress(CompressibleAnimData, OutResult) ? ACLSafetyFallbackResult::Success : ACLSafetyFallbackResult::Failure;
@@ -91,11 +86,11 @@ void UAnimBoneCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
 {
 	Super::PopulateDDCKey(Ar);
 
-	acl::CompressionSettings Settings;
+	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
 	uint32 ForceRebuildVersion = 0;
-	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::AlgorithmType8::UniformlySampled);
+	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::algorithm_type8::uniformly_sampled);
 	uint32 SettingsHash = Settings.get_hash();
 
 	Ar	<< SafetyFallbackThreshold << ForceRebuildVersion << AlgorithmVersion << SettingsHash;

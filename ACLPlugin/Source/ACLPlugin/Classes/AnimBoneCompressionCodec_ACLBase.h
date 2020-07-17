@@ -5,15 +5,15 @@
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
 #include "Animation/AnimBoneCompressionCodec.h"
-#include "AnimBoneCompressionCodec_ACLBase.generated.h"
 
-namespace acl
-{
-	class AnimationClip;
-	class CompressedClip;
-	struct CompressionSettings;
-	class IAllocator;
-}
+#if WITH_EDITORONLY_DATA
+#include <acl/compression/compression_settings.h>
+#include <acl/compression/track_array.h>
+#include <acl/core/compressed_tracks.h>
+#include <acl/core/iallocator.h>
+#endif
+
+#include "AnimBoneCompressionCodec_ACLBase.generated.h"
 
 /** An enum for ACL rotation formats. */
 UENUM()
@@ -89,8 +89,8 @@ class UAnimBoneCompressionCodec_ACLBase : public UAnimBoneCompressionCodec
 	virtual void PopulateDDCKey(FArchive& Ar) override;
 
 	// Our implementation
-	virtual void GetCompressionSettings(acl::CompressionSettings& OutSettings) const PURE_VIRTUAL(UAnimBoneCompressionCodec_ACLBase::GetCompressionSettings, );
-	virtual ACLSafetyFallbackResult ExecuteSafetyFallback(acl::IAllocator& Allocator, const acl::CompressionSettings& Settings, const acl::AnimationClip& RawClip, const acl::CompressedClip& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult);
+	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const PURE_VIRTUAL(UAnimBoneCompressionCodec_ACLBase::GetCompressionSettings, );
+	virtual ACLSafetyFallbackResult ExecuteSafetyFallback(acl::iallocator& Allocator, const acl::compression_settings& Settings, const acl::track_array_qvvf& RawClip, const acl::track_array_qvvf& BaseClip, const acl::compressed_tracks& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult);
 #endif
 
 	// UAnimBoneCompressionCodec implementation

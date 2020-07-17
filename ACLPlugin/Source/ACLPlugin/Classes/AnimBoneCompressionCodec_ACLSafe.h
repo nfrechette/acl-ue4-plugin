@@ -18,7 +18,7 @@ class UAnimBoneCompressionCodec_ACLSafe : public UAnimBoneCompressionCodec_ACLBa
 	virtual void PopulateDDCKey(FArchive& Ar) override;
 
 	// UAnimBoneCompressionCodec_ACLBase implementation
-	virtual void GetCompressionSettings(acl::CompressionSettings& OutSettings) const override;
+	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const override;
 #endif
 
 	// UAnimBoneCompressionCodec implementation
