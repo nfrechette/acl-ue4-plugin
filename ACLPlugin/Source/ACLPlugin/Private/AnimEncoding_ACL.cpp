@@ -39,7 +39,7 @@ constexpr acl::sample_rounding_policy get_rounding_policy(EAnimInterpolationType
  * The FTransform type does not support setting the members directly from vector types
  * so we derive from it and expose that functionality.
  */
-struct FACLTransform : public FTransform
+struct FACLTransform final : public FTransform
 {
 	void RTM_SIMD_CALL SetRotationRaw(rtm::quatf_arg0 Rotation_)
 	{
@@ -88,7 +88,7 @@ struct FACLTransform : public FTransform
  * Output pose writer that can selectively skip certain track types.
  */
 template<bool SkipRotations, bool SkipTranslations, bool SkipScales>
-struct UE4OutputPoseWriter : public acl::track_writer
+struct UE4OutputPoseWriter final : public acl::track_writer
 {
 	// Raw pointer for performance reasons, caller is responsible for ensuring data is valid
 	FACLTransform* Atoms;
@@ -147,7 +147,7 @@ using UE4ScalePoseWriter = UE4OutputPoseWriter<true, true, false>;
 /*
 * Output track writer that can selectively skip certain track types.
 */
-struct UE4OutputTrackWriter : public acl::track_writer
+struct UE4OutputTrackWriter final : public acl::track_writer
 {
 	// Raw pointer for performance reasons, caller is responsible for ensuring data is valid
 	FACLTransform* Atom;
