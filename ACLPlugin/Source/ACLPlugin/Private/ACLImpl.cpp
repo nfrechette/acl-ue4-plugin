@@ -132,7 +132,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	const rtm::vector4f ACLDefaultScale = rtm::vector_set(bIsAdditive ? 0.0f : 1.0f);
 
 	acl::track_array_qvvf Tracks(AllocatorImpl, NumBones);
-	Tracks.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*CompressibleAnimData.Name)));
+	Tracks.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*CompressibleAnimData.FullName)));
 
 	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
