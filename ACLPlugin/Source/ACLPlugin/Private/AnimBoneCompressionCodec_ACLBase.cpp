@@ -10,13 +10,13 @@
 
 #include "ACLImpl.h"
 
-#include <acl/algorithm/uniformly_sampled/encoder.h>
-#include <acl/algorithm/uniformly_sampled/decoder.h>
-#include <acl/compression/skeleton_error_metric.h>
-#include <acl/compression/utils.h>
+#include <acl/compression/compress.h>
+#include <acl/compression/transform_error_metrics.h>
+#include <acl/compression/track_error.h>
+#include <acl/decompression/decompress.h>
 #endif	// WITH_EDITORONLY_DATA
 
-#include <acl/core/compressed_clip.h>
+#include <acl/core/compressed_tracks.h>
 
 bool FACLCompressedAnimData::IsValid() const
 {
@@ -25,8 +25,8 @@ bool FACLCompressedAnimData::IsValid() const
 		return false;
 	}
 
-	const acl::CompressedClip* CompressedClipData = reinterpret_cast<const acl::CompressedClip*>(CompressedByteStream.GetData());
-	return CompressedClipData->is_valid(false).empty();
+	const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(CompressedByteStream.GetData());
+	return CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty();
 }
 
 UAnimBoneCompressionCodec_ACLBase::UAnimBoneCompressionCodec_ACLBase(const FObjectInitializer& ObjectInitializer)
@@ -48,29 +48,34 @@ UAnimBoneCompressionCodec_ACLBase::UAnimBoneCompressionCodec_ACLBase(const FObje
 #if WITH_EDITORONLY_DATA
 bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
-	using namespace acl;
-
 	ACLAllocator AllocatorImpl;
 
-	TUniquePtr<RigidSkeleton> ACLSkeleton = BuildACLSkeleton(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance);
-	TUniquePtr<AnimationClip> ACLClip = BuildACLClip(AllocatorImpl, CompressibleAnimData, *ACLSkeleton, false);
-	TUniquePtr<AnimationClip> ACLBaseClip = nullptr;
+	acl::track_array_qvvf ACLTracks = BuildACLTransformTrackArray(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, false);
 
-	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLClip->get_raw_size());
-
+	acl::track_array_qvvf ACLBaseTracks;
 	if (CompressibleAnimData.bIsValidAdditive)
-	{
-		ACLBaseClip = BuildACLClip(AllocatorImpl, CompressibleAnimData, *ACLSkeleton, true);
+		ACLBaseTracks = BuildACLTransformTrackArray(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, true);
 
-		ACLClip->set_additive_base(ACLBaseClip.Get(), AdditiveClipFormat8::Additive1);
+	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLTracks.get_raw_size());
+
+	// Set our error threshold
+	for (acl::track_qvvf& Track : ACLTracks)
+		Track.get_description().precision = ErrorThreshold;
+
+	// Override track settings if we need to
+	if (IsA<UAnimBoneCompressionCodec_ACLSafe>())
+	{
+		// Disable constant rotation track detection
+		for (acl::track_qvvf& Track : ACLTracks)
+			Track.get_description().constant_rotation_threshold_angle = 0.0f;
 	}
 
-	CompressionSettings Settings;
+	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
-	TransformErrorMetric DefaultErrorMetric;
-	AdditiveTransformErrorMetric<AdditiveClipFormat8::Additive1> AdditiveErrorMetric;
-	if (ACLBaseClip != nullptr)
+	acl::qvvf_transform_error_metric DefaultErrorMetric;
+	acl::additive_qvvf_transform_error_metric<acl::additive_clip_format8::additive1> AdditiveErrorMetric;
+	if (!ACLBaseTracks.is_empty())
 	{
 		Settings.error_metric = &AdditiveErrorMetric;
 	}
@@ -79,19 +84,21 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 		Settings.error_metric = &DefaultErrorMetric;
 	}
 
-	OutputStats Stats;
-	CompressedClip* CompressedClipData = nullptr;
-	ErrorResult CompressionResult = uniformly_sampled::compress_clip(AllocatorImpl, *ACLClip, Settings, CompressedClipData, Stats);
+	const acl::additive_clip_format8 AdditiveFormat = acl::additive_clip_format8::additive0;
+
+	acl::output_stats Stats;
+	acl::compressed_tracks* CompressedTracks = nullptr;
+	acl::error_result CompressionResult = acl::compress_track_list(AllocatorImpl, ACLTracks, Settings, ACLBaseTracks, AdditiveFormat, CompressedTracks, Stats);
 
 	// Make sure if we managed to compress, that the error is acceptable and if it isn't, re-compress again with safer settings
 	// This should be VERY rare with the default threshold
 	if (CompressionResult.empty())
 	{
-		const ACLSafetyFallbackResult FallbackResult = ExecuteSafetyFallback(AllocatorImpl, Settings, *ACLClip, *CompressedClipData, CompressibleAnimData, OutResult);
+		const ACLSafetyFallbackResult FallbackResult = ExecuteSafetyFallback(AllocatorImpl, Settings, ACLTracks, ACLBaseTracks, *CompressedTracks, CompressibleAnimData, OutResult);
 		if (FallbackResult != ACLSafetyFallbackResult::Ignored)
 		{
-			AllocatorImpl.deallocate(CompressedClipData, CompressedClipData->get_size());
-			CompressedClipData = nullptr;
+			AllocatorImpl.deallocate(CompressedTracks, CompressedTracks->get_size());
+			CompressedTracks = nullptr;
 
 			return FallbackResult == ACLSafetyFallbackResult::Success;
 		}
@@ -103,13 +110,13 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 		return false;
 	}
 
-	checkSlow(CompressedClipData->is_valid(true).empty());
+	checkSlow(CompressedTracks->is_valid(true).empty());
 
-	const uint32 CompressedClipDataSize = CompressedClipData->get_size();
+	const uint32 CompressedClipDataSize = CompressedTracks->get_size();
 
 	OutResult.CompressedByteStream.Empty(CompressedClipDataSize);
 	OutResult.CompressedByteStream.AddUninitialized(CompressedClipDataSize);
-	FMemory::Memcpy(OutResult.CompressedByteStream.GetData(), CompressedClipData, CompressedClipDataSize);
+	FMemory::Memcpy(OutResult.CompressedByteStream.GetData(), CompressedTracks, CompressedClipDataSize);
 
 	OutResult.Codec = this;
 
@@ -119,16 +126,16 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 #if !NO_LOGGING
 	{
-		uniformly_sampled::DecompressionContext<uniformly_sampled::DebugDecompressionSettings> Context;
-		Context.initialize(*CompressedClipData);
-		const BoneError bone_error = calculate_compressed_clip_error(AllocatorImpl, *ACLClip, *Settings.error_metric, Context);
+		acl::decompression_context<acl::debug_transform_decompression_settings> Context;
+		Context.initialize(*CompressedTracks);
+		const acl::track_error TrackError = acl::calculate_compression_error(AllocatorImpl, ACLTracks, Context, *Settings.error_metric, ACLBaseTracks);
 
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipDataSize);
-		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), bone_error.error, bone_error.index, bone_error.sample_time);
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), TrackError.error, TrackError.index, TrackError.sample_time);
 	}
 #endif
 
-	AllocatorImpl.deallocate(CompressedClipData, CompressedClipDataSize);
+	AllocatorImpl.deallocate(CompressedTracks, CompressedClipDataSize);
 	return true;
 }
 
@@ -150,7 +157,7 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 	}
 }
 
-ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACLBase::ExecuteSafetyFallback(acl::IAllocator& Allocator, const acl::CompressionSettings& Settings, const acl::AnimationClip& RawClip, const acl::CompressedClip& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
+ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACLBase::ExecuteSafetyFallback(acl::iallocator& Allocator, const acl::compression_settings& Settings, const acl::track_array_qvvf& RawClip, const acl::track_array_qvvf& BaseClip, const acl::compressed_tracks& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
 	return ACLSafetyFallbackResult::Ignored;
 }

@@ -38,34 +38,6 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
 	float ConstantScaleThreshold;
 
-	/** Whether to enable per clip range reduction for rotations or not. */
-	UPROPERTY(EditAnywhere, Category = Clip)
-	bool bClipRangeReduceRotations;
-
-	/** Whether to enable per clip range reduction for translations or not. */
-	UPROPERTY(EditAnywhere, Category = Clip)
-	bool bClipRangeReduceTranslations;
-
-	/** Whether to enable per clip range reduction for scales or not. */
-	UPROPERTY(EditAnywhere, Category = Clip)
-	bool bClipRangeReduceScales;
-
-	/** Whether to enable clip segmenting or not. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
-	bool bEnableSegmenting;
-
-	/** Whether to enable per segment range reduction for rotations or not. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
-	bool bSegmentRangeReduceRotations;
-
-	/** Whether to enable per segment range reduction for translations or not. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
-	bool bSegmentRangeReduceTranslations;
-
-	/** Whether to enable per segment range reduction for scales or not. */
-	UPROPERTY(EditAnywhere, Category = Segmenting)
-	bool bSegmentRangeReduceScales;
-
 	/** The ideal number of key frames to retain per segment for each track. */
 	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
 	uint16 IdealNumKeyFramesPerSegment;
@@ -80,7 +52,7 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 	virtual void PopulateDDCKey(FArchive& Ar) override;
 
 	// UAnimBoneCompressionCodec_ACLBase implementation
-	virtual void GetCompressionSettings(acl::CompressionSettings& OutSettings) const override;
+	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const override;
 #endif
 
 	// UAnimBoneCompressionCodec implementation
