@@ -43,6 +43,7 @@
 
 #include <acl/core/error.h>
 #include <acl/core/iallocator.h>
+
 #include <rtm/quatf.h>
 #include <rtm/vector4f.h>
 #include <rtm/qvvf.h>
