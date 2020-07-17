@@ -36,15 +36,6 @@
 static acl::sample_rounding_policy get_rounding_policy(EAnimInterpolationType InterpType) { return InterpType == EAnimInterpolationType::Step ? acl::sample_rounding_policy::floor : acl::sample_rounding_policy::none; }
 
 /*
- * We disable range checks when using certain allocations for performance reasons.
- */
-class ACLMemStackAllocator : public TMemStackAllocator<>
-{
-public:
-	enum { RequireRangeCheck = false };
-};
-
-/*
  * The FTransform type does not support setting the members directly from vector types
  * so we derive from it and expose that functionality.
  */
