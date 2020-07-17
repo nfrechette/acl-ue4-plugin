@@ -75,7 +75,7 @@ void UAnimCompress_ACL::DoReduction(const FCompressibleAnimData& CompressibleAni
 
 	acl::qvvf_transform_error_metric DefaultErrorMetric;
 	acl::additive_qvvf_transform_error_metric<acl::additive_clip_format8::additive1> AdditiveErrorMetric;
-	if (ACLBaseTracks.get_num_tracks() != 0)
+	if (!ACLBaseTracks.is_empty())
 		Settings.error_metric = &AdditiveErrorMetric;
 	else
 		Settings.error_metric = &DefaultErrorMetric;
