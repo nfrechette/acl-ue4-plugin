@@ -210,8 +210,8 @@ void AEFACLCompressionCodec_Base::ByteSwapOut(FUECompressedAnimData& CompressedD
 template<typename DecompressionSettingsType>
 static FORCEINLINE_DEBUGGABLE void GetBoneAtomImpl(FTransform& OutAtom, const FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex)
 {
-	const acl::compressed_tracks* CompressedClipData = reinterpret_cast<const acl::compressed_tracks*>(DecompContext.GetCompressedByteStream());
-	check(CompressedClipData->is_valid(false).empty());
+	const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(DecompContext.GetCompressedByteStream());
+	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
 	acl::decompression_context<DecompressionSettingsType> Context;
 	Context.initialize(*CompressedClipData);
@@ -230,8 +230,8 @@ void AEFACLCompressionCodec_Default::GetBoneAtom(FTransform& OutAtom, FAnimSeque
 template<typename DecompressionSettingsType, typename WriterType>
 static FORCEINLINE_DEBUGGABLE void GetPoseTracks(FTransformArray& Atoms, const BoneTrackArray& DesiredPairs, const FAnimSequenceDecompressionContext& DecompContext)
 {
-	const acl::compressed_tracks* CompressedClipData = reinterpret_cast<const acl::compressed_tracks*>(DecompContext.GetCompressedByteStream());
-	check(CompressedClipData->is_valid(false).empty());
+	const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(DecompContext.GetCompressedByteStream());
+	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
 	const acl::acl_impl::transform_tracks_header& TransformHeader = acl::acl_impl::get_transform_tracks_header(*CompressedClipData);
 	if (!WriterType::skip_all_scales() && !TransformHeader.has_scale)
