@@ -46,7 +46,7 @@ struct FACLTransform : public FTransform
 #if PLATFORM_ENABLE_VECTORINTRINSICS
 		Rotation = Rotation_;
 #else
-		acl::quat_unaligned_write(Rotation_, &Rotation.X);
+		rtm::quat_store(Rotation_, &Rotation.X);
 #endif
 	}
 
@@ -55,7 +55,7 @@ struct FACLTransform : public FTransform
 #if PLATFORM_ENABLE_VECTORINTRINSICS
 		Translation = VectorSet_W0(Translation_);
 #else
-		acl::vector_unaligned_write3(Translation_, &Translation.X);
+		rtm::vector_store3(Translation_, &Translation.X);
 #endif
 	}
 
@@ -64,7 +64,7 @@ struct FACLTransform : public FTransform
 #if PLATFORM_ENABLE_VECTORINTRINSICS
 		Scale3D = VectorSet_W0(Scale_);
 #else
-		acl::vector_unaligned_write3(Scale_, &Scale3D.X);
+		rtm::vector_store3(Scale_, &Scale3D.X);
 #endif
 	}
 
