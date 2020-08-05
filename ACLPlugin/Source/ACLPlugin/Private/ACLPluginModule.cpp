@@ -4,7 +4,10 @@
 #include "IACLPluginModule.h"
 #include "Modules/ModuleManager.h"
 
-#if !UE_BUILD_SHIPPING
+// Enable console commands only in development builds when logging is enabled
+#define WITH_ACL_CONSOLE_COMMANDS (!UE_BUILD_SHIPPING && !UE_BUILD_TEST && !NO_LOGGING)
+
+#if WITH_ACL_CONSOLE_COMMANDS
 #include "AnimationCompression.h"
 #include "Animation/AnimBoneCompressionCodec.h"
 #include "Animation/AnimBoneCompressionSettings.h"
@@ -21,7 +24,7 @@ private:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
-#if !UE_BUILD_SHIPPING
+#if WITH_ACL_CONSOLE_COMMANDS
 	// Console commands
 	void ListCodecs(const TArray<FString>& Args);
 	void ListAnimSequences(const TArray<FString>& Args);
@@ -34,7 +37,7 @@ IMPLEMENT_MODULE(FACLPlugin, ACLPlugin)
 
 //////////////////////////////////////////////////////////////////////////
 
-#if !UE_BUILD_SHIPPING
+#if WITH_ACL_CONSOLE_COMMANDS
 template<class ClassType>
 static TArray<ClassType*> GetObjectInstancesSorted()
 {
@@ -260,7 +263,7 @@ void FACLPlugin::ListAnimSequences(const TArray<FString>& Args)
 
 void FACLPlugin::StartupModule()
 {
-#if !UE_BUILD_SHIPPING
+#if WITH_ACL_CONSOLE_COMMANDS
 	if (!IsRunningCommandlet())
 	{
 		ConsoleCommands.Add(IConsoleManager::Get().RegisterConsoleCommand(
@@ -282,7 +285,7 @@ void FACLPlugin::StartupModule()
 
 void FACLPlugin::ShutdownModule()
 {
-#if !UE_BUILD_SHIPPING
+#if WITH_ACL_CONSOLE_COMMANDS
 	for (IConsoleObject* Cmd : ConsoleCommands)
 	{
 		IConsoleManager::Get().UnregisterConsoleObject(Cmd);
