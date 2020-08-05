@@ -4,7 +4,7 @@
 
 # Animation Compression Library Unreal Engine 4 Plugin
 
-This plugin integrates the [Animation Compression Library](https://github.com/nfrechette/acl) version [v1.3.1](https://github.com/nfrechette/acl/releases/tag/v1.3.1) within [Unreal Engine 4](https://www.unrealengine.com/en-US/blog). It is suitable for every animation clip and platform as it features a low memory footprint, high accuracy, and very fast compression and decompression.
+This plugin integrates the [Animation Compression Library](https://github.com/nfrechette/acl) version [v1.3.3](https://github.com/nfrechette/acl/releases/tag/v1.3.3) within [Unreal Engine 4](https://www.unrealengine.com/en-US/blog). It is suitable for every animation clip and platform as it features a low memory footprint, high accuracy, and very fast compression and decompression.
 
 Compared to **UE 4.23.1**, the ACL plugin compresses up to **2.9x smaller**, is up to **4.7x more accurate**, up to **52.9x faster to compress**, and up to **6.8x faster to decompress** (results may vary depending on the platform and data).
 

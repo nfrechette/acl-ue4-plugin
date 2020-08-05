@@ -1,5 +1,9 @@
 # Significant changes per release
 
+## 0.6.2
+
+*  Upgraded to ACL v1.3.3
+
 ## 0.6.1
 
 *  Fix crash when using the curve compression codec and no curves are present
