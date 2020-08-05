@@ -1,5 +1,10 @@
 # Significant changes per release
 
+## 1.0.3
+
+*  Upgraded to ACL v1.3.3
+*  Fix build when logging is disabled in non-shipping builds
+
 ## 1.0.2
 
 *  Changes required to meet the UE4 marketplace guidelines
