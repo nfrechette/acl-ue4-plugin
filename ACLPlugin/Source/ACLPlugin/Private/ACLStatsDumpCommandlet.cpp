@@ -301,8 +301,8 @@ static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimS
 	const acl::qvvf_transform_error_metric ErrorMetric;
 	SimpleTransformWriter RawWriter(RawLocalPoseTransforms);
 
-	TArray<uint16> ParentTransformIndices;
-	TArray<uint16> SelfTransformIndices;
+	TArray<uint32> ParentTransformIndices;
+	TArray<uint32> SelfTransformIndices;
 	ParentTransformIndices.AddUninitialized(NumBones);
 	SelfTransformIndices.AddUninitialized(NumBones);
 
@@ -311,8 +311,8 @@ static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimS
 		const acl::track_qvvf& Track = Tracks[BoneIndex];
 		const acl::track_desc_transformf& Desc = Track.get_description();
 
-		ParentTransformIndices[BoneIndex] = Desc.parent_index == acl::k_invalid_track_index ? acl::k_invalid_bone_index : acl::safe_static_cast<uint16>(Desc.parent_index);
-		SelfTransformIndices[BoneIndex] = acl::safe_static_cast<uint16>(BoneIndex);
+		ParentTransformIndices[BoneIndex] = Desc.parent_index;
+		SelfTransformIndices[BoneIndex] = BoneIndex;
 	}
 
 	acl::itransform_error_metric::local_to_object_space_args local_to_object_space_args_raw;
@@ -395,8 +395,8 @@ static void DumpClipDetailedError(const acl::track_array_qvvf& Tracks, UAnimSequ
 
 	SimpleTransformWriter RawWriter(RawLocalPoseTransforms);
 
-	TArray<uint16> ParentTransformIndices;
-	TArray<uint16> SelfTransformIndices;
+	TArray<uint32> ParentTransformIndices;
+	TArray<uint32> SelfTransformIndices;
 	ParentTransformIndices.AddUninitialized(NumBones);
 	SelfTransformIndices.AddUninitialized(NumBones);
 
@@ -405,8 +405,8 @@ static void DumpClipDetailedError(const acl::track_array_qvvf& Tracks, UAnimSequ
 		const acl::track_qvvf& Track = Tracks[BoneIndex];
 		const acl::track_desc_transformf& Desc = Track.get_description();
 
-		ParentTransformIndices[BoneIndex] = Desc.parent_index == acl::k_invalid_track_index ? acl::k_invalid_bone_index : acl::safe_static_cast<uint16>(Desc.parent_index);
-		SelfTransformIndices[BoneIndex] = acl::safe_static_cast<uint16>(BoneIndex);
+		ParentTransformIndices[BoneIndex] = Desc.parent_index;
+		SelfTransformIndices[BoneIndex] = BoneIndex;
 	}
 
 	acl::itransform_error_metric::local_to_object_space_args local_to_object_space_args_raw;

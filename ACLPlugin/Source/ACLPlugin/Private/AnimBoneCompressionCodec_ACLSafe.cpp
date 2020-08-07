@@ -29,12 +29,11 @@ void UAnimBoneCompressionCodec_ACLSafe::PopulateDDCKey(FArchive& Ar)
 	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
-	uint32 ForceRebuildVersion = 0;
-	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::algorithm_type8::uniformly_sampled);
+	uint32 ForceRebuildVersion = 1;
 	uint32 SettingsHash = Settings.get_hash();
 
 	Ar << DefaultVirtualVertexDistance << SafeVirtualVertexDistance
-		<< ForceRebuildVersion << AlgorithmVersion << SettingsHash;
+		<< ForceRebuildVersion << SettingsHash;
 }
 #endif // WITH_EDITORONLY_DATA
 

@@ -89,11 +89,10 @@ void UAnimBoneCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
 	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
-	uint32 ForceRebuildVersion = 0;
-	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::algorithm_type8::uniformly_sampled);
+	uint32 ForceRebuildVersion = 1;
 	uint32 SettingsHash = Settings.get_hash();
 
-	Ar	<< SafetyFallbackThreshold << ForceRebuildVersion << AlgorithmVersion << SettingsHash;
+	Ar	<< SafetyFallbackThreshold << ForceRebuildVersion << SettingsHash;
 
 	if (SafetyFallbackCodec != nullptr)
 	{

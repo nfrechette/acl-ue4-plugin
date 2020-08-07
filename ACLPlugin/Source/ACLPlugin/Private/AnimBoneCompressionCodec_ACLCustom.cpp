@@ -47,11 +47,10 @@ void UAnimBoneCompressionCodec_ACLCustom::PopulateDDCKey(FArchive& Ar)
 	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
-	uint32 ForceRebuildVersion = 0;
-	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::algorithm_type8::uniformly_sampled);
+	uint32 ForceRebuildVersion = 1;
 	uint32 SettingsHash = Settings.get_hash();
 
-	Ar	<< ForceRebuildVersion << AlgorithmVersion << SettingsHash;
+	Ar	<< ForceRebuildVersion << SettingsHash;
 }
 #endif // WITH_EDITORONLY_DATA
 
