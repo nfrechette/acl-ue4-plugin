@@ -218,8 +218,8 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 #endif
 	}
 
-	const acl::acl_impl::transform_tracks_header& TransformHeader = acl::acl_impl::get_transform_tracks_header(*CompressedClipData);
-	if (TransformHeader.has_scale)
+	const acl::acl_impl::tracks_header& TracksHeader = acl::acl_impl::get_tracks_header(*CompressedClipData);
+	if (TracksHeader.get_has_scale())
 	{
 		for (const BoneTrackPair& Pair : ScalePairs)
 		{

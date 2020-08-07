@@ -42,11 +42,12 @@ void UAnimCurveCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
 		}
 	}
 
-	uint32 ForceRebuildVersion = 0;
+	uint32 ForceRebuildVersion = 1;
 	Ar << ForceRebuildVersion;
 
-	uint16 AlgorithmVersion = acl::get_algorithm_version(acl::algorithm_type8::uniformly_sampled);
-	Ar << AlgorithmVersion;
+	acl::compression_settings Settings;
+	uint32 SettingsHash = Settings.get_hash();
+	Ar << SettingsHash;
 }
 
 // For each curve, returns its largest position delta if the curve is for a morph target, 0.0 otherwise
