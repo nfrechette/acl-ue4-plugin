@@ -159,8 +159,8 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4C
 				RawTrack.ScaleKeys.Add(Scale);
 			}
 
-			const FString BoneName = ANSI_TO_TCHAR(Track.get_name().c_str());
-			UE4Clip->AddNewRawTrack(FName(*BoneName), &RawTrack);
+			const FName BoneName(Track.get_name().c_str());
+			UE4Clip->AddNewRawTrack(BoneName, &RawTrack);
 		}
 	}
 
@@ -197,8 +197,8 @@ static void SampleUE4Clip(const acl::track_array_qvvf& Tracks, USkeleton* UE4Ske
 	for (uint32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
 		const acl::track_qvvf& Track = Tracks[BoneIndex];
-		const FString BoneName = ANSI_TO_TCHAR(Track.get_name().c_str());
-		const int32 BoneTreeIndex = RefSkeleton.FindBoneIndex(FName(*BoneName));
+		const FName BoneName(Track.get_name().c_str());
+		const int32 BoneTreeIndex = RefSkeleton.FindBoneIndex(BoneName);
 		const int32 BoneTrackIndex = GetAnimationTrackIndex(BoneTreeIndex, UE4Clip);
 
 		FTransform BoneTransform;
