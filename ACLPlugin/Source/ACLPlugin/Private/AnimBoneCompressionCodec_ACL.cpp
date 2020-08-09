@@ -4,6 +4,7 @@
 
 #if WITH_EDITORONLY_DATA
 #include "AnimBoneCompressionCodec_ACLSafe.h"
+#include "Rendering/SkeletalMeshModel.h"
 
 #include "ACLImpl.h"
 
@@ -93,6 +94,15 @@ void UAnimBoneCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
 	uint32 SettingsHash = Settings.get_hash();
 
 	Ar	<< SafetyFallbackThreshold << ForceRebuildVersion << SettingsHash;
+
+	for (USkeletalMesh* SkelMesh : OptimizationTargets)
+	{
+		FSkeletalMeshModel* MeshModel = SkelMesh != nullptr ? SkelMesh->GetImportedModel() : nullptr;
+		if (MeshModel != nullptr)
+		{
+			Ar << MeshModel->SkeletalMeshModelGUID;
+		}
+	}
 
 	if (SafetyFallbackCodec != nullptr)
 	{
