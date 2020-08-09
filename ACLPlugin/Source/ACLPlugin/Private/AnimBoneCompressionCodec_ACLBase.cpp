@@ -7,6 +7,7 @@
 #if WITH_EDITORONLY_DATA
 #include "AnimBoneCompressionCodec_ACLSafe.h"
 #include "Animation/AnimationSettings.h"
+#include "Rendering/SkeletalMeshModel.h"
 
 #include "ACLImpl.h"
 
@@ -46,6 +47,127 @@ UAnimBoneCompressionCodec_ACLBase::UAnimBoneCompressionCodec_ACLBase(const FObje
 }
 
 #if WITH_EDITORONLY_DATA
+static void AppendMaxVertexDistances(USkeletalMesh* OptimizationTarget, TMap<FName, float>& BoneMaxVertexDistanceMap)
+{
+	USkeleton* Skeleton = OptimizationTarget != nullptr ? OptimizationTarget->Skeleton : nullptr;
+	if (Skeleton == nullptr)
+	{
+		return; // No data to work with
+	}
+
+	const FSkeletalMeshModel* MeshModel = OptimizationTarget->GetImportedModel();
+	if (MeshModel == nullptr || MeshModel->LODModels.Num() == 0)
+	{
+		return;	// No data to work with
+	}
+
+	const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+	const TArray<FTransform>& RefSkeletonPose = RefSkeleton.GetRefBonePose();
+	const uint32 NumBones = RefSkeletonPose.Num();
+
+	TArray<FTransform> RefSkeletonObjectSpacePose;
+	RefSkeletonObjectSpacePose.AddUninitialized(NumBones);
+	for (uint32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	{
+		const int32 ParentBoneIndex = RefSkeleton.GetParentIndex(BoneIndex);
+		if (ParentBoneIndex != INDEX_NONE)
+		{
+			RefSkeletonObjectSpacePose[BoneIndex] = RefSkeletonPose[BoneIndex] * RefSkeletonObjectSpacePose[ParentBoneIndex];
+		}
+		else
+		{
+			RefSkeletonObjectSpacePose[BoneIndex] = RefSkeletonPose[BoneIndex];
+		}
+	}
+
+	// Iterate over every vertex and track which one is the most distant for every bone
+	TArray<float> MostDistantVertexDistancePerBone;
+	MostDistantVertexDistancePerBone.AddZeroed(NumBones);
+
+	const uint32 NumSections = MeshModel->LODModels[0].Sections.Num();
+	for (uint32 SectionIndex = 0; SectionIndex < NumSections; ++SectionIndex)
+	{
+		const FSkelMeshSection& Section = MeshModel->LODModels[0].Sections[SectionIndex];
+		const uint32 NumVertices = Section.SoftVertices.Num();
+		for (uint32 VertexIndex = 0; VertexIndex < NumVertices; ++VertexIndex)
+		{
+			const FSoftSkinVertex& VertexInfo = Section.SoftVertices[VertexIndex];
+			for (uint32 InfluenceIndex = 0; InfluenceIndex < MAX_TOTAL_INFLUENCES; ++InfluenceIndex)
+			{
+				if (VertexInfo.InfluenceWeights[InfluenceIndex] != 0)
+				{
+					const uint32 SectionBoneIndex = VertexInfo.InfluenceBones[InfluenceIndex];
+					const uint32 BoneIndex = Section.BoneMap[SectionBoneIndex];
+
+					const FTransform& BoneTransform = RefSkeletonObjectSpacePose[BoneIndex];
+
+					const float VertexDistanceToBone = FVector::Distance(VertexInfo.Position, BoneTransform.GetTranslation());
+
+					float& MostDistantVertexDistance = MostDistantVertexDistancePerBone[BoneIndex];
+					MostDistantVertexDistance = FMath::Max(MostDistantVertexDistance, VertexDistanceToBone);
+				}
+			}
+		}
+	}
+
+	// Store the results in a map by bone name since the optimizing target might use a different
+	// skeleton mapping.
+	for (uint32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	{
+		const FName BoneName = RefSkeleton.GetBoneName(BoneIndex);
+		const float MostDistantVertexDistance = MostDistantVertexDistancePerBone[BoneIndex];
+
+		float& BoneMaxVertexDistance = BoneMaxVertexDistanceMap.FindOrAdd(BoneName, 0.0f);
+		BoneMaxVertexDistance = FMath::Max(BoneMaxVertexDistance, MostDistantVertexDistance);
+	}
+}
+
+static void PopulateShellDistanceFromOptimizationTargets(const FCompressibleAnimData& CompressibleAnimData, const TArray<USkeletalMesh*>& OptimizationTargets, acl::track_array_qvvf& ACLTracks)
+{
+	// For each bone, get the furtest vertex distance
+	TMap<FName, float> BoneMaxVertexDistanceMap;
+	for (USkeletalMesh* OptimizationTarget : OptimizationTargets)
+	{
+		AppendMaxVertexDistances(OptimizationTarget, BoneMaxVertexDistanceMap);
+	}
+
+	const uint32 NumBones = ACLTracks.get_num_tracks();
+	for (uint32 ACLBoneIndex = 0; ACLBoneIndex < NumBones; ++ACLBoneIndex)
+	{
+		acl::track_qvvf& ACLTrack = ACLTracks[ACLBoneIndex];
+		const FName BoneName(ACLTrack.get_name().c_str());
+
+		const float* MostDistantVertexDistance = BoneMaxVertexDistanceMap.Find(BoneName);
+		if (MostDistantVertexDistance == nullptr || *MostDistantVertexDistance <= 0.0F)
+		{
+			continue;	// No skinned vertices for this bone, skipping
+		}
+
+		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[ACLBoneIndex];
+
+		acl::track_desc_transformf& Desc = ACLTrack.get_description();
+
+		// We set our shell distance to the most distant vertex distance.
+		// This ensures that we measure the error where that vertex lies.
+		// Together with the precision value, all vertices skinned to this bone
+		// will be guaranteed to have an error smaller or equal to the precision
+		// threshold used.
+		if (UE4Bone.bHasSocket || UE4Bone.bKeyEndEffector)
+		{
+			// Bones that have sockets or are key end effectors require extra precision, make sure
+			// that our shell distance is at least what we ask of it regardless of the skinning
+			// information.
+			Desc.shell_distance = FMath::Max(Desc.shell_distance, *MostDistantVertexDistance);
+		}
+		else
+		{
+			// This could be higher or lower than the default value used by ordinary bones.
+			// This thus taylors the shell distance to the visual mesh.
+			Desc.shell_distance = *MostDistantVertexDistance;
+		}
+	}
+}
+
 bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
 	ACLAllocator AllocatorImpl;
@@ -57,6 +179,13 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 		ACLBaseTracks = BuildACLTransformTrackArray(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, true);
 
 	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLTracks.get_raw_size());
+
+	// If we have an optimization target, use it
+	TArray<USkeletalMesh*> OptimizationTargets = GetOptimizationTargets();
+	if (OptimizationTargets.Num() != 0)
+	{
+		PopulateShellDistanceFromOptimizationTargets(CompressibleAnimData, OptimizationTargets, ACLTracks);
+	}
 
 	// Set our error threshold
 	for (acl::track_qvvf& Track : ACLTracks)

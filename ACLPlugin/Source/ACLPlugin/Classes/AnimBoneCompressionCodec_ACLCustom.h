@@ -46,6 +46,10 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
 	uint16 MaxNumKeyFramesPerSegment;
 
+	/** The skeletal meshes used to estimate the skinning deformation during compression. */
+	UPROPERTY(EditAnywhere, Category = "ACL Options")
+	TArray<class USkeletalMesh*> OptimizationTargets;
+
 	//////////////////////////////////////////////////////////////////////////
 
 	// UAnimBoneCompressionCodec implementation
@@ -53,6 +57,7 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 
 	// UAnimBoneCompressionCodec_ACLBase implementation
 	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const override;
+	virtual TArray<class USkeletalMesh*> GetOptimizationTargets() const override { return OptimizationTargets; }
 #endif
 
 	// UAnimBoneCompressionCodec implementation

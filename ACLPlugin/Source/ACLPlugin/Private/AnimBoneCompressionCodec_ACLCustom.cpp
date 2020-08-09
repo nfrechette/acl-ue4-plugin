@@ -5,6 +5,8 @@
 #include "ACLDecompressionImpl.h"
 
 #if WITH_EDITORONLY_DATA
+#include "Rendering/SkeletalMeshModel.h"
+
 #include <acl/compression/compression_settings.h>
 #endif
 
@@ -51,6 +53,15 @@ void UAnimBoneCompressionCodec_ACLCustom::PopulateDDCKey(FArchive& Ar)
 	uint32 SettingsHash = Settings.get_hash();
 
 	Ar	<< ForceRebuildVersion << SettingsHash;
+
+	for (USkeletalMesh* SkelMesh : OptimizationTargets)
+	{
+		FSkeletalMeshModel* MeshModel = SkelMesh != nullptr ? SkelMesh->GetImportedModel() : nullptr;
+		if (MeshModel != nullptr)
+		{
+			Ar << MeshModel->SkeletalMeshModelGUID;
+		}
+	}
 }
 #endif // WITH_EDITORONLY_DATA
 
