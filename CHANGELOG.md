@@ -1,5 +1,10 @@
 # Significant changes per release
 
+## 0.6.3
+
+*  Upgraded to ACL v1.3.4
+*  Fix harmless assert when compressing a single frame additive sequence
+
 ## 0.6.2
 
 *  Upgraded to ACL v1.3.3
