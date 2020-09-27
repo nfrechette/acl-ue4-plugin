@@ -1,5 +1,10 @@
 # Significant changes per release
 
+## 1.0.5
+
+*  Upgraded to ACL v1.3.5
+*  Fix crash when more than 50000 frames are present by failing gracefully
+
 ## 1.0.4
 
 *  Upgraded to ACL v1.3.4
