@@ -1133,7 +1133,11 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 		// Use source directory
 		ACLRawDir = ParamsMap[TEXT("input")];
 
+#if ENGINE_MINOR_VERSION >= 26
+		UPackage* TempPackage = CreatePackage(TEXT("/Temp/ACL"));
+#else
 		UPackage* TempPackage = CreatePackage(nullptr, TEXT("/Temp/ACL"));
+#endif
 
 		ACLAllocator Allocator;
 
