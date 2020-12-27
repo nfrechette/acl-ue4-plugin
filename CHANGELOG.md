@@ -1,5 +1,9 @@
 # Significant changes per release
 
+## 1.0.6
+
+*  Add support for UE 4.26
+
 ## 1.0.5
 
 *  Upgraded to ACL v1.3.5
