@@ -5,7 +5,9 @@
 Starting with UE 4.25, the engine natively supports an animation compression codec interface suitable for plugins. This allows the *ACL Plugin v1.0.0* (and up) to function as-is with no custom engine changes straight from the Unreal Marketplace or from GitHub. Here are the necessary steps in order to use the plugin directly from GitHub:
 
 *  Clone the *develop* branch and its sub-modules with: `git clone --recurse-submodules https://github.com/nfrechette/acl-ue4-plugin.git`
-*  Grab the `ACLPlugin` directory located here: [acl-ue4-plugin/ACLPlugin](../ACLPlugin) and copy it under `UE4 Root\Engine\Plugins` or in the plugin directory of your project.
+*  Run the following python script under [Tools](..\Tools\prepare_release.py) with the version of UE4 you need: `python prepare_release.py 4.26`
+*  The python script packages a zip file at the root which you can distribute and move
+*  Unzip the generated file under `UE4 Root\Engine\Plugins` or in the plugin directory of your project.
 *  Update the UE4 solution with the `GenerateProjectFiles.bat` or the equivalent file for your OS. The ACL plugin contains code that needs to be built for the editor and the runtime.
 *  Open and build the editor.
 
