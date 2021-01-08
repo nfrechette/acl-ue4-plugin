@@ -20,6 +20,12 @@
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
 			"BlacklistPlatforms": []
+		},
+		{
+			"Name": "ACLPluginEditor",
+			"Type" : "Editor",
+			"LoadingPhase" : "Default",
+			"BlacklistPlatforms": []
 		}
 	]
 }

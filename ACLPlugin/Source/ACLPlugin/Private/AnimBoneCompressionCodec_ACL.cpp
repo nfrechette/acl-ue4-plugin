@@ -67,8 +67,9 @@ ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACL::ExecuteSafetyFallback(acl
 	{
 		checkSlow(CompressedClipData.is_valid(true).empty());
 
-		acl::decompression_context<UE4DefaultDecompressionSettings> Context;
+		acl::decompression_context<UE4DefaultDBDecompressionSettings> Context;
 		Context.initialize(CompressedClipData);
+
 		const acl::track_error TrackError = acl::calculate_compression_error(Allocator, RawClip, Context, *Settings.error_metric, BaseClip);
 		if (TrackError.error >= SafetyFallbackThreshold)
 		{
@@ -126,10 +127,24 @@ UAnimBoneCompressionCodec* UAnimBoneCompressionCodec_ACL::GetCodec(const FString
 
 void UAnimBoneCompressionCodec_ACL::DecompressPose(FAnimSequenceDecompressionContext& DecompContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms) const
 {
-	::DecompressPose<UE4DefaultDecompressionSettings>(DecompContext, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
+	const FACLCompressedAnimData& AnimData = static_cast<const FACLCompressedAnimData&>(DecompContext.CompressedAnimData);
+	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
+	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
+
+	acl::decompression_context<UE4DefaultDecompressionSettings> ACLContext;
+	ACLContext.initialize(*CompressedClipData);
+
+	::DecompressPose(DecompContext, ACLContext, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
 }
 
 void UAnimBoneCompressionCodec_ACL::DecompressBone(FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex, FTransform& OutAtom) const
 {
-	::DecompressBone<UE4DefaultDecompressionSettings>(DecompContext, TrackIndex, OutAtom);
+	const FACLCompressedAnimData& AnimData = static_cast<const FACLCompressedAnimData&>(DecompContext.CompressedAnimData);
+	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
+	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
+
+	acl::decompression_context<UE4DefaultDecompressionSettings> ACLContext;
+	ACLContext.initialize(*CompressedClipData);
+
+	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
 }

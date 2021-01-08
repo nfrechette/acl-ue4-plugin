@@ -21,6 +21,7 @@
 
 #include <acl/core/error.h>
 #include <acl/core/iallocator.h>
+#include <acl/decompression/decompress.h>
 
 #include <rtm/quatf.h>
 #include <rtm/vector4f.h>
@@ -41,6 +42,9 @@ public:
 	}
 };
 
+extern ACLPLUGIN_API ACLAllocator ACLAllocatorImpl;
+
+/** RTM <-> UE4 conversion utilities */
 inline rtm::vector4f RTM_SIMD_CALL VectorCast(const FVector& Input) { return rtm::vector_set(Input.X, Input.Y, Input.Z); }
 inline FVector RTM_SIMD_CALL VectorCast(rtm::vector4f_arg0 Input) { return FVector(rtm::vector_get_x(Input), rtm::vector_get_y(Input), rtm::vector_get_z(Input)); }
 inline rtm::quatf RTM_SIMD_CALL QuatCast(const FQuat& Input) { return rtm::quat_set(Input.X, Input.Y, Input.Z, Input.W); }
@@ -48,15 +52,67 @@ inline FQuat RTM_SIMD_CALL QuatCast(rtm::quatf_arg0 Input) { return FQuat(rtm::q
 inline rtm::qvvf RTM_SIMD_CALL TransformCast(const FTransform& Input) { return rtm::qvv_set(QuatCast(Input.GetRotation()), VectorCast(Input.GetTranslation()), VectorCast(Input.GetScale3D())); }
 inline FTransform RTM_SIMD_CALL TransformCast(rtm::qvvf_arg0 Input) { return FTransform(QuatCast(Input.rotation), VectorCast(Input.translation), VectorCast(Input.scale)); }
 
-#if WITH_EDITOR
-#include "AnimBoneCompressionCodec_ACLBase.h"
+/** The decompression settings used by ACL */
+using UE4DefaultDecompressionSettings = acl::default_transform_decompression_settings;
+using UE4CustomDecompressionSettings = acl::debug_transform_decompression_settings;
 
+struct UE4SafeDecompressionSettings final : public UE4DefaultDecompressionSettings
+{
+	static constexpr bool is_rotation_format_supported(acl::rotation_format8 format) { return format == acl::rotation_format8::quatf_full; }
+	static constexpr acl::rotation_format8 get_rotation_format(acl::rotation_format8 /*format*/) { return acl::rotation_format8::quatf_full; }
+};
+
+using UE4DefaultDatabaseSettings = acl::default_database_settings;
+
+struct UE4DefaultDBDecompressionSettings final : public UE4DefaultDecompressionSettings
+{
+	using database_settings_type = UE4DefaultDatabaseSettings;
+};
+
+using UE4DebugDatabaseSettings = acl::debug_database_settings;
+
+struct UE4DebugDBDecompressionSettings final : public acl::debug_transform_decompression_settings
+{
+	using database_settings_type = UE4DebugDatabaseSettings;
+};
+
+/** UE4 equivalents for some ACL enums */
+/** An enum for ACL rotation formats. */
+UENUM()
+enum ACLRotationFormat
+{
+	ACLRF_Quat_128 UMETA(DisplayName = "Quat Full Bit Rate"),
+	ACLRF_QuatDropW_96 UMETA(DisplayName = "Quat Drop W Full Bit Rate"),
+	ACLRF_QuatDropW_Variable UMETA(DisplayName = "Quat Drop W Variable Bit Rate"),
+};
+
+/** An enum for ACL Vector3 formats. */
+UENUM()
+enum ACLVectorFormat
+{
+	ACLVF_Vector3_96 UMETA(DisplayName = "Vector3 Full Bit Rate"),
+	ACLVF_Vector3_Variable UMETA(DisplayName = "Vector3 Variable Bit Rate"),
+};
+
+/** An enum for ACL compression levels. */
+UENUM()
+enum ACLCompressionLevel
+{
+	ACLCL_Lowest UMETA(DisplayName = "Lowest"),
+	ACLCL_Low UMETA(DisplayName = "Low"),
+	ACLCL_Medium UMETA(DisplayName = "Medium"),
+	ACLCL_High UMETA(DisplayName = "High"),
+	ACLCL_Highest UMETA(DisplayName = "Highest"),
+};
+
+/** Editor only utilities */
+#if WITH_EDITOR
 #include <acl/compression/track_array.h>
 #include <acl/compression/compression_level.h>
 
-acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format);
-acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
-acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Level);
+ACLPLUGIN_API acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format);
+ACLPLUGIN_API acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
+ACLPLUGIN_API acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Level);
 
-acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase);
+ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase);
 #endif // WITH_EDITOR

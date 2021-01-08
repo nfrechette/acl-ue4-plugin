@@ -2,7 +2,10 @@
 
 #include "AnimCurveCompressionCodec_ACL.h"
 
+#include "ACLImpl.h"
+
 #if WITH_EDITORONLY_DATA
+#include "AnimationCompression.h"
 #include "Animation/MorphTarget.h"
 #include "Rendering/SkeletalMeshModel.h"
 
@@ -10,8 +13,6 @@
 #include <acl/compression/track.h>
 #include <acl/compression/track_array.h>
 #include <acl/compression/track_error.h>
-
-#include "ACLImpl.h"
 #endif	// WITH_EDITOR
 
 #include <acl/decompression/decompress.h>
@@ -108,8 +109,7 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 	const float SampleRate = bIsStaticPose ? 30.0f : (float(NumSamples - 1) / SequenceLength);
 	const float InvSampleRate = 1.0f / SampleRate;
 
-	ACLAllocator AllocatorImpl;
-	acl::track_array_float1f Tracks(AllocatorImpl, NumCurves);
+	acl::track_array_float1f Tracks(ACLAllocatorImpl, NumCurves);
 
 	for (int32 CurveIndex = 0; CurveIndex < NumCurves; ++CurveIndex)
 	{
@@ -149,7 +149,7 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 		Desc.output_index = CurveIndex;
 		Desc.precision = Precision;
 
-		acl::track_float1f Track = acl::track_float1f::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
+		acl::track_float1f Track = acl::track_float1f::make_reserve(Desc, ACLAllocatorImpl, NumSamples, SampleRate);
 		for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 		{
 			const float SampleTime = FMath::Clamp(SampleIndex * InvSampleRate, 0.0f, SequenceLength);
@@ -165,7 +165,7 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 
 	acl::compressed_tracks* CompressedTracks = nullptr;
 	acl::output_stats Stats;
-	const acl::error_result CompressionResult = acl::compress_track_list(AllocatorImpl, Tracks, Settings, CompressedTracks, Stats);
+	const acl::error_result CompressionResult = acl::compress_track_list(ACLAllocatorImpl, Tracks, Settings, CompressedTracks, Stats);
 
 	if (CompressionResult.any())
 	{
@@ -187,14 +187,14 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 	{
 		acl::decompression_context<acl::debug_scalar_decompression_settings> Context;
 		Context.initialize(*CompressedTracks);
-		const acl::track_error Error = acl::calculate_compression_error(AllocatorImpl, Tracks, Context);
+		const acl::track_error Error = acl::calculate_compression_error(ACLAllocatorImpl, Tracks, Context);
 
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Curves compressed size: %u bytes"), CompressedDataSize);
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Curves error: %.4f (curve %u @ %.3f)"), Error.error, Error.index, Error.sample_time);
 	}
 #endif
 
-	AllocatorImpl.deallocate(CompressedTracks, CompressedDataSize);
+	ACLAllocatorImpl.deallocate(CompressedTracks, CompressedDataSize);
 	return true;
 }
 #endif // WITH_EDITORONLY_DATA

@@ -39,10 +39,24 @@ void UAnimBoneCompressionCodec_ACLSafe::PopulateDDCKey(FArchive& Ar)
 
 void UAnimBoneCompressionCodec_ACLSafe::DecompressPose(FAnimSequenceDecompressionContext& DecompContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms) const
 {
-	::DecompressPose<UE4SafeDecompressionSettings>(DecompContext, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
+	const FACLCompressedAnimData& AnimData = static_cast<const FACLCompressedAnimData&>(DecompContext.CompressedAnimData);
+	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
+	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
+
+	acl::decompression_context<UE4SafeDecompressionSettings> ACLContext;
+	ACLContext.initialize(*CompressedClipData);
+
+	::DecompressPose(DecompContext, ACLContext, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
 }
 
 void UAnimBoneCompressionCodec_ACLSafe::DecompressBone(FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex, FTransform& OutAtom) const
 {
-	::DecompressBone<UE4SafeDecompressionSettings>(DecompContext, TrackIndex, OutAtom);
+	const FACLCompressedAnimData& AnimData = static_cast<const FACLCompressedAnimData&>(DecompContext.CompressedAnimData);
+	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
+	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
+
+	acl::decompression_context<UE4SafeDecompressionSettings> ACLContext;
+	ACLContext.initialize(*CompressedClipData);
+
+	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
 }

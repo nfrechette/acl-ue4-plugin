@@ -170,13 +170,11 @@ static void PopulateShellDistanceFromOptimizationTargets(const FCompressibleAnim
 
 bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
-	ACLAllocator AllocatorImpl;
-
-	acl::track_array_qvvf ACLTracks = BuildACLTransformTrackArray(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, false);
+	acl::track_array_qvvf ACLTracks = BuildACLTransformTrackArray(ACLAllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, false);
 
 	acl::track_array_qvvf ACLBaseTracks;
 	if (CompressibleAnimData.bIsValidAdditive)
-		ACLBaseTracks = BuildACLTransformTrackArray(AllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, true);
+		ACLBaseTracks = BuildACLTransformTrackArray(ACLAllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, true);
 
 	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLTracks.get_raw_size());
 
@@ -214,19 +212,25 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	}
 
 	const acl::additive_clip_format8 AdditiveFormat = acl::additive_clip_format8::additive0;
+	const bool bUseStreamingDatabase = UseDatabase();
+
+	if (bUseStreamingDatabase)
+	{
+		Settings.include_contributing_error = true;
+	}
 
 	acl::output_stats Stats;
 	acl::compressed_tracks* CompressedTracks = nullptr;
-	acl::error_result CompressionResult = acl::compress_track_list(AllocatorImpl, ACLTracks, Settings, ACLBaseTracks, AdditiveFormat, CompressedTracks, Stats);
+	const acl::error_result CompressionResult = acl::compress_track_list(ACLAllocatorImpl, ACLTracks, Settings, ACLBaseTracks, AdditiveFormat, CompressedTracks, Stats);
 
 	// Make sure if we managed to compress, that the error is acceptable and if it isn't, re-compress again with safer settings
 	// This should be VERY rare with the default threshold
 	if (CompressionResult.empty())
 	{
-		const ACLSafetyFallbackResult FallbackResult = ExecuteSafetyFallback(AllocatorImpl, Settings, ACLTracks, ACLBaseTracks, *CompressedTracks, CompressibleAnimData, OutResult);
+		const ACLSafetyFallbackResult FallbackResult = ExecuteSafetyFallback(ACLAllocatorImpl, Settings, ACLTracks, ACLBaseTracks, *CompressedTracks, CompressibleAnimData, OutResult);
 		if (FallbackResult != ACLSafetyFallbackResult::Ignored)
 		{
-			AllocatorImpl.deallocate(CompressedTracks, CompressedTracks->get_size());
+			ACLAllocatorImpl.deallocate(CompressedTracks, CompressedTracks->get_size());
 			CompressedTracks = nullptr;
 
 			return FallbackResult == ACLSafetyFallbackResult::Success;
@@ -251,20 +255,29 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 	OutResult.AnimData = AllocateAnimData();
 	OutResult.AnimData->CompressedNumberOfFrames = CompressibleAnimData.NumFrames;
-	OutResult.AnimData->Bind(OutResult.CompressedByteStream);
 
 #if !NO_LOGGING
 	{
-		acl::decompression_context<acl::debug_transform_decompression_settings> Context;
+		acl::decompression_context<UE4DebugDBDecompressionSettings> Context;
 		Context.initialize(*CompressedTracks);
-		const acl::track_error TrackError = acl::calculate_compression_error(AllocatorImpl, ACLTracks, Context, *Settings.error_metric, ACLBaseTracks);
+
+		const acl::track_error TrackError = acl::calculate_compression_error(ACLAllocatorImpl, ACLTracks, Context, *Settings.error_metric, ACLBaseTracks);
 
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipDataSize);
 		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), TrackError.error, TrackError.index, TrackError.sample_time);
 	}
 #endif
 
-	AllocatorImpl.deallocate(CompressedTracks, CompressedClipDataSize);
+	ACLAllocatorImpl.deallocate(CompressedTracks, CompressedClipDataSize);
+
+	if (bUseStreamingDatabase)
+	{
+		RegisterWithDatabase(CompressibleAnimData, OutResult);
+	}
+
+	// Bind our compressed sequence data buffer
+	OutResult.AnimData->Bind(OutResult.CompressedByteStream);
+
 	return true;
 }
 
