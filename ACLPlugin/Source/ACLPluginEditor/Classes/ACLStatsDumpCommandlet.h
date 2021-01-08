@@ -22,7 +22,6 @@ class UACLStatsDumpCommandlet : public UCommandlet
 public:
 	virtual int32 Main(const FString& Params) override;
 
-#if WITH_EDITOR
 	FString ACLRawDir;
 	FString OutputDir;
 
@@ -41,5 +40,4 @@ public:
 	class UAnimBoneCompressionSettings* KeyReductionCompressionSettings;
 	class UAnimBoneCompressionCodec_ACL* ACLCodec;
 	class UAnimCompress_RemoveLinearKeys* KeyReductionCodec;
-#endif
 };

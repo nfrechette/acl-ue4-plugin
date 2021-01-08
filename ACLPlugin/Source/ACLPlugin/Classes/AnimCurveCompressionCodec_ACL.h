@@ -2,6 +2,8 @@
 
 // Copyright 2020 Nicholas Frechette. All Rights Reserved.
 
+#include "ACLImpl.h"
+
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
 #include "Animation/AnimCurveCompressionCodec.h"

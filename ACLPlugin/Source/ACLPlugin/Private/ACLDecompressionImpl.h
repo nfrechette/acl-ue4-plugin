@@ -3,9 +3,11 @@
 // Copyright 2018 Nicholas Frechette. All Rights Reserved.
 
 #include "CoreMinimal.h"
+
 #include "ACLImpl.h"
 
 #include <acl/decompression/decompress.h>
+#include <acl/decompression/database/database.h>
 
 constexpr acl::sample_rounding_policy get_rounding_policy(EAnimInterpolationType InterpType) { return InterpType == EAnimInterpolationType::Step ? acl::sample_rounding_policy::floor : acl::sample_rounding_policy::none; }
 
@@ -136,41 +138,21 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 	}
 };
 
-using UE4DefaultDecompressionSettings = acl::default_transform_decompression_settings;
-using UE4CustomDecompressionSettings = acl::debug_transform_decompression_settings;
-
-struct UE4SafeDecompressionSettings final : public UE4DefaultDecompressionSettings
+template<class ACLContextType>
+FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, int32 TrackIndex, FTransform& OutAtom)
 {
-	static constexpr bool is_rotation_format_supported(acl::rotation_format8 format) { return format == acl::rotation_format8::quatf_full; }
-	static constexpr acl::rotation_format8 get_rotation_format(acl::rotation_format8 /*format*/) { return acl::rotation_format8::quatf_full; }
-};
-
-template<typename DecompressionSettingsType>
-FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex, FTransform& OutAtom)
-{
-	const FACLCompressedAnimData& AnimData = static_cast<const FACLCompressedAnimData&>(DecompContext.CompressedAnimData);
-	const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(AnimData.CompressedByteStream.GetData());
-	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
-
-	acl::decompression_context<DecompressionSettingsType> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
+	ACLContext.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
 
 	UE4OutputTrackWriter Writer(OutAtom);
-	Context.decompress_track(TrackIndex, Writer);
+	ACLContext.decompress_track(TrackIndex, Writer);
 }
 
-template<typename DecompressionSettingsType>
-FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms)
+template<class ACLContextType>
+/*FORCEINLINE_DEBUGGABLE*/ inline void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms)
 {
-	const FACLCompressedAnimData& AnimData = static_cast<const FACLCompressedAnimData&>(DecompContext.CompressedAnimData);
-	const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(AnimData.CompressedByteStream.GetData());
-	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
+	ACLContext.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
 
-	acl::decompression_context<DecompressionSettingsType> Context;
-	Context.initialize(*CompressedClipData);
-	Context.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
-
+	const acl::compressed_tracks* CompressedClipData = ACLContext.get_compressed_tracks();
 	const int32 ACLBoneCount = CompressedClipData->get_num_tracks();
 
 	// TODO: Allocate this with padding and use SIMD to set everything to 0xFF
@@ -246,5 +228,5 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 	// This ensures we read the compressed pose data once, linearly.
 
 	FUE4OutputWriter PoseWriter(OutAtoms, TrackToAtomsMap);
-	Context.decompress_tracks(PoseWriter);
+	ACLContext.decompress_tracks(PoseWriter);
 }
