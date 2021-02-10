@@ -180,6 +180,19 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 			continue;
 		}
 
+		// Update our compressed data to match the current settings
+		// We might need to revert to non-frame stripped data or the codec might have changed
+		// forcing us to recompress
+		// In practice we'll load directly from the DDC and it should be fast
+		const bool bAsyncCompression = false;
+		const bool bAllowAlternateCompressor = false;
+		const bool bOutput = false;
+
+		FRequestAnimCompressionParams Params(bAsyncCompression, bAllowAlternateCompressor, bOutput);
+		Params.bPerformFrameStripping = false;
+
+		AnimSeq->RequestAnimCompression(Params);
+
 		CookedSequences.Add(AnimSeq);
 	}
 
