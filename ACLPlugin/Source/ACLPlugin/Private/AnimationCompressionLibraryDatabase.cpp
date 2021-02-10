@@ -38,12 +38,14 @@ UAnimationCompressionLibraryDatabase::UAnimationCompressionLibraryDatabase(const
 	: Super(ObjectInitializer)
 	, CurrentVisualFidelity(ACLVisualFidelity::Lowest)
 	, NextFidelityChangeRequestID(0)
-	, MaxStreamRequestSizeKB(1024)		// By default we stream 1 MB (1 chunk) at a time
 #if WITH_EDITORONLY_DATA
 	, HighestImportanceProportion(0.5f)	// The rest remains in the anim sequences
 	, MediumImportanceProportion(0.0f)	// No medium quality tier by default
 	, LowestImportanceProportion(0.5f)	// By default we move 50% of the key frames to the database
 	, StripLowestImportanceTier(false)	// By default we don't strip the lowest tier
+#endif
+	, MaxStreamRequestSizeKB(1024)		// By default we stream 1 MB (1 chunk) at a time
+#if WITH_EDITORONLY_DATA
 	// By default, in the editor we preview the full quality.
 	// Our database context won't be used until we need to build the database for preview if we change this value.
 	, PreviewVisualFidelity(ACLVisualFidelity::Highest)
