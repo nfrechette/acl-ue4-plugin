@@ -108,6 +108,17 @@ void UAnimBoneCompressionCodec_ACLDatabase::GetPreloadDependencies(TArray<UObjec
 	}
 }
 
+void UAnimBoneCompressionCodec_ACLDatabase::PreSave(const class ITargetPlatform* TargetPlatform)
+{
+	Super::PreSave(TargetPlatform);
+
+	UAnimBoneCompressionSettings* Settings = Cast<UAnimBoneCompressionSettings>(GetOuter());
+	if (Settings != nullptr && Settings->Codecs.Num() != 1)
+	{
+		UE_LOG(LogAnimationCompression, Error, TEXT("ACL database codec must be the only codec in its parent bone compression settings asset. [%s]"), *Settings->GetPathName());
+	}
+}
+
 void UAnimBoneCompressionCodec_ACLDatabase::RegisterWithDatabase(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
 	// After we are done compressing our animation sequence, it will contain the necessary metadata needed to build our
