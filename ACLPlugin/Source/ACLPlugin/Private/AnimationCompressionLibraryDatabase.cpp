@@ -189,7 +189,9 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 		SequenceHashes.Add(AnimData.SequenceNameHash, &bIsAlreadyInSet);
 		if (bIsAlreadyInSet)
 		{
-			UE_LOG(LogAnimationCompression, Warning, TEXT("Cannot include a sequence with a non-unique name in the ACL database: [%s]"), *AnimSeq->GetPathName());
+			// Our anim sequence has a hash that we've seen already which means an anim sequence has been duplicated
+			// and lives in a separate asset with identical data.
+			// We'll skip it since we'll be able to re-use the same data at runtime.
 			continue;
 		}
 
