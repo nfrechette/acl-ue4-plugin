@@ -137,8 +137,8 @@ void UAnimBoneCompressionCodec_ACLDatabase::RegisterWithDatabase(const FCompress
 
 	FACLDatabaseCompressedAnimData& AnimData = static_cast<FACLDatabaseCompressedAnimData&>(*OutResult.AnimData);
 
-	// Store the sequence name hash since we need it in cooked builds to find our data
-	AnimData.SequenceNameHash = GetTypeHash(CompressibleAnimData.AnimFName);
+	// Store the sequence full name's hash since we need it in cooked builds to find our data
+	AnimData.SequenceNameHash = GetTypeHash(CompressibleAnimData.FullName);
 
 	// Copy the sequence data
 	AnimData.CompressedClip = OutResult.CompressedByteStream;
@@ -162,7 +162,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::PopulateDDCKey(FArchive& Ar)
 	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
-	uint32 ForceRebuildVersion = 3;
+	uint32 ForceRebuildVersion = 4;
 	uint32 SettingsHash = Settings.get_hash();
 
 	Ar	<< ForceRebuildVersion << SettingsHash;
