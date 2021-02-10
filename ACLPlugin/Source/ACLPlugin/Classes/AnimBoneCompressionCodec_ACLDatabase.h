@@ -62,6 +62,7 @@ class UAnimBoneCompressionCodec_ACLDatabase : public UAnimBoneCompressionCodec_A
 	//////////////////////////////////////////////////////////////////////////
 	// UObject
 	virtual void GetPreloadDependencies(TArray<UObject*>& OutDeps) override;
+	virtual void PreSave(const class ITargetPlatform* TargetPlatform) override;
 
 	// UAnimBoneCompressionCodec implementation
 	virtual void PopulateDDCKey(FArchive& Ar) override;

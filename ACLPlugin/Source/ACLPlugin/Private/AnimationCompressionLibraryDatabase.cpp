@@ -430,20 +430,15 @@ bool UAnimationCompressionLibraryDatabase::UpdateReferencingAnimSequenceList()
 		}
 
 		UAnimBoneCompressionSettings* Settings = AnimSeq->BoneCompressionSettings;
-		if (Settings == nullptr)
+		if (Settings == nullptr || Settings->Codecs.Num() != 1)
 		{
 			continue;
 		}
 
-		// TODO: Warn if more than one codec present in the settings asset
-
-		for (UAnimBoneCompressionCodec* Codec : Settings->Codecs)
+		UAnimBoneCompressionCodec_ACLDatabase* DatabaseCodec = Cast<UAnimBoneCompressionCodec_ACLDatabase>(Settings->Codecs[0]);
+		if (DatabaseCodec != nullptr && DatabaseCodec->DatabaseAsset == this)
 		{
-			UAnimBoneCompressionCodec_ACLDatabase* DatabaseCodec = Cast<UAnimBoneCompressionCodec_ACLDatabase>(Codec);
-			if (DatabaseCodec != nullptr && DatabaseCodec->DatabaseAsset == this)
-			{
-				ReferencingAnimSequences.Add(AnimSeq);
-			}
+			ReferencingAnimSequences.Add(AnimSeq);
 		}
 	}
 
