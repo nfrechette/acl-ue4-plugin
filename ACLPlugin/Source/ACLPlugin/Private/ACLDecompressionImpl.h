@@ -17,7 +17,7 @@ constexpr acl::sample_rounding_policy get_rounding_policy(EAnimInterpolationType
  */
 struct FACLTransform final : public FTransform
 {
-	void RTM_SIMD_CALL SetRotationRaw(rtm::quatf_arg0 Rotation_)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL SetRotationRaw(rtm::quatf_arg0 Rotation_)
 	{
 #if PLATFORM_ENABLE_VECTORINTRINSICS
 		Rotation = Rotation_;
@@ -26,7 +26,7 @@ struct FACLTransform final : public FTransform
 #endif
 	}
 
-	void RTM_SIMD_CALL SetTranslationRaw(rtm::vector4f_arg0 Translation_)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL SetTranslationRaw(rtm::vector4f_arg0 Translation_)
 	{
 #if PLATFORM_ENABLE_VECTORINTRINSICS
 		Translation = VectorSet_W0(Translation_);
@@ -35,7 +35,7 @@ struct FACLTransform final : public FTransform
 #endif
 	}
 
-	void RTM_SIMD_CALL SetScale3DRaw(rtm::vector4f_arg0 Scale_)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL SetScale3DRaw(rtm::vector4f_arg0 Scale_)
 	{
 #if PLATFORM_ENABLE_VECTORINTRINSICS
 		Scale3D = VectorSet_W0(Scale_);
@@ -69,13 +69,13 @@ struct FUE4OutputWriter final : public acl::track_writer
 
 	//////////////////////////////////////////////////////////////////////////
 	// Override the OutputWriter behavior
-	bool skip_track_rotation(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Rotation == 0xFFFF; }
-	bool skip_track_translation(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Translation == 0xFFFF; }
-	bool skip_track_scale(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Scale == 0xFFFF; }
+	FORCEINLINE_DEBUGGABLE bool skip_track_rotation(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Rotation == 0xFFFF; }
+	FORCEINLINE_DEBUGGABLE bool skip_track_translation(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Translation == 0xFFFF; }
+	FORCEINLINE_DEBUGGABLE bool skip_track_scale(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Scale == 0xFFFF; }
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
-	void RTM_SIMD_CALL write_rotation(uint32_t BoneIndex, rtm::quatf_arg0 Rotation)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_rotation(uint32_t BoneIndex, rtm::quatf_arg0 Rotation)
 	{
 		const uint32 AtomIndex = TrackToAtomsMap[BoneIndex].Rotation;
 
@@ -85,7 +85,7 @@ struct FUE4OutputWriter final : public acl::track_writer
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a translation value for a specified bone index
-	void RTM_SIMD_CALL write_translation(uint32_t BoneIndex, rtm::vector4f_arg0 Translation)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_translation(uint32_t BoneIndex, rtm::vector4f_arg0 Translation)
 	{
 		const uint32 AtomIndex = TrackToAtomsMap[BoneIndex].Translation;
 
@@ -95,7 +95,7 @@ struct FUE4OutputWriter final : public acl::track_writer
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a scale value for a specified bone index
-	void RTM_SIMD_CALL write_scale(uint32_t BoneIndex, rtm::vector4f_arg0 Scale)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_scale(uint32_t BoneIndex, rtm::vector4f_arg0 Scale)
 	{
 		const uint32 AtomIndex = TrackToAtomsMap[BoneIndex].Scale;
 
@@ -148,8 +148,9 @@ FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& De
 }
 
 template<class ACLContextType>
-/*FORCEINLINE_DEBUGGABLE*/ inline void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms)
+FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms)
 {
+	// Seek first, we'll start prefetching ahead right away
 	ACLContext.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
 
 	const acl::compressed_tracks* CompressedClipData = ACLContext.get_compressed_tracks();
