@@ -39,9 +39,9 @@
 //		-output=<directory>: The commandlet output will be written at the given path (stats or dumped clips)
 //		-compress: Commandlet will compress the input clips and output stats
 //		-extract: Commandlet will extract the input clips into output *acl.sjson clips
-//		-noerror: Disables the exhaustive error dumping
-//		-noauto: Disables automatic compression
-//		-noacl: Disables ACL compression
+//		-error: Enables the exhaustive error dumping
+//		-auto: Uses automatic compression
+//		-acl: Uses ACL compression
 //		-MasterTolerance=<tolerance>: The error threshold used by automatic compression
 //		-resume: If present, clip extraction or compression will continue where it left off
 //////////////////////////////////////////////////////////////////////////
