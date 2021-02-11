@@ -20,7 +20,7 @@ struct FACLDatabaseCompressedAnimData final : public ICompressedAnimData
 	/** Maps the database context instance. Used in cooked build only. */
 	acl::database_context<UE4DefaultDatabaseSettings>* DatabaseContext = nullptr;
 
-	/** The codec instance that owns us. Used in cooked build only. */
+	/** The codec instance that owns us. */
 	const class UAnimBoneCompressionCodec_ACLDatabase* Codec = nullptr;
 
 	/** The sequence name hash that owns this data. */
@@ -38,6 +38,10 @@ struct FACLDatabaseCompressedAnimData final : public ICompressedAnimData
 #endif
 
 	// ICompressedAnimData implementation
+#if WITH_EDITORONLY_DATA
+	virtual ~FACLDatabaseCompressedAnimData() override;
+#endif
+
 	virtual void SerializeCompressedData(FArchive& Ar) override;
 	virtual void Bind(const TArrayView<uint8> BulkData) override;
 	virtual int64 GetApproxCompressedSize() const override;

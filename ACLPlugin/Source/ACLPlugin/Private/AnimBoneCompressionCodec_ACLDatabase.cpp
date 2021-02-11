@@ -9,6 +9,7 @@
 #include "Rendering/SkeletalMeshModel.h"
 
 #include "ACLImpl.h"
+#include "EditorDatabaseMonitor.h"
 
 #include <acl/compression/compress.h>
 #include <acl/compression/track_error.h>
@@ -36,7 +37,11 @@ void FACLDatabaseCompressedAnimData::Bind(const TArrayView<uint8> BulkData)
 {
 	check(BulkData.Num() == 0);	// Should always be empty
 
-#if !WITH_EDITORONLY_DATA
+#if WITH_EDITORONLY_DATA
+	// We have fresh new compressed data which means either we ran compression or we loaded from the DDC
+	// We can't tell which is which so mark the database as being potentially dirty
+	EditorDatabaseMonitor::MarkDirty(Codec->DatabaseAsset);
+#else
 	// In a cooked build, we lookup our anim sequence and database from the database asset
 	// We search by the sequence hash which lives in the top 32 bits of each entry
 	const int32 SequenceIndex = Algo::BinarySearchBy(Codec->DatabaseAsset->CookedAnimSequenceMappings, SequenceNameHash, [](uint64 InValue) { return uint32(InValue >> 32); });
@@ -89,6 +94,16 @@ bool FACLDatabaseCompressedAnimData::IsValid() const
 
 	return true;
 }
+
+#if WITH_EDITORONLY_DATA
+FACLDatabaseCompressedAnimData::~FACLDatabaseCompressedAnimData()
+{
+	// Our compressed data is being destroyed which means either we are unloading or we are about to have
+	// new compressed data. If the new codec isn't an ACL instance we have no way of knowing so assume the
+	// database is dirty and double check.
+	EditorDatabaseMonitor::MarkDirty(Codec->DatabaseAsset);
+}
+#endif
 
 UAnimBoneCompressionCodec_ACLDatabase::UAnimBoneCompressionCodec_ACLDatabase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

@@ -20,6 +20,10 @@
 #include "UObject/UObjectIterator.h"
 #endif
 
+#if WITH_EDITORONLY_DATA
+#include "EditorDatabaseMonitor.h"
+#endif
+
 ACLAllocator ACLAllocatorImpl;
 
 class FACLPlugin final : public IACLPlugin
@@ -36,6 +40,10 @@ private:
 	void SetDatabaseVisualFidelity(const TArray<FString>& Args);
 
 	TArray<IConsoleObject*> ConsoleCommands;
+#endif
+
+#if WITH_EDITORONLY_DATA
+	void OnPostEngineInit();
 #endif
 };
 
@@ -329,6 +337,13 @@ void FACLPlugin::SetDatabaseVisualFidelity(const TArray<FString>& Args)
 }
 #endif
 
+#if WITH_EDITORONLY_DATA
+void FACLPlugin::OnPostEngineInit()
+{
+	EditorDatabaseMonitor::RegisterMonitor();
+}
+#endif
+
 void FACLPlugin::StartupModule()
 {
 #if WITH_ACL_CONSOLE_COMMANDS
@@ -356,10 +371,20 @@ void FACLPlugin::StartupModule()
 		));
 	}
 #endif
+
+#if WITH_EDITORONLY_DATA
+	FCoreDelegates::OnPostEngineInit.AddRaw(this, &FACLPlugin::OnPostEngineInit);
+#endif
 }
 
 void FACLPlugin::ShutdownModule()
 {
+#if WITH_EDITORONLY_DATA
+	FCoreDelegates::OnPostEngineInit.RemoveAll(this);
+
+	EditorDatabaseMonitor::UnregisterMonitor();
+#endif
+
 #if WITH_ACL_CONSOLE_COMMANDS
 	for (IConsoleObject* Cmd : ConsoleCommands)
 	{
