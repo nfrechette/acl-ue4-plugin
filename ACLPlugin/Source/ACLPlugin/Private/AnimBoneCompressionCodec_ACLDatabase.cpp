@@ -231,30 +231,33 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressPose(FAnimSequenceDecompre
 	acl::decompression_context<UE4DefaultDBDecompressionSettings> ACLContext;
 
 #if WITH_EDITORONLY_DATA
-	if (DatabaseAsset == nullptr || !DatabaseAsset->DatabaseContext.is_initialized())
-	{
-		// No preview, use the full quality that lives in the anim sequence
-		const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
-		check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
-
-		ACLContext.initialize(*CompressedClipData);
-	}
-	else
+	if (DatabaseAsset != nullptr && DatabaseAsset->DatabaseContext.is_initialized())
 	{
 		// We are previewing, use the database and the anim sequence data contained within it
 
 		// Lookup our anim sequence from the database asset
 		// We search by the sequence hash which lives in the top 32 bits of each entry
 		const int32 SequenceIndex = Algo::BinarySearchBy(DatabaseAsset->PreviewAnimSequenceMappings, AnimData.SequenceNameHash, [](uint64 InValue) { return uint32(InValue >> 32); });
-		check(SequenceIndex != INDEX_NONE);
+		if (SequenceIndex != INDEX_NONE)
+		{
+			const uint32 CompressedClipOffset = uint32(DatabaseAsset->PreviewAnimSequenceMappings[SequenceIndex]);	// Truncate top 32 bits
+			const uint8* CompressedBytes = DatabaseAsset->PreviewCompressedBytes.GetData() + CompressedClipOffset;
 
-		const uint32 CompressedClipOffset = uint32(DatabaseAsset->PreviewAnimSequenceMappings[SequenceIndex]);	// Truncate top 32 bits
-		const uint8* CompressedBytes = DatabaseAsset->PreviewCompressedBytes.GetData() + CompressedClipOffset;
+			const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(CompressedBytes);
+			check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-		const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(CompressedBytes);
+			ACLContext.initialize(*CompressedClipData, DatabaseAsset->DatabaseContext);
+		}
+	}
+
+	if (!ACLContext.is_initialized())
+	{
+		// No preview or we live updated things and the monitor hasn't caught up yet
+		// Use the full quality that lives in the anim sequence
+		const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
 		check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-		ACLContext.initialize(*CompressedClipData, DatabaseAsset->DatabaseContext);
+		ACLContext.initialize(*CompressedClipData);
 	}
 #else
 	if (AnimData.CompressedByteStream.Num() == 0)
@@ -283,30 +286,33 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressBone(FAnimSequenceDecompre
 	acl::decompression_context<UE4DefaultDBDecompressionSettings> ACLContext;
 
 #if WITH_EDITORONLY_DATA
-	if (DatabaseAsset == nullptr || !DatabaseAsset->DatabaseContext.is_initialized())
-	{
-		// No preview, use the full quality that lives in the anim sequence
-		const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
-		check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
-
-		ACLContext.initialize(*CompressedClipData);
-	}
-	else
+	if (DatabaseAsset != nullptr && DatabaseAsset->DatabaseContext.is_initialized())
 	{
 		// We are previewing, use the database and the anim sequence data contained within it
 
 		// Lookup our anim sequence from the database asset
 		// We search by the sequence hash which lives in the top 32 bits of each entry
 		const int32 SequenceIndex = Algo::BinarySearchBy(DatabaseAsset->PreviewAnimSequenceMappings, AnimData.SequenceNameHash, [](uint64 InValue) { return uint32(InValue >> 32); });
-		check(SequenceIndex != INDEX_NONE);
+		if (SequenceIndex != INDEX_NONE)
+		{
+			const uint32 CompressedClipOffset = uint32(DatabaseAsset->PreviewAnimSequenceMappings[SequenceIndex]);	// Truncate top 32 bits
+			const uint8* CompressedBytes = DatabaseAsset->PreviewCompressedBytes.GetData() + CompressedClipOffset;
 
-		const uint32 CompressedClipOffset = uint32(DatabaseAsset->PreviewAnimSequenceMappings[SequenceIndex]);	// Truncate top 32 bits
-		const uint8* CompressedBytes = DatabaseAsset->PreviewCompressedBytes.GetData() + CompressedClipOffset;
+			const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(CompressedBytes);
+			check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-		const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(CompressedBytes);
+			ACLContext.initialize(*CompressedClipData, DatabaseAsset->DatabaseContext);
+		}
+	}
+
+	if (!ACLContext.is_initialized())
+	{
+		// No preview or we live updated things and the monitor hasn't caught up yet
+		// Use the full quality that lives in the anim sequence
+		const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
 		check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-		ACLContext.initialize(*CompressedClipData, DatabaseAsset->DatabaseContext);
+		ACLContext.initialize(*CompressedClipData);
 	}
 #else
 	if (AnimData.CompressedByteStream.Num() == 0)
