@@ -38,6 +38,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
   <tr>
     <td align="center"><a href="https://github.com/Meradrin"><img src="https://avatars.githubusercontent.com/u/7066278?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Meradrin</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=Meradrin" title="Code">💻</a></td>
     <td align="center"><a href="https://github.com/r-lyeh/statvs"><img src="https://avatars.githubusercontent.com/u/35402248?v=4?s=100" width="100px;" alt=""/><br /><sub><b>r-lyeh</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=r-lyeh" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/nucleiis"><img src="https://avatars.githubusercontent.com/u/20119165?v=4?s=100" width="100px;" alt=""/><br /><sub><b>nucleiis</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/issues?q=author%3Anucleiis" title="Bug reports">🐛</a></td>
   </tr>
 </table>
 
