@@ -1,0 +1,24 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "Meradrin",
+      "name": "Meradrin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7066278?v=4",
+      "profile": "https://github.com/Meradrin",
+      "contributions": [
+        "code"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "acl-ue4-plugin",
+  "projectOwner": "nfrechette",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
