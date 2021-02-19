@@ -1,7 +1,5 @@
 [![CLA assistant](https://cla-assistant.io/readme/badge/nfrechette/acl-ue4-plugin)](https://cla-assistant.io/nfrechette/acl-ue4-plugin)
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
+[![All Contributors](https://img.shields.io/github/all-contributors/nfrechette/acl-ue4-plugin)](#contributors-)
 [![GitHub release](https://img.shields.io/github/release/nfrechette/acl-ue4-plugin.svg)](https://github.com/nfrechette/acl-ue4-plugin/releases)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/nfrechette/acl-ue4-plugin/master/LICENSE)
 ![UE4](https://img.shields.io/badge/UE4-4.25+-orange)
