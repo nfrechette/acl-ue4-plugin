@@ -202,6 +202,18 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 struct UE4CurveDecompressionSettings final : public acl::decompression_settings
 {
 	static constexpr bool is_track_type_supported(acl::track_type8 type) { return type == acl::track_type8::float1f; }
+
+	// Only support our latest version
+	static constexpr acl::compressed_tracks_version16 version_supported() { return acl::compressed_tracks_version16::latest; }
+
+#if UE_BUILD_SHIPPING
+	// Shipping builds do not need safety checks, by then the game has been tested enough
+	// Only data corruption could cause a safety check to fail
+	// We keep this disabled regardless because it is generally better to output a T-pose than to have a
+	// potential crash. Corruption can happen and it would be unfortunate if a demo or playtest failed
+	// as a result of a crash that we can otherwise recover from.
+	//static constexpr bool skip_initialize_safety_checks() { return true; }
+#endif
 };
 
 struct UE4CurveWriter final : public acl::track_writer
