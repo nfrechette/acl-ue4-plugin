@@ -6,6 +6,9 @@
 #include "UE4DatabaseStreamer.h"
 
 #include "LatentActions.h"
+#include "Containers/Ticker.h"
+
+#include "ACLImpl.h"
 
 #if WITH_EDITORONLY_DATA
 #include "Animation/AnimBoneCompressionSettings.h"
@@ -13,7 +16,6 @@
 #include "Interfaces/ITargetPlatform.h"
 #include "UObject/UObjectIterator.h"
 
-#include "ACLImpl.h"
 #include "UE4DatabasePreviewStreamer.h"
 
 #include <acl/compression/compress.h>

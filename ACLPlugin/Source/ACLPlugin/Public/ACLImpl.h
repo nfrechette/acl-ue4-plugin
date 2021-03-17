@@ -3,6 +3,7 @@
 // Copyright 2018 Nicholas Frechette. All Rights Reserved.
 
 #include "CoreMinimal.h"
+#include "UObject/ObjectMacros.h"
 
 #if DO_GUARD_SLOW
 	// ACL has a lot of asserts, only enabled in Debug

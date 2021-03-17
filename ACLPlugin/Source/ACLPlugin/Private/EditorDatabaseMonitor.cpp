@@ -2,7 +2,7 @@
 
 #if WITH_EDITORONLY_DATA
 #include "EditorDatabaseMonitor.h"
-
+#include "Containers/Ticker.h"
 #include "UObject/WeakObjectPtrTemplates.h"
 
 namespace EditorDatabaseMonitor
