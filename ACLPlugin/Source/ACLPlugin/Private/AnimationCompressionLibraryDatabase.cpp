@@ -251,7 +251,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 	acl::compressed_database* SplitDB = nullptr;
 	uint8* SplitDBBulkDataMedium = nullptr;
 	uint8* SplitDBBulkDataLow = nullptr;
-	const acl::error_result SplitResult = acl::split_compressed_database_bulk_data(ACLAllocatorImpl, *MergedDB, SplitDB, SplitDBBulkDataMedium, SplitDBBulkDataLow);
+	const acl::error_result SplitResult = acl::split_database_bulk_data(ACLAllocatorImpl, *MergedDB, SplitDB, SplitDBBulkDataMedium, SplitDBBulkDataLow);
 
 	// Free the merged instance we no longer need
 	ACLAllocatorImpl.deallocate(MergedDB, MergedDB->get_size());
@@ -279,7 +279,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 	if (bStripLowestTier && SplitDB->has_bulk_data(acl::quality_tier::lowest_importance))
 	{
 		acl::compressed_database* StrippedDB = nullptr;
-		const acl::error_result StripResult = acl::strip_quality_tier(ACLAllocatorImpl, *SplitDB, acl::quality_tier::lowest_importance, StrippedDB);
+		const acl::error_result StripResult = acl::strip_database_quality_tier(ACLAllocatorImpl, *SplitDB, acl::quality_tier::lowest_importance, StrippedDB);
 
 		if (StripResult.any())
 		{

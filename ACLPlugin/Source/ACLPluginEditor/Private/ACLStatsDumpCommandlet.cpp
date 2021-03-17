@@ -19,6 +19,7 @@
 #include <sjson/writer.h>
 
 #include <acl/compression/impl/track_list_context.h>	// For create_output_track_mapping(..)
+#include <acl/compression/convert.h>
 #include <acl/compression/track_array.h>
 #include <acl/compression/transform_error_metrics.h>
 #include <acl/compression/track_error.h>
@@ -69,29 +70,48 @@ static const TCHAR* ReadACLClip(FFileManagerGeneric& FileManager, const FString&
 
 	// Allocate directly without a TArray to automatically manage the memory because some
 	// clips are larger than 2 GB
-	char* RawSJSONData = static_cast<char*>(GMalloc->Malloc(Size));
+	char* RawData = static_cast<char*>(GMalloc->Malloc(Size));
 
-	Reader->Serialize(RawSJSONData, Size);
+	Reader->Serialize(RawData, Size);
 	Reader->Close();
 
-	acl::clip_reader ClipReader(Allocator, RawSJSONData, Size);
-
-	if (ClipReader.get_file_type() != acl::sjson_file_type::raw_clip)
+	if (ACLClipPath.EndsWith(TEXT(".acl")))
 	{
-		GMalloc->Free(RawSJSONData);
-		return TEXT("SJSON file isn't a raw clip");
+		acl::compressed_tracks* CompressedTracks = reinterpret_cast<acl::compressed_tracks*>(RawData);
+		if (Size != CompressedTracks->get_size() || CompressedTracks->is_valid(true).any())
+		{
+			GMalloc->Free(RawData);
+			return TEXT("Invalid binary ACL file provided");
+		}
+
+		const acl::error_result Result = acl::convert_track_list(Allocator, *CompressedTracks, OutTracks);
+		if (Result.any())
+		{
+			GMalloc->Free(RawData);
+			return TEXT("Failed to convert input binary track list");
+		}
+	}
+	else
+	{
+		acl::clip_reader ClipReader(Allocator, RawData, Size);
+
+		if (ClipReader.get_file_type() != acl::sjson_file_type::raw_clip)
+		{
+			GMalloc->Free(RawData);
+			return TEXT("SJSON file isn't a raw clip");
+		}
+
+		acl::sjson_raw_clip RawClip;
+		if (!ClipReader.read_raw_clip(RawClip))
+		{
+			GMalloc->Free(RawData);
+			return TEXT("Failed to read ACL raw clip from file");
+		}
+
+		OutTracks = MoveTemp(RawClip.track_list);
 	}
 
-	acl::sjson_raw_clip RawClip;
-	if (!ClipReader.read_raw_clip(RawClip))
-	{
-		GMalloc->Free(RawSJSONData);
-		return TEXT("Failed to read ACL raw clip from file");
-	}
-
-	OutTracks = MoveTemp(RawClip.track_list);
-
-	GMalloc->Free(RawSJSONData);
+	GMalloc->Free(RawData);
 	return nullptr;
 }
 
@@ -1250,13 +1270,24 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 		UPackage* TempPackage = CreatePackage(nullptr, TEXT("/Temp/ACL"));
 #endif
 
+		TArray<FString> FilesLegacy;
+		FileManager.FindFiles(FilesLegacy, *ACLRawDir, TEXT(".acl.sjson"));		// Legacy ASCII file format
+
+		TArray<FString> FilesBinary;
+		FileManager.FindFiles(FilesBinary, *ACLRawDir, TEXT(".acl"));			// ACL 2.0+ binary format
+
 		TArray<FString> Files;
-		FileManager.FindFiles(Files, *ACLRawDir, TEXT(".acl.sjson"));
+		Files.Append(FilesLegacy);
+		Files.Append(FilesBinary);
 
 		for (const FString& Filename : Files)
 		{
 			const FString ACLClipPath = FPaths::Combine(*ACLRawDir, *Filename);
-			const FString UE4StatPath = FPaths::Combine(*OutputDir, *Filename.Replace(TEXT(".acl.sjson"), TEXT("_stats.sjson"), ESearchCase::CaseSensitive));
+
+			FString UE4StatFilename = Filename.Replace(TEXT(".acl.sjson"), TEXT("_stats.sjson"), ESearchCase::CaseSensitive);
+			UE4StatFilename = UE4StatFilename.Replace(TEXT(".acl"), TEXT("_stats.sjson"), ESearchCase::CaseSensitive);
+
+			const FString UE4StatPath = FPaths::Combine(*OutputDir, *UE4StatFilename);
 
 			if (ResumeTask && FileManager.FileExists(*UE4StatPath))
 			{
