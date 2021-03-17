@@ -49,7 +49,12 @@ UAnimBoneCompressionCodec_ACLBase::UAnimBoneCompressionCodec_ACLBase(const FObje
 #if WITH_EDITORONLY_DATA
 static void AppendMaxVertexDistances(USkeletalMesh* OptimizationTarget, TMap<FName, float>& BoneMaxVertexDistanceMap)
 {
+#if ENGINE_MINOR_VERSION >= 27
+	USkeleton* Skeleton = OptimizationTarget != nullptr ? OptimizationTarget->GetSkeleton() : nullptr;
+#else
 	USkeleton* Skeleton = OptimizationTarget != nullptr ? OptimizationTarget->Skeleton : nullptr;
+#endif
+
 	if (Skeleton == nullptr)
 	{
 		return; // No data to work with
