@@ -9,6 +9,8 @@
 
 #include "CoreMinimal.h"
 #include "PerPlatformProperties.h"
+#include "Engine/LatentActionManager.h"
+#include "Serialization/BulkData.h"
 #include "UObject/ObjectMacros.h"
 #include "AnimationCompressionLibraryDatabase.generated.h"
 
