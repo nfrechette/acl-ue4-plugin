@@ -9,22 +9,24 @@ namespace EditorDatabaseMonitor
 {
 	static FDelegateHandle MonitorTickerHandle;
 	static TArray<TWeakObjectPtr<UAnimationCompressionLibraryDatabase>> DirtyDatabases;
+	static FCriticalSection DirtyDatabasesCS;
 
 	static bool MonitorTicker(float DeltaTime)
 	{
-		if (DirtyDatabases.Num() != 0)
+		// Copy our array with a quick swap to avoid holding the lock too long
+		TArray<TWeakObjectPtr<UAnimationCompressionLibraryDatabase>> DirtyDatabasesTmp;
 		{
-			// Iterate over our dirty databases and refresh any stale mappings we might have
-			for (TWeakObjectPtr<UAnimationCompressionLibraryDatabase>& DatabasePtr : DirtyDatabases)
-			{
-				if (UAnimationCompressionLibraryDatabase* Database = DatabasePtr.Get())
-				{
-					Database->UpdateReferencingAnimSequenceList();
-				}
-			}
+			FScopeLock Lock(&DirtyDatabasesCS);
+			Swap(DirtyDatabases, DirtyDatabasesTmp);
+		}
 
-			// Reset everything
-			DirtyDatabases.Empty(0);
+		// Iterate over our dirty databases and refresh any stale mappings we might have
+		for (TWeakObjectPtr<UAnimationCompressionLibraryDatabase>& DatabasePtr : DirtyDatabasesTmp)
+		{
+			if (UAnimationCompressionLibraryDatabase* Database = DatabasePtr.Get())
+			{
+				Database->UpdateReferencingAnimSequenceList();
+			}
 		}
 
 		const bool bFireTickerAgainAfterDelay = true;
@@ -55,15 +57,13 @@ namespace EditorDatabaseMonitor
 
 	void MarkDirty(UAnimationCompressionLibraryDatabase* Database)
 	{
-		// Must execute on the main thread, not thread safe
-		check(IsInGameThread());
-
 		if (Database == nullptr)
 		{
 			return;	// Nothing to do
 		}
 
 		// Add our database, we'll process it later
+		FScopeLock Lock(&DirtyDatabasesCS);
 		DirtyDatabases.AddUnique(Database);
 	}
 }
