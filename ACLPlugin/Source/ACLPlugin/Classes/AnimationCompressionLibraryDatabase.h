@@ -42,8 +42,6 @@ struct FFidelityChangeRequest
 	bool bIsInProgress;
 };
 
-// TODO: Protect member access with private where relevant
-
 /** An ACL database object references several UAnimSequence instances that it contains. */
 UCLASS(MinimalAPI, config = Engine, meta = (DisplayName = "ACL Database"))
 class UAnimationCompressionLibraryDatabase : public UObject
