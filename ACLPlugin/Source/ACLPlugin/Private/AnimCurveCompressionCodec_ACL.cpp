@@ -43,7 +43,7 @@ void UAnimCurveCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
 		}
 	}
 
-	uint32 ForceRebuildVersion = 1;
+	uint32 ForceRebuildVersion = 2;
 	Ar << ForceRebuildVersion;
 
 	acl::compression_settings Settings;
