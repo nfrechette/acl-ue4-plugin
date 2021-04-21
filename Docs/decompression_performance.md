@@ -14,7 +14,7 @@
 
 ## Observations
 
-A number of interesting things can be seen in the above graphs. ACL is *much* faster: ranging from **2.4x** to **3.4x** on PC and **1.8x** to **5x** on mobile. The variance is also much lower as decompression performance remains consistent from frame to frame. As a result, fewer spikes can be seen with ACL..
+A number of interesting things can be seen in the above graphs. ACL is *much* faster: ranging from **3.4x** to **5.1x** on PC and **3.4x** to **8.4x** on mobile. The variance is also much lower as decompression performance remains consistent from frame to frame. As a result, fewer spikes can be seen with ACL.
 
 The Matinee fight scene also shows how UE4 searches for keys when linearly interpolating. The keys are split into two and the codec estimates if our desired keys are more likely to be in the first half or the second half. It then starts searching from that end towards the other. In the wild, most sequences are very short and such a heuristic is a reasonable choice over a more traditional binary search. However, the fight scene is very long at 2000 frames! The graphs highlights how decompressing early or late in the sequence is much faster than near the middle.
 
@@ -31,13 +31,13 @@ Decompression performance is extracted using the UE4 CSV profiler. Reproducing t
 
 ### Run your project and dump the stats
 
-Launch your cooked project with these specific command line arguments: `ACLPlayground.exe -nosound -execcmds="a.Budget.Enabled 0" -csvcaptureframes=600 -deterministic -usefixedtimestep -fps=30 -csvCategories="Animation"`.
+Launch your cooked project with these specific command line arguments: `ACLPlayground.exe -nosound -execcmds="a.Budget.Enabled 0,a.ParallelAnimEvaluation 0" -csvcaptureframes=600 -deterministic -usefixedtimestep -fps=30 -csvCategories="Animation"`.
 
 For Windows, this executable is usually located here: `...\ACLPlayground\Saved\StagedBuilds\WindowsNoEditor`.
 
 The above command does a few things:
 
-*  `-execcmds="a.Budget.Enabled 0"` makes sure that the animation budget enforcing is disabled
+*  `-execcmds="a.Budget.Enabled 0,a.ParallelAnimEvaluation 0"` makes sure that the animation budget enforcing is disabled and that everything runs on a single thread to reduce noise
 *  `-csvcaptureframes=600` captures 600 frames as soon as the scene finishes loading
 *  `-deterministic -usefixedtimestep -fps=30` ensures our frame rate is stable at 30 FPS to keep profiling captures consistent
 *  `-csvCategories="Animation"` this enables the *Animation* category for CSV profiling
