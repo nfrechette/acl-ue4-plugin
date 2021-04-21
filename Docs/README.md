@@ -45,6 +45,45 @@ The compression level dictates how aggressively ACL tries to optimize the memory
 
 Despite the best efforts of ACL, some exotic animation sequences will end up having an unacceptably large error, and when this happens, it will attempt to fall back to safer settings. This should happen extremely rarely if the virtual vertex distances are properly tuned. In order to control this behavior, a threshold is provided to control when it kicks in (the behavior can be disabled if you set the threshold to **0.0**). As ACL improves over time, the fallback might become obsolete.
 
+### Anim Compress ACL Database
+
+This codec exposes quality based streaming. This is explained [here](https://nfrechette.github.io/2021/01/17/progressive_animation_streaming/).
+
+To set things up, first create a new database asset from the Content Browser: *Animation -> ACL Database*.
+
+![ACL Database Asset Settings](Images/CompressionSettings_DatabaseAsset.png)
+
+A database asset references all the animation sequences that will be part of it automatically. It contains a few settings:
+
+* Highest Importance Proportion: Percentage of animation data that remains always loaded in memory (the most important key frames).
+* Medium Importance Proportion: Percentage of animation data that is moved into the streamable medium tier.
+* Low Importance Proportion: Percentage of animation data that is moved into the streamable lowest tier.
+* Strip Lowest Importance Tier: Whether or not to strip entirely the lowest tier (once stripped, it cannot be streamed).
+* Max Stream Request Size KB: Maximum IO stream request size (small reads perform more poorly and should be avoided).
+* Preview Visual Fidelity: Which visual fidelity level to use for preview in the editor (editor only, transient).
+
+All three proportion fields must sum to **1.0**.
+
+The preview visual fidelity field is meant to help preview in the editor what the animation quality will be once data is streamed at a particular fidelity level. By default, the editor always shows the highest visual fidelity.
+
+Once your database asset is configured, it needs to be referenced by a database enabled codec.
+
+![ACL Database Codec Settings](Images/CompressionSettings_DatabaseCodec.png)
+
+This codec is identical to the default one described above with the addition of the database field. Multiple codecs can reference the same database assets. Animation sequences that use this codec will end up in the selected database and can have their data streamed at runtime or stripped entirely during cook.
+
+Frame stripping with ACL is much more powerful than the UE4 frame stripping. ACL allows you to control how much data you want to strip and it will pick the least important key frames from all animations within the database. This means that some sequences might retain more key frames than others if they are more important. As such, this is far less destructive as we can globally optimize across many sequences.
+
+In a cooked build, no data will be streamed by default. The default visual fidelity level is at its lowest. In order to increase it, data must be streamed. This is exposed through the blueprint interface.
+
+You can find the blueprint nodes under: *Animation -> ACL*.
+
+![ACL Blueprint Streaming](Images/BlueprintStreaming.png)
+
+The visual fidelity can be queried and set through ordinary latent blueprint nodes. By setting the desired fidelity level, ACL figures out what needs to be streamed in or out. If multiple change request come in while streaming is in progress, they will be queued and execute once everything else queued prior has completed. It is not currently possible to interrupt a fidelity change request.
+
+When the visual fidelity changes, memory is allocated and freed on demand to accommodate the request. Data is loaded from disk asynchronously.
+
 ### Anim Compress ACL Custom
 
 Using the custom codec allows you to tweak and control every aspect of ACL. These are provided mostly for debugging purposes. In production, it should never be needed but if you do find that to be the case, please reach out so that we can investigate and fix this issue. Note that as a result of supporting every option possible, decompression can often end up being a bit slower (less code is stripped by the compiler).
