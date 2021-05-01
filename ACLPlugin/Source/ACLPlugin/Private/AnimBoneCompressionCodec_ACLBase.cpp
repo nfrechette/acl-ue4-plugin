@@ -221,7 +221,7 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 	if (bUseStreamingDatabase)
 	{
-		Settings.include_contributing_error = true;
+		Settings.enable_database_support = true;
 	}
 
 	acl::output_stats Stats;

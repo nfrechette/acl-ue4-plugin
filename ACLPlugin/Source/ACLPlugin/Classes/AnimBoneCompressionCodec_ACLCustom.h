@@ -38,14 +38,6 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
 	float ConstantScaleThreshold;
 
-	/** The ideal number of key frames to retain per segment for each track. */
-	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
-	uint16 IdealNumKeyFramesPerSegment;
-
-	/** The maximum number of key frames to retain per segment for each track. */
-	UPROPERTY(EditAnywhere, Category = Segmenting, meta = (ClampMin = "8"))
-	uint16 MaxNumKeyFramesPerSegment;
-
 	/** The skeletal meshes used to estimate the skinning deformation during compression. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
 	TArray<class USkeletalMesh*> OptimizationTargets;

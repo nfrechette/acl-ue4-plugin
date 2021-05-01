@@ -21,9 +21,6 @@ UAnimBoneCompressionCodec_ACLCustom::UAnimBoneCompressionCodec_ACLCustom(const F
 	ConstantRotationThresholdAngle = 0.00284714461f;	// The smallest angle a float32 can represent in a quaternion is 0.000690533954 so we use a value just slightly larger
 	ConstantTranslationThreshold = 0.001f;				// 0.001cm, very conservative to be safe
 	ConstantScaleThreshold = 0.00001f;					// Very small value to be safe since scale is sensitive
-
-	IdealNumKeyFramesPerSegment = 16;
-	MaxNumKeyFramesPerSegment = 31;
 #endif	// WITH_EDITORONLY_DATA
 }
 
@@ -37,9 +34,6 @@ void UAnimBoneCompressionCodec_ACLCustom::GetCompressionSettings(acl::compressio
 	OutSettings.translation_format = GetVectorFormat(TranslationFormat);
 	OutSettings.scale_format = GetVectorFormat(ScaleFormat);
 	OutSettings.level = GetCompressionLevel(CompressionLevel);
-
-	OutSettings.segmenting.ideal_num_samples = IdealNumKeyFramesPerSegment;
-	OutSettings.segmenting.max_num_samples = MaxNumKeyFramesPerSegment;
 }
 
 void UAnimBoneCompressionCodec_ACLCustom::PopulateDDCKey(FArchive& Ar)
