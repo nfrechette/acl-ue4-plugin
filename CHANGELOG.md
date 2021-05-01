@@ -37,6 +37,31 @@
 *  Add support for AnimSequence curve compression
 *  Upgraded to ACL v1.3.1
 
+## 0.6.4
+
+*  Upgraded to ACL v1.3.5
+*  Fix crash when more than 50000 frames are present by failing gracefully
+
+## 0.6.3
+
+*  Upgraded to ACL v1.3.4
+*  Fix harmless assert when compressing a single frame additive sequence
+
+## 0.6.2
+
+*  Upgraded to ACL v1.3.3
+
+## 0.6.1
+
+*  Fix crash when using the curve compression codec and no curves are present
+*  Minor cleanup
+
+## 0.6.0
+
+*  Upgraded code to support UE 4.24
+*  Add support for AnimSequence curve compression
+*  Upgraded to ACL v1.3.1
+
 ## 0.5.0
 
 *  Upgraded code to support UE 4.23
