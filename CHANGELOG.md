@@ -1,5 +1,13 @@
 # Significant changes per release
 
+## 2.0.0
+
+*  Upgraded to ACL v2.0.0
+*  Added support for streaming databases (code and blueprints)
+*  Added ability to specify a skeletal mesh to improve accuracy
+*  Fixed all MSVC static analysis warnings/issues
+*  Other minor improvements and clean up
+
 ## 1.0.6
 
 *  Add support for UE 4.26
