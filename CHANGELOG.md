@@ -1,5 +1,24 @@
 # Significant changes per release
 
+## 1.0.6
+
+*  Add support for UE 4.26
+
+## 1.0.5
+
+*  Upgraded to ACL v1.3.5
+*  Fix crash when more than 50000 frames are present by failing gracefully
+
+## 1.0.4
+
+*  Upgraded to ACL v1.3.4
+*  Fix harmless assert when compressing a single frame additive sequence
+
+## 1.0.3
+
+*  Upgraded to ACL v1.3.3
+*  Fix build when logging is disabled in non-shipping builds
+
 ## 1.0.2
 
 *  Changes required to meet the UE4 marketplace guidelines
