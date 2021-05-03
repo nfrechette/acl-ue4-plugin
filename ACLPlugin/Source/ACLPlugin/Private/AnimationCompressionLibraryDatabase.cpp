@@ -7,6 +7,7 @@
 
 #include "LatentActions.h"
 #include "Containers/Ticker.h"
+#include "Engine/Engine.h"
 
 #include "ACLImpl.h"
 
