@@ -1,5 +1,9 @@
 # Significant changes per release
 
+## 2.0.1
+
+*  Add missing include for marketplace submission
+
 ## 2.0.0
 
 *  Upgraded to ACL v2.0.0
