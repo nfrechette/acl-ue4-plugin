@@ -321,9 +321,10 @@ void UAnimBoneCompressionCodec_ACLBase::ByteSwapIn(ICompressedAnimData& AnimData
 #error "ACL does not currently support big-endian platforms"
 #endif
 
+	// ByteSwapIn(..) is called on load
+
 	// TODO: ACL does not support byte swapping
-	FACLCompressedAnimData& ACLAnimData = static_cast<FACLCompressedAnimData&>(AnimData);
-	MemoryStream.Serialize(ACLAnimData.CompressedByteStream.GetData(), ACLAnimData.CompressedByteStream.Num());
+	MemoryStream.Serialize(CompressedData.GetData(), CompressedData.Num());
 }
 
 void UAnimBoneCompressionCodec_ACLBase::ByteSwapOut(ICompressedAnimData& AnimData, TArrayView<uint8> CompressedData, FMemoryWriter& MemoryStream) const
@@ -332,7 +333,8 @@ void UAnimBoneCompressionCodec_ACLBase::ByteSwapOut(ICompressedAnimData& AnimDat
 #error "ACL does not currently support big-endian platforms"
 #endif
 
+	// ByteSwapOut(..) is called on save, during cooking, or when counting memory
+
 	// TODO: ACL does not support byte swapping
-	FACLCompressedAnimData& ACLAnimData = static_cast<FACLCompressedAnimData&>(AnimData);
-	MemoryStream.Serialize(ACLAnimData.CompressedByteStream.GetData(), ACLAnimData.CompressedByteStream.Num());
+	MemoryStream.Serialize(CompressedData.GetData(), CompressedData.Num());
 }
