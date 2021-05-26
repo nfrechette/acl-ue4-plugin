@@ -561,10 +561,43 @@ void UAnimationCompressionLibraryDatabase::Serialize(FArchive& Ar)
 	bool bCooked = Ar.IsCooking();
 	Ar << bCooked;
 
+	// Serialize the cooked bulk data ONLY if we are cooking.
 	if (bCooked)
 	{
 		CookedBulkData.SetBulkDataFlags(BULKDATA_Force_NOT_InlinePayload);
 		CookedBulkData.Serialize(Ar, this, INDEX_NONE, false);
+	}
+	else if (Ar.IsCountingMemory())
+	{
+		// When counting memory, also track the streamed in data.
+		if (DatabaseContext.is_initialized() && DatabaseStreamer)
+		{
+			const uint8* MediumTierData = DatabaseStreamer->get_bulk_data(acl::quality_tier::medium_importance);
+			if (MediumTierData != nullptr)
+			{
+				const uint32 MediumTierSize = DatabaseContext.get_compressed_database()->get_bulk_data_size(acl::quality_tier::medium_importance);
+
+				// Avoid touching the actual tier data, use a temporary array since the content itself doesn't matter
+				TArray<uint8> Tmp;
+				Tmp.Empty(MediumTierSize);
+				Tmp.AddZeroed(MediumTierSize);
+
+				Ar << Tmp;
+			}
+
+			const uint8* LowestTierData = DatabaseStreamer->get_bulk_data(acl::quality_tier::lowest_importance);
+			if (LowestTierData != nullptr)
+			{
+				const uint32 LowestTierSize = DatabaseContext.get_compressed_database()->get_bulk_data_size(acl::quality_tier::lowest_importance);
+
+				// Avoid touching the actual tier data, use a temporary array since the content itself doesn't matter
+				TArray<uint8> Tmp;
+				Tmp.Empty(LowestTierSize);
+				Tmp.AddZeroed(LowestTierSize);
+
+				Ar << Tmp;
+			}
+		}
 	}
 }
 
