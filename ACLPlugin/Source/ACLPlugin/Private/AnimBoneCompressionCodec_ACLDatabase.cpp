@@ -208,9 +208,12 @@ void UAnimBoneCompressionCodec_ACLDatabase::ByteSwapIn(ICompressedAnimData& Anim
 #error "ACL does not currently support big-endian platforms"
 #endif
 
+	// ByteSwapIn(..) is called on load
+
 	// TODO: ACL does not support byte swapping
-	FACLDatabaseCompressedAnimData& ACLAnimData = static_cast<FACLDatabaseCompressedAnimData&>(AnimData);
-	MemoryStream.Serialize(ACLAnimData.CompressedByteStream.GetData(), ACLAnimData.CompressedByteStream.Num());
+
+	// Because we manage the memory manually, the compressed data should always be empty
+	check(CompressedData.Num() == 0);
 }
 
 void UAnimBoneCompressionCodec_ACLDatabase::ByteSwapOut(ICompressedAnimData& AnimData, TArrayView<uint8> CompressedData, FMemoryWriter& MemoryStream) const
@@ -219,9 +222,22 @@ void UAnimBoneCompressionCodec_ACLDatabase::ByteSwapOut(ICompressedAnimData& Ani
 #error "ACL does not currently support big-endian platforms"
 #endif
 
+	// ByteSwapOut(..) is called on save, during cooking, or when counting memory
+
 	// TODO: ACL does not support byte swapping
-	FACLDatabaseCompressedAnimData& ACLAnimData = static_cast<FACLDatabaseCompressedAnimData&>(AnimData);
-	MemoryStream.Serialize(ACLAnimData.CompressedByteStream.GetData(), ACLAnimData.CompressedByteStream.Num());
+
+#if WITH_EDITORONLY_DATA
+	// In the editor, if we are saving or cooking, the output should be empty since we manage the memory manually.
+	// The real editor data lives in FACLDatabaseCompressedAnimData::CompressedClip
+	//
+	// Sadly, we have no way of knowing if we are counting memory from here and as such we'll contribute no size.
+	// For a true memory report, it is best to run it with cooked data anyway.
+	check(CompressedData.Num() == 0);
+#else
+	// With cooked data, we are never saving unless it is to count memory.
+	// Since the actual sequence data lives in the database, its size will be tracked there.
+	// We'll do nothing here to avoid counting twice.
+#endif
 }
 
 void UAnimBoneCompressionCodec_ACLDatabase::DecompressPose(FAnimSequenceDecompressionContext& DecompContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms) const
