@@ -159,7 +159,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::RegisterWithDatabase(const FCompress
 	AnimData.CompressedClip = OutResult.CompressedByteStream;
 
 	// When we have a database, the compressed sequence data lives in the database, zero out the compressed byte buffer
-	// since we handle the data manually ourself
+	// since we handle the data manually
 	OutResult.CompressedByteStream.Empty(0);
 }
 
