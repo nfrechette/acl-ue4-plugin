@@ -1,5 +1,11 @@
 # Significant changes per release
 
+## 2.0.2
+
+*  Fix assert when running memreport
+*  Fix memreport reported usage for ACL
+*  Fix crash when streaming in multiple database chunks
+
 ## 2.0.1
 
 *  Add missing include for marketplace submission
