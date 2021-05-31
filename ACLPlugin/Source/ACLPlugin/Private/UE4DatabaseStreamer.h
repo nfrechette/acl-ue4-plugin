@@ -28,7 +28,6 @@ public:
 		BulkDataMediumSize = acl::align_to(BulkDataMediumSize, acl::k_database_bulk_data_alignment);
 
 		const uint32 BulkDataLowSize = CompressedDatabase.get_bulk_data_size(acl::quality_tier::lowest_importance);
-		//StreamableBulkData_.GetBulkDataSize();
 
 		BulkDataSize[0] = BulkDataMediumSize;
 		BulkDataSize[1] = BulkDataLowSize;
