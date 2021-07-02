@@ -56,7 +56,7 @@ void FACLDatabaseCompressedAnimData::Bind(const TArrayView<uint8> BulkData)
 		const uint32 CompressedSize = CompressedClipData->get_size();
 
 		CompressedByteStream = TArrayView<uint8>(CompressedBytes, CompressedSize);
-		DatabaseContext = &Codec->DatabaseAsset->DatabaseContext;
+		DatabaseContext = Codec->DatabaseAsset->DatabaseContext.Get();
 	}
 	else
 	{
@@ -247,7 +247,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressPose(FAnimSequenceDecompre
 	acl::decompression_context<UE4DefaultDBDecompressionSettings> ACLContext;
 
 #if WITH_EDITORONLY_DATA
-	if (DatabaseAsset != nullptr && DatabaseAsset->DatabaseContext.is_initialized())
+	if (DatabaseAsset != nullptr && DatabaseAsset->DatabaseContext->is_initialized())
 	{
 		// We are previewing, use the database and the anim sequence data contained within it
 
@@ -262,7 +262,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressPose(FAnimSequenceDecompre
 			const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(CompressedBytes);
 			check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-			ACLContext.initialize(*CompressedClipData, DatabaseAsset->DatabaseContext);
+			ACLContext.initialize(*CompressedClipData, *DatabaseAsset->DatabaseContext);
 		}
 	}
 
@@ -302,7 +302,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressBone(FAnimSequenceDecompre
 	acl::decompression_context<UE4DefaultDBDecompressionSettings> ACLContext;
 
 #if WITH_EDITORONLY_DATA
-	if (DatabaseAsset != nullptr && DatabaseAsset->DatabaseContext.is_initialized())
+	if (DatabaseAsset != nullptr && DatabaseAsset->DatabaseContext->is_initialized())
 	{
 		// We are previewing, use the database and the anim sequence data contained within it
 
@@ -317,7 +317,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressBone(FAnimSequenceDecompre
 			const acl::compressed_tracks* CompressedClipData = acl::make_compressed_tracks(CompressedBytes);
 			check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-			ACLContext.initialize(*CompressedClipData, DatabaseAsset->DatabaseContext);
+			ACLContext.initialize(*CompressedClipData, *DatabaseAsset->DatabaseContext);
 		}
 	}
 
