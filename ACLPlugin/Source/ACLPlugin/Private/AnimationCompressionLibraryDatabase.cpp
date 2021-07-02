@@ -39,6 +39,7 @@ const TCHAR* VisualFidelityToString(ACLVisualFidelity Fidelity)
 
 UAnimationCompressionLibraryDatabase::UAnimationCompressionLibraryDatabase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
+	, DatabaseContext(MakeUnique<acl::database_context<UE4DefaultDatabaseSettings>>())
 	, CurrentVisualFidelity(ACLVisualFidelity::Lowest)
 	, NextFidelityChangeRequestID(0)
 #if WITH_EDITORONLY_DATA
@@ -408,7 +409,7 @@ void UAnimationCompressionLibraryDatabase::UpdatePreviewState(bool bBuildDatabas
 	{
 		// Create a temporary database now so we can preview our animations at the desired quality
 		PreviewDatabaseStreamer.Reset();
-		DatabaseContext.reset();
+		DatabaseContext->reset();
 
 		BuildDatabase(PreviewCompressedBytes, PreviewAnimSequenceMappings, PreviewBulkData);
 
@@ -420,7 +421,7 @@ void UAnimationCompressionLibraryDatabase::UpdatePreviewState(bool bBuildDatabas
 
 			PreviewDatabaseStreamer = MakeUnique<UE4DatabasePreviewStreamer>(*CompressedDatabase, PreviewBulkData);
 
-			const bool ContextInitResult = DatabaseContext.initialize(ACLAllocatorImpl, *CompressedDatabase, *PreviewDatabaseStreamer, *PreviewDatabaseStreamer);
+			const bool ContextInitResult = DatabaseContext->initialize(ACLAllocatorImpl, *CompressedDatabase, *PreviewDatabaseStreamer, *PreviewDatabaseStreamer);
 			checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));
 
 			// New fidelity is lowest
@@ -429,7 +430,7 @@ void UAnimationCompressionLibraryDatabase::UpdatePreviewState(bool bBuildDatabas
 	}
 
 	// Perform any streaming request as a result of our new preview/database state
-	if (DatabaseContext.is_initialized())
+	if (DatabaseContext->is_initialized())
 	{
 		SetVisualFidelity(PreviewVisualFidelity);
 	}
@@ -520,7 +521,7 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 		Streamer->WaitForStreamingToComplete();
 
 		// Reset our context to make sure it no longer references the streamer
-		DatabaseContext.reset();
+		DatabaseContext->reset();
 
 		// Free our streamer, it is no longer needed
 		delete Streamer;
@@ -530,7 +531,7 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 	if (PreviewDatabaseStreamer)
 	{
 		// Reset our context to make sure it no longer references the streamer
-		DatabaseContext.reset();
+		DatabaseContext->reset();
 
 		// Free our streamer, it is no longer needed
 		PreviewDatabaseStreamer.Reset();
@@ -549,7 +550,7 @@ void UAnimationCompressionLibraryDatabase::PostLoad()
 
 		DatabaseStreamer = MakeUnique<UE4DatabaseStreamer>(*CompressedDatabase, CookedBulkData);
 
-		const bool ContextInitResult = DatabaseContext.initialize(ACLAllocatorImpl, *CompressedDatabase, *DatabaseStreamer, *DatabaseStreamer);
+		const bool ContextInitResult = DatabaseContext->initialize(ACLAllocatorImpl, *CompressedDatabase, *DatabaseStreamer, *DatabaseStreamer);
 		checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));
 	}
 }
@@ -570,12 +571,12 @@ void UAnimationCompressionLibraryDatabase::Serialize(FArchive& Ar)
 	else if (Ar.IsCountingMemory())
 	{
 		// When counting memory, also track the streamed in data.
-		if (DatabaseContext.is_initialized() && DatabaseStreamer)
+		if (DatabaseContext->is_initialized() && DatabaseStreamer)
 		{
 			const uint8* MediumTierData = DatabaseStreamer->get_bulk_data(acl::quality_tier::medium_importance);
 			if (MediumTierData != nullptr)
 			{
-				const uint32 MediumTierSize = DatabaseContext.get_compressed_database()->get_bulk_data_size(acl::quality_tier::medium_importance);
+				const uint32 MediumTierSize = DatabaseContext->get_compressed_database()->get_bulk_data_size(acl::quality_tier::medium_importance);
 
 				// Avoid touching the actual tier data, use a temporary array since the content itself doesn't matter
 				TArray<uint8> Tmp;
@@ -588,7 +589,7 @@ void UAnimationCompressionLibraryDatabase::Serialize(FArchive& Ar)
 			const uint8* LowestTierData = DatabaseStreamer->get_bulk_data(acl::quality_tier::lowest_importance);
 			if (LowestTierData != nullptr)
 			{
-				const uint32 LowestTierSize = DatabaseContext.get_compressed_database()->get_bulk_data_size(acl::quality_tier::lowest_importance);
+				const uint32 LowestTierSize = DatabaseContext->get_compressed_database()->get_bulk_data_size(acl::quality_tier::lowest_importance);
 
 				// Avoid touching the actual tier data, use a temporary array since the content itself doesn't matter
 				TArray<uint8> Tmp;
@@ -612,7 +613,7 @@ void UAnimationCompressionLibraryDatabase::SetVisualFidelityImpl(ACLVisualFideli
 	check(IsInGameThread());
 
 #if WITH_EDITORONLY_DATA
-	if (!DatabaseContext.is_initialized())
+	if (!DatabaseContext->is_initialized())
 	{
 		// We are in the editor and we aren't previewing yet which means the highest quality is showing, build the database now
 		// so we can properly preview
@@ -620,7 +621,7 @@ void UAnimationCompressionLibraryDatabase::SetVisualFidelityImpl(ACLVisualFideli
 	}
 #endif
 
-	check(DatabaseContext.is_initialized());
+	check(DatabaseContext->is_initialized());
 
 	const bool bIsFirstRequest = FidelityChangeRequests.Num() == 0;
 	const ACLVisualFidelity FinalEffectiveFidelity = bIsFirstRequest ? CurrentVisualFidelity : FidelityChangeRequests.Last().Fidelity;
@@ -763,9 +764,9 @@ static uint32 CalculateNumChunksToStream(const acl::compressed_database& Databas
 */
 bool UAnimationCompressionLibraryDatabase::UpdateVisualFidelityTicker(float DeltaTime)
 {
-	check(DatabaseContext.is_initialized());
+	check(DatabaseContext->is_initialized());
 
-	const uint32 NumChunksToStream = CalculateNumChunksToStream(*DatabaseContext.get_compressed_database(), MaxStreamRequestSizeKB);
+	const uint32 NumChunksToStream = CalculateNumChunksToStream(*DatabaseContext->get_compressed_database(), MaxStreamRequestSizeKB);
 
 	while (FidelityChangeRequests.Num() != 0)
 	{
@@ -792,7 +793,7 @@ bool UAnimationCompressionLibraryDatabase::UpdateVisualFidelityTicker(float Delt
 			else
 			{
 				// To reach medium quality, we need to stream out our lowest importance tier
-				Result = DatabaseContext.stream_out(acl::quality_tier::lowest_importance, NumChunksToStream);
+				Result = DatabaseContext->stream_out(acl::quality_tier::lowest_importance, NumChunksToStream);
 				LogRequestResult(*this, Result);
 
 				switch (Result)
@@ -836,12 +837,12 @@ bool UAnimationCompressionLibraryDatabase::UpdateVisualFidelityTicker(float Delt
 				if (Request.Fidelity == ACLVisualFidelity::Highest)
 				{
 					// To reach highest quality, we need to stream in our lowest importance tier
-					Result = DatabaseContext.stream_in(acl::quality_tier::lowest_importance, NumChunksToStream);
+					Result = DatabaseContext->stream_in(acl::quality_tier::lowest_importance, NumChunksToStream);
 				}
 				else
 				{
 					// To reach lowest quality, we need to stream out our medium importance tier
-					Result = DatabaseContext.stream_out(acl::quality_tier::medium_importance, NumChunksToStream);
+					Result = DatabaseContext->stream_out(acl::quality_tier::medium_importance, NumChunksToStream);
 				}
 
 				LogRequestResult(*this, Result);
@@ -885,7 +886,7 @@ bool UAnimationCompressionLibraryDatabase::UpdateVisualFidelityTicker(float Delt
 			else
 			{
 				// To reach medium quality, we need to stream in our medium importance tier
-				Result = DatabaseContext.stream_in(acl::quality_tier::medium_importance, NumChunksToStream);
+				Result = DatabaseContext->stream_in(acl::quality_tier::medium_importance, NumChunksToStream);
 				LogRequestResult(*this, Result);
 
 				switch (Result)
