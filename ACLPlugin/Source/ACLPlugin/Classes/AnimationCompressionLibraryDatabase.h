@@ -60,8 +60,8 @@ private:
 	/** Bulk data that we'll stream. Present only in cooked builds. */
 	FByteBulkData CookedBulkData;
 
-	/** The database decompression context object. Bound to the compressed database instance. */
-	acl::database_context<UE4DefaultDatabaseSettings> DatabaseContext;
+	/** The database decompression context object. Bound to the compressed database instance. UObjects don't support alignment above 16, use unique ptr instead. */
+	TUniquePtr<acl::database_context<UE4DefaultDatabaseSettings>> DatabaseContext;
 
 	/** The streamer instance used by the database context. Only used in cooked builds. */
 	TUniquePtr<acl::database_streamer> DatabaseStreamer;
