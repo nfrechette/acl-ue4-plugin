@@ -53,7 +53,7 @@ private:
 	UPROPERTY()
 	TArray<uint8> CookedCompressedBytes;
 
-	/** Stores a mapping for each anim sequence, where its compresssed data lives in our compressed buffer. Each 64 bit value is split into 32 bits: (Hash << 32) | Offset. Present only in cooked builds. */
+	/** Stores a mapping for each anim sequence, where its compressed data lives in our compressed buffer. Each 64 bit value is split into 32 bits: (Hash << 32) | Offset. Present only in cooked builds. */
 	UPROPERTY()
 	TArray<uint64> CookedAnimSequenceMappings;
 
