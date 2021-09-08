@@ -542,6 +542,9 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 		PreviewDatabaseStreamer.Reset();
 	}
 #endif
+
+	// Manually run the destructor since the container is opaque
+	DatabaseContext.~database_context<UE4DefaultDatabaseSettings>();
 }
 
 void UAnimationCompressionLibraryDatabase::PostLoad()
