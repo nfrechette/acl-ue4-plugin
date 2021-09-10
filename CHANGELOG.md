@@ -1,5 +1,10 @@
 # Significant changes per release
 
+## 2.0.3
+
+*  Fix potential crash with AVX2 due to incorrect allocation alignment
+*  Upgraded to ACL v2.0.1
+
 ## 2.0.2
 
 *  Fix assert when running memreport
