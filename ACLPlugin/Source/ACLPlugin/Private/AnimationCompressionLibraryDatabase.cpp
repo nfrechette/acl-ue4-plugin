@@ -761,9 +761,9 @@ static void LogRequestResult(const UAnimationCompressionLibraryDatabase& Databas
 	}
 }
 
-static void FailAllRequests(TArray<FFidelityChangeRequest>& Requests)
+static void FailAllRequests(const TArray<FFidelityChangeRequest>& Requests)
 {
-	for (FFidelityChangeRequest& Request : Requests)
+	for (const FFidelityChangeRequest& Request : Requests)
 	{
 		if (Request.Result != nullptr)
 		{
