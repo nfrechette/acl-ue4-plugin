@@ -87,6 +87,9 @@ private:
 	/** A queue of visual fidelity change requests. */
 	TArray<FFidelityChangeRequest> FidelityChangeRequests;
 
+	/** The handle to the fidelity update ticket. */
+	FDelegateHandle FidelityUpdateTickerHandle;
+
 #if WITH_EDITORONLY_DATA
 	/** What percentage of the key frames should remain in the anim sequences. */
 	UPROPERTY(VisibleAnywhere, Category = "Database")
