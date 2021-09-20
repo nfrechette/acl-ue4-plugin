@@ -517,6 +517,23 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 {
 	Super::BeginDestroy();
 
+	// Remove our ticker if we have one
+	if (FidelityUpdateTickerHandle.IsValid())
+	{
+		FTicker::GetCoreTicker().RemoveTicker(FidelityUpdateTickerHandle);
+		FidelityUpdateTickerHandle.Reset();
+	}
+
+	// If we have visual fidelity changes in progress, cancel them
+	for (const FFidelityChangeRequest& Request : FidelityChangeRequests)
+	{
+		if (Request.Result != nullptr)
+		{
+			*Request.Result = ACLVisualFidelityChangeResult::Failed;
+		}
+	}
+	FidelityChangeRequests.Empty();
+
 	acl::database_context<UE4DefaultDatabaseSettings>& DatabaseContext = GetDatabaseContext();
 
 	if (DatabaseStreamer)
@@ -711,8 +728,9 @@ void UAnimationCompressionLibraryDatabase::SetVisualFidelityImpl(ACLVisualFideli
 	// If this is the first request, queue our ticker so we can start tracking our changes
 	if (bIsFirstRequest)
 	{
+		check(!FidelityUpdateTickerHandle.IsValid());
 		auto UpdateVisualFidelity = [this](float DeltaTime) { return UpdateVisualFidelityTicker(DeltaTime); };
-		FTicker::GetCoreTicker().AddTicker(TEXT("ACLDBStreamOut"), 0.0F, UpdateVisualFidelity);
+		FidelityUpdateTickerHandle = FTicker::GetCoreTicker().AddTicker(TEXT("ACLDBStreamOut"), 0.0F, UpdateVisualFidelity);
 	}
 }
 
@@ -954,7 +972,14 @@ bool UAnimationCompressionLibraryDatabase::UpdateVisualFidelityTicker(float Delt
 		}
 	}
 
-	return FidelityChangeRequests.Num() != 0;	// We need to fire again if we have more pending requests
+	const bool bHasMoreRequests = FidelityChangeRequests.Num() != 0;
+	if (!bHasMoreRequests)
+	{
+		// Clear our ticker handle, no longer needed
+		FidelityUpdateTickerHandle.Reset();
+	}
+
+	return bHasMoreRequests;	// We need to fire again if we have more pending requests
 }
 
 class FSetDatabaseVisualFidelityAction final : public FPendingLatentAction
