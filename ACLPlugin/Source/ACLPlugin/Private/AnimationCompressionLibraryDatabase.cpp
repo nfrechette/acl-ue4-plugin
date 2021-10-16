@@ -513,6 +513,17 @@ bool UAnimationCompressionLibraryDatabase::UpdateReferencingAnimSequenceList()
 }
 #endif
 
+static void FailAllRequests(const TArray<FFidelityChangeRequest>& Requests)
+{
+	for (const FFidelityChangeRequest& Request : Requests)
+	{
+		if (Request.Result != nullptr)
+		{
+			*Request.Result = ACLVisualFidelityChangeResult::Failed;
+		}
+	}
+}
+
 void UAnimationCompressionLibraryDatabase::BeginDestroy()
 {
 	Super::BeginDestroy();
@@ -525,13 +536,7 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 	}
 
 	// If we have visual fidelity changes in progress, cancel them
-	for (const FFidelityChangeRequest& Request : FidelityChangeRequests)
-	{
-		if (Request.Result != nullptr)
-		{
-			*Request.Result = ACLVisualFidelityChangeResult::Failed;
-		}
-	}
+	FailAllRequests(FidelityChangeRequests);
 	FidelityChangeRequests.Empty();
 
 	acl::database_context<UE4DefaultDatabaseSettings>& DatabaseContext = GetDatabaseContext();
@@ -758,17 +763,6 @@ static void LogRequestResult(const UAnimationCompressionLibraryDatabase& Databas
 	case acl::database_stream_request_result::no_free_streaming_requests:
 		UE_LOG(LogAnimationCompression, Log, TEXT("Failed to find a free ACL database streaming request [%s]"), *Database.GetPathName());
 		break;
-	}
-}
-
-static void FailAllRequests(const TArray<FFidelityChangeRequest>& Requests)
-{
-	for (const FFidelityChangeRequest& Request : Requests)
-	{
-		if (Request.Result != nullptr)
-		{
-			*Request.Result = ACLVisualFidelityChangeResult::Failed;
-		}
 	}
 }
 
