@@ -1001,17 +1001,26 @@ public:
 			return;
 		}
 
+		bool bDispatchedNow = false;
 		if (!bIsDispatched)
 		{
 			// Fire off our change request, will complete right away if no change is requested, otherwise we just dispatch
 			bIsDispatched = true;
+			bDispatchedNow = true;
 			OutResult = ACLVisualFidelityChangeResult::Dispatched;
 			DatabaseAsset->SetVisualFidelityImpl(VisualFidelity, &OutResult);
 		}
 
 		// We are done once our result is set
 		const bool bIsDone = OutResult != ACLVisualFidelityChangeResult::Dispatched;
-		Response.FinishAndTriggerIf(bIsDone, LatentInfo.ExecutionFunction, LatentInfo.Linkage, LatentInfo.CallbackTarget);
+		if (bIsDone)
+		{
+			Response.FinishAndTriggerIf(bIsDone, LatentInfo.ExecutionFunction, LatentInfo.Linkage, LatentInfo.CallbackTarget);
+		}
+		else if (bDispatchedNow)
+		{
+			Response.TriggerLink(LatentInfo.ExecutionFunction, LatentInfo.Linkage, LatentInfo.CallbackTarget);
+		}
 	}
 
 #if WITH_EDITOR
