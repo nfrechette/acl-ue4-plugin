@@ -169,7 +169,7 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 
 	if (CompressionResult.any())
 	{
-		UE_LOG(LogAnimationCompression, Warning, TEXT("ACL failed to compress curves: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
+		UE_LOG(LogAnimationCompression, Warning, TEXT("ACL failed to compress curves: %s [%s]"), ANSI_TO_TCHAR(CompressionResult.c_str()), *AnimSeq.FullName);
 		return false;
 	}
 
@@ -189,8 +189,8 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 		Context.initialize(*CompressedTracks);
 		const acl::track_error Error = acl::calculate_compression_error(ACLAllocatorImpl, Tracks, Context);
 
-		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Curves compressed size: %u bytes"), CompressedDataSize);
-		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Curves error: %.4f (curve %u @ %.3f)"), Error.error, Error.index, Error.sample_time);
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Curves compressed size: %u bytes [%s]"), CompressedDataSize, *AnimSeq.FullName);
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Curves error: %.4f (curve %u @ %.3f) [%s]"), Error.error, Error.index, Error.sample_time, *AnimSeq.FullName);
 	}
 #endif
 

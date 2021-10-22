@@ -73,8 +73,8 @@ ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACL::ExecuteSafetyFallback(acl
 		const acl::track_error TrackError = acl::calculate_compression_error(Allocator, RawClip, Context, *Settings.error_metric, BaseClip);
 		if (TrackError.error >= SafetyFallbackThreshold)
 		{
-			UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipData.get_size());
-			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm"), TrackError.error);
+			UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes [%s]"), CompressedClipData.get_size(), *CompressibleAnimData.FullName);
+			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Animation error is too high, a safe fallback will be used instead: %.4f cm [%s]"), TrackError.error, *CompressibleAnimData.FullName);
 
 			// Just use the safety fallback
 			return SafetyFallbackCodec->Compress(CompressibleAnimData, OutResult) ? ACLSafetyFallbackResult::Success : ACLSafetyFallbackResult::Failure;
