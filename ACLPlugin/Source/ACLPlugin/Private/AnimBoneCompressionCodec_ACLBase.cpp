@@ -181,7 +181,7 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	if (CompressibleAnimData.bIsValidAdditive)
 		ACLBaseTracks = BuildACLTransformTrackArray(ACLAllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, true);
 
-	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes"), ACLTracks.get_raw_size());
+	UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation raw size: %u bytes [%s]"), ACLTracks.get_raw_size(), *CompressibleAnimData.FullName);
 
 	// If we have an optimization target, use it
 	TArray<USkeletalMesh*> OptimizationTargets = GetOptimizationTargets();
@@ -244,7 +244,7 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 	if (!CompressionResult.empty())
 	{
-		UE_LOG(LogAnimationCompression, Warning, TEXT("ACL failed to compress clip: %s"), ANSI_TO_TCHAR(CompressionResult.c_str()));
+		UE_LOG(LogAnimationCompression, Warning, TEXT("ACL failed to compress clip: %s [%s]"), ANSI_TO_TCHAR(CompressionResult.c_str()), *CompressibleAnimData.FullName);
 		return false;
 	}
 
@@ -268,8 +268,8 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 		const acl::track_error TrackError = acl::calculate_compression_error(ACLAllocatorImpl, ACLTracks, Context, *Settings.error_metric, ACLBaseTracks);
 
-		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes"), CompressedClipDataSize);
-		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f)"), TrackError.error, TrackError.index, TrackError.sample_time);
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation compressed size: %u bytes [%s]"), CompressedClipDataSize, *CompressibleAnimData.FullName);
+		UE_LOG(LogAnimationCompression, Verbose, TEXT("ACL Animation error: %.4f cm (bone %u @ %.3f) [%s]"), TrackError.error, TrackError.index, TrackError.sample_time, *CompressibleAnimData.FullName);
 	}
 #endif
 

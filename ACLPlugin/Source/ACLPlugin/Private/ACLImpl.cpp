@@ -84,7 +84,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	check(!bIsAdditive || bIsAdditiveBakedIntoRaw);
 	if (bIsAdditive && !bIsAdditiveBakedIntoRaw)
 	{
-		UE_LOG(LogAnimationCompression, Fatal, TEXT("Animation sequence is additive but it is not baked into the raw data, this is not supported."));
+		UE_LOG(LogAnimationCompression, Fatal, TEXT("Animation sequence is additive but it is not baked into the raw data, this is not supported. [%s]"), *CompressibleAnimData.FullName);
 		return acl::track_array_qvvf();
 	}
 

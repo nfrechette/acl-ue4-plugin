@@ -166,7 +166,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 		UAnimBoneCompressionCodec_ACLDatabase* DatabaseCodec = Cast<UAnimBoneCompressionCodec_ACLDatabase>(AnimSeq->CompressedData.BoneCompressionCodec);
 		if (DatabaseCodec == nullptr || DatabaseCodec->DatabaseAsset != this)
 		{
-			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Database mapping is stale. [%s] no longer references it."), *AnimSeq->GetPathName());
+			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL Database mapping is stale. '%s' no longer references it. [%s]"), *AnimSeq->GetPathName(), *GetPathName());
 			continue;
 		}
 
@@ -186,7 +186,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 		const FACLDatabaseCompressedAnimData& AnimData = static_cast<const FACLDatabaseCompressedAnimData&>(*AnimSeq->CompressedData.CompressedDataStructure);
 		if (!AnimData.IsValid())
 		{
-			UE_LOG(LogAnimationCompression, Warning, TEXT("Cannot include an invalid sequence in the ACL database: [%s]"), *AnimSeq->GetPathName());
+			UE_LOG(LogAnimationCompression, Warning, TEXT("Cannot include a invalid sequence '%s' in the ACL database. [%s]"), *AnimSeq->GetPathName(), *GetPathName());
 			continue;
 		}
 
@@ -230,7 +230,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 	if (MergeResult.any())
 	{
 		// Free our duplicate compressed clips
-		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to merge databases: %s"), ANSI_TO_TCHAR(MergeResult.c_str()));
+		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to merge databases: %s [%s]"), ANSI_TO_TCHAR(MergeResult.c_str()), *GetPathName());
 		return;
 	}
 
@@ -270,7 +270,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 			ACLAllocatorImpl.deallocate(CompressedTracks, CompressedTracks->get_size());
 		}
 
-		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to split database: %s"), ANSI_TO_TCHAR(SplitResult.c_str()));
+		UE_LOG(LogAnimationCompression, Error, TEXT("ACL failed to split database: %s [%s]"), ANSI_TO_TCHAR(SplitResult.c_str()), *GetPathName());
 		return;
 	}
 
@@ -289,7 +289,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 		if (StripResult.any())
 		{
 			// We failed to strip our tier but the split database is still usable, don't fail anything
-			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL failed to strip lowest database tier: %s"), ANSI_TO_TCHAR(StripResult.c_str()));
+			UE_LOG(LogAnimationCompression, Warning, TEXT("ACL failed to strip lowest database tier: %s [%s]"), ANSI_TO_TCHAR(StripResult.c_str()), *GetPathName());
 		}
 		else
 		{
