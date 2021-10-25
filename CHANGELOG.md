@@ -1,5 +1,11 @@
 # Significant changes per release
 
+## 2.0.4
+
+*  Fix rare potential use after free in database
+*  Minor fixes to database blueprint handling
+*  Improved logging
+
 ## 2.0.3
 
 *  Fix potential crash with AVX2 due to incorrect allocation alignment
