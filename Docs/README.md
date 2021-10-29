@@ -21,9 +21,9 @@ The ACL plugin also provides its own compression settings assets located in its 
 
 ### How to change the default compression codec
 
-In order to change the default compression settings asset used, you will need to edit the `BaseEngine.ini` or the equivalent file in your project under the `[Animation.DefaultObjectSettings]` section. The relevant entry is this one: `BoneCompressionSettings="/Engine/Animation/DefaultAnimBoneCompressionSettings"`. It points to an asset under *Engine Content*. You can change it to point to any other suitable asset of your choice. You can also modify that asset to add ACL.
+In order to change the default compression settings asset used, you will need to edit the `BaseEngine.ini` or the equivalent file in your project under the `[Animation.DefaultObjectSettings]` section. The relevant entry is this one: `BoneCompressionSettings="/Engine/Animation/DefaultAnimBoneCompressionSettings"`. It points to an asset under *Engine Content*. You can change it to point to any other suitable asset of your choice. You can also modify that asset to add ACL. Note that if you wish to point to your own asset that lives in your project, the path should look like this: `BoneCompressionSettings="/Game/Foo/MySettings"` for a file located here: `.../MyProject/Content/Foo/MySettings.uasset`.
 
-*The process is identical for the default curve compression codec.*
+*The process is identical for the default curve compression codec: `CurveCompressionSettings="/Game/Foo/MyCurveSettings"` in the same INI file and the same section.*
 
 ## Bone compression settings
 
