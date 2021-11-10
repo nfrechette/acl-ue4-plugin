@@ -118,21 +118,21 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
-	void RTM_SIMD_CALL write_rotation(uint32_t BoneIndex, rtm::quatf_arg0 Rotation)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_rotation(uint32_t BoneIndex, rtm::quatf_arg0 Rotation)
 	{
 		Atom.SetRotationRaw(Rotation);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a translation value for a specified bone index
-	void RTM_SIMD_CALL write_translation(uint32_t BoneIndex, rtm::vector4f_arg0 Translation)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_translation(uint32_t BoneIndex, rtm::vector4f_arg0 Translation)
 	{
 		Atom.SetTranslationRaw(Translation);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a scale value for a specified bone index
-	void RTM_SIMD_CALL write_scale(uint32_t BoneIndex, rtm::vector4f_arg0 Scale)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_scale(uint32_t BoneIndex, rtm::vector4f_arg0 Scale)
 	{
 		Atom.SetScale3DRaw(Scale);
 	}
