@@ -134,7 +134,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::PreSave(const class ITargetPlatform*
 	}
 }
 
-void UAnimBoneCompressionCodec_ACLDatabase::RegisterWithDatabase(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
+void UAnimBoneCompressionCodec_ACLDatabase::PostCompression(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) const
 {
 	// After we are done compressing our animation sequence, it will contain the necessary metadata needed to build our
 	// streaming database. The anim sequence will contain every sample and it will be used as-is in the editor where we

@@ -269,10 +269,11 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 	ACLAllocatorImpl.deallocate(CompressedTracks, CompressedClipDataSize);
 
-	if (bUseStreamingDatabase)
 	{
-		RegisterWithDatabase(CompressibleAnimData, OutResult);
 	}
+
+	// Allow codecs to override final anim data and result
+	PostCompression(CompressibleAnimData, OutResult);
 
 	// Bind our compressed sequence data buffer
 	OutResult.AnimData->Bind(OutResult.CompressedByteStream);
