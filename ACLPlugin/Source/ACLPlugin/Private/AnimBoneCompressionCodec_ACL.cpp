@@ -16,10 +16,10 @@
 
 UAnimBoneCompressionCodec_ACL::UAnimBoneCompressionCodec_ACL(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-{
 #if WITH_EDITORONLY_DATA
-	SafetyFallbackThreshold = 1.0f;			// 1cm, should be very rarely exceeded
-#endif	// WITH_EDITORONLY_DATA
+	, SafetyFallbackThreshold(1.0f)			// 1cm, should be very rarely exceeded
+#endif
+{
 }
 
 #if WITH_EDITORONLY_DATA
