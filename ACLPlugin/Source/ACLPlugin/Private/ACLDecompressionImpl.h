@@ -109,32 +109,32 @@ struct FUE4OutputWriter final : public acl::track_writer
 */
 struct UE4OutputTrackWriter final : public acl::track_writer
 {
-	// Raw pointer for performance reasons, caller is responsible for ensuring data is valid
-	FACLTransform* Atom;
+	// Raw reference for performance reasons, caller is responsible for ensuring data is valid
+	FACLTransform& Atom;
 
-	UE4OutputTrackWriter(FTransform& Atom_)
-		: Atom(static_cast<FACLTransform*>(&Atom_))
+	explicit UE4OutputTrackWriter(FTransform& Atom_)
+		: Atom(static_cast<FACLTransform&>(Atom_))
 	{}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
 	void RTM_SIMD_CALL write_rotation(uint32_t BoneIndex, rtm::quatf_arg0 Rotation)
 	{
-		Atom->SetRotationRaw(Rotation);
+		Atom.SetRotationRaw(Rotation);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a translation value for a specified bone index
 	void RTM_SIMD_CALL write_translation(uint32_t BoneIndex, rtm::vector4f_arg0 Translation)
 	{
-		Atom->SetTranslationRaw(Translation);
+		Atom.SetTranslationRaw(Translation);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a scale value for a specified bone index
 	void RTM_SIMD_CALL write_scale(uint32_t BoneIndex, rtm::vector4f_arg0 Scale)
 	{
-		Atom->SetScale3DRaw(Scale);
+		Atom.SetScale3DRaw(Scale);
 	}
 };
 
