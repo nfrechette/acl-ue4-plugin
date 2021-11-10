@@ -166,7 +166,9 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 			}
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			{
 				Track[SampleIndex] = BindTransform;
+			}
 		}
 
 		Tracks[BoneIndex] = MoveTemp(Track);
