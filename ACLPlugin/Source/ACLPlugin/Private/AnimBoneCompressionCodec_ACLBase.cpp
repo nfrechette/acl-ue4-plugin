@@ -217,12 +217,6 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	}
 
 	const acl::additive_clip_format8 AdditiveFormat = acl::additive_clip_format8::additive0;
-	const bool bUseStreamingDatabase = UseDatabase();
-
-	if (bUseStreamingDatabase)
-	{
-		Settings.enable_database_support = true;
-	}
 
 	acl::output_stats Stats;
 	acl::compressed_tracks* CompressedTracks = nullptr;

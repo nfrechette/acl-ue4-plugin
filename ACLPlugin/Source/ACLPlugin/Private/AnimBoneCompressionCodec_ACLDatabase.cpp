@@ -168,6 +168,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::GetCompressionSettings(acl::compress
 	OutSettings = acl::get_default_compression_settings();
 
 	OutSettings.level = GetCompressionLevel(CompressionLevel);
+	OutSettings.enable_database_support = true;
 }
 
 void UAnimBoneCompressionCodec_ACLDatabase::PopulateDDCKey(FArchive& Ar)

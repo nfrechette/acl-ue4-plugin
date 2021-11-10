@@ -72,7 +72,6 @@ class UAnimBoneCompressionCodec_ACLDatabase : public UAnimBoneCompressionCodec_A
 	virtual void PopulateDDCKey(FArchive& Ar) override;
 
 	// UAnimBoneCompressionCodec_ACLBase implementation
-	virtual bool UseDatabase() const override { return true; }
 	virtual void RegisterWithDatabase(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) override;
 	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const override;
 	virtual TArray<class USkeletalMesh*> GetOptimizationTargets() const override { return OptimizationTargets; }
