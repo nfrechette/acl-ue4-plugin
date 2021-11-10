@@ -153,7 +153,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::RegisterWithDatabase(const FCompress
 	// show the highest quality by default.
 	//
 	// However, the anim sequence data that we just compressed will not be used in a cooked build. When we build our
-	// database, the sequence data will be modifier since we'll remove key frames from it. Its hash will change.
+	// database, the sequence data will be modified since we'll remove key frames from it. Its hash will change.
 	// The new compressed data will live in the database asset next to the compressed database data. This has the benefit
 	// that every compressed clip and the database now live in the same region of virtual memory, reducing the TLB miss
 	// rate (when large pages are used on console and mobile since multiple clips fit within a page) and when we do miss
