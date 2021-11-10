@@ -20,6 +20,9 @@
 	#define ACL_USE_POPCOUNT
 #endif
 
+// In non-shipping builds, if we can log errors we enable the checks at runtime
+#define WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS (!UE_BUILD_SHIPPING && !NO_LOGGING)
+
 #include <acl/core/error.h>
 #include <acl/core/iallocator.h>
 #include <acl/decompression/decompress.h>
@@ -134,4 +137,6 @@ ACLPLUGIN_API acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
 ACLPLUGIN_API acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Level);
 
 ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase);
+
+ACLPLUGIN_API void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, TArray<FTransform>& OutStrippedBindPose);
 #endif // WITH_EDITOR

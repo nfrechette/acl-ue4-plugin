@@ -29,6 +29,14 @@ struct FACLDatabaseCompressedAnimData final : public ICompressedAnimData
 #if WITH_EDITORONLY_DATA
 	/** Holds the compressed_tracks instance for the anim sequence */
 	TArray<uint8> CompressedClip;
+
+	/** Holds the default pose used when bind pose stripping is enabled */
+	TArray<FTransform> StrippedBindPose;
+#endif
+
+#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
+	/** Holds an ACL type bitset for each UE4 track to tell if it was excluded from bind pose stripping or not */
+	TArray<uint32> TracksExcludedFromStrippingBitSet;
 #endif
 
 #if WITH_EDITORONLY_DATA
@@ -73,6 +81,8 @@ class UAnimBoneCompressionCodec_ACLDatabase : public UAnimBoneCompressionCodec_A
 
 	// UAnimBoneCompressionCodec_ACLBase implementation
 	virtual void PostCompression(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) const override;
+	virtual void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, ICompressedAnimData& AnimData) const override;
+	virtual void SetExcludedFromStrippingBitSet(const TArray<uint32>& TracksExcludedFromStrippingBitSet, ICompressedAnimData& AnimData) const;
 	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const override;
 	virtual TArray<class USkeletalMesh*> GetOptimizationTargets() const override { return OptimizationTargets; }
 #endif
