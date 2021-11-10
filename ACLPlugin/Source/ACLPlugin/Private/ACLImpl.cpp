@@ -157,7 +157,9 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 			const rtm::qvvf BindTransform = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), ACLDefaultScale);
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			{
 				Track[SampleIndex] = BindTransform;
+			}
 		}
 
 		Tracks[BoneIndex] = MoveTemp(Track);
