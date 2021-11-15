@@ -31,10 +31,10 @@ void FACLCompressedAnimData::SerializeCompressedData(class FArchive& Ar)
 	}
 #endif
 
+#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
 	int32 TracksExcludedFromStrippingBitSetCount = TracksExcludedFromStrippingBitSet.Num();
 	Ar << TracksExcludedFromStrippingBitSetCount;
 
-#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
 	// Checks are enabled, serialize our data (in editor and non-shipping cooked builds)
 	if (Ar.IsLoading())
 	{
@@ -49,8 +49,10 @@ void FACLCompressedAnimData::SerializeCompressedData(class FArchive& Ar)
 	{
 		Ar.Serialize(TracksExcludedFromStrippingBitSet.GetData(), TracksExcludedFromStrippingBitSetCount * sizeof(int32));
 	}
-	
 #else
+	int32 TracksExcludedFromStrippingBitSetCount = 0;
+	Ar << TracksExcludedFromStrippingBitSetCount;
+
 	if (Ar.IsLoading())
 	{
 		// If checks are disabled, skip the data in the archive since we don't need it
