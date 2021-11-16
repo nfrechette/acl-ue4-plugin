@@ -419,9 +419,13 @@ static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimS
 
 			float Error;
 			if (HasScale)
+			{
 				Error = rtm::scalar_cast(ErrorMetric.calculate_error(calculate_error_args));
+			}
 			else
+			{
 				Error = rtm::scalar_cast(ErrorMetric.calculate_error_no_scale(calculate_error_args));
+			}
 
 			if (Error > MaxError)
 			{
