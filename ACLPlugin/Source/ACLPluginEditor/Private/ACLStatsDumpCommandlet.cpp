@@ -1246,6 +1246,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 		KeyReductionCodec->ScaleCompressionFormat = ACF_None;
 		KeyReductionCodec->bActuallyFilterLinearKeys = true;
 		KeyReductionCodec->bRetarget = TryKeyReductionRetarget;
+
 		KeyReductionCompressionSettings->Codecs.Add(KeyReductionCodec);
 		KeyReductionCompressionSettings->AddToRoot();
 	}
