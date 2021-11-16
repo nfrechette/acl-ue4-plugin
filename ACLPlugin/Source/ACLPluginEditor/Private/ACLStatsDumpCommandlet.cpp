@@ -44,6 +44,7 @@
 //		-auto: Uses automatic compression
 //		-acl: Uses ACL compression
 //		-MasterTolerance=<tolerance>: The error threshold used by automatic compression
+//		-strip: Enables ACL bind pose stripping
 //		-resume: If present, clip extraction or compression will continue where it left off
 //////////////////////////////////////////////////////////////////////////
 
@@ -1233,6 +1234,8 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 	{
 		ACLCompressionSettings = NewObject<UAnimBoneCompressionSettings>(this, UAnimBoneCompressionSettings::StaticClass());
 		ACLCodec = NewObject<UAnimBoneCompressionCodec_ACL>(this, UAnimBoneCompressionCodec_ACL::StaticClass());
+		ACLCodec->bStripBindPose = Switches.Contains(TEXT("strip"));
+
 		ACLCompressionSettings->Codecs.Add(ACLCodec);
 		ACLCompressionSettings->AddToRoot();
 	}
