@@ -401,7 +401,8 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 #if !NO_LOGGING
 	{
-		acl::decompression_context<UE4DebugDBDecompressionSettings> Context;
+		// Use debug settings in case codec picked is the fallback
+		acl::decompression_context<UE4DebugDecompressionSettings> Context;
 		Context.initialize(*CompressedTracks);
 
 		const acl::track_error TrackError = acl::calculate_compression_error(ACLAllocatorImpl, ACLTracks, Context, *Settings.error_metric, ACLBaseTracks);

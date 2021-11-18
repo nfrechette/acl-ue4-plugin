@@ -288,7 +288,8 @@ static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimS
 
 		const acl::qvvf_transform_error_metric ErrorMetric;
 
-		acl::decompression_context<acl::debug_transform_decompression_settings> Context;
+		// Use debug settings since we don't know the specific codec used
+		acl::decompression_context<UE4DebugDecompressionSettings> Context;
 		Context.initialize(*CompressedClipData);
 		const acl::track_error TrackError = acl::calculate_compression_error(ACLAllocatorImpl, Tracks, Context, ErrorMetric);
 
