@@ -133,7 +133,9 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UE4S
 		UE4Bone.ParentIndex = Desc.parent_index == acl::k_invalid_track_index ? INDEX_NONE : Desc.parent_index;
 		UE4Bone.ExportName = BoneName;
 
-		SkeletonModifier.Add(UE4Bone, FTransform::Identity);
+		const FTransform BindPose(QuatCast(Desc.default_value.rotation), VectorCast(Desc.default_value.translation), VectorCast(Desc.default_value.scale));
+
+		SkeletonModifier.Add(UE4Bone, BindPose);
 	}
 
 	// When our modifier is destroyed here, it will rebuild the skeleton
