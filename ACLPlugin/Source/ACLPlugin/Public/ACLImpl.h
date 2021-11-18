@@ -72,7 +72,14 @@ struct UE4DefaultDecompressionSettings : public acl::default_transform_decompres
 #endif
 };
 
-using UE4CustomDecompressionSettings = acl::debug_transform_decompression_settings;
+struct UE4DebugDecompressionSettings : public acl::debug_transform_decompression_settings
+{
+	// Only support our latest version
+	static constexpr acl::compressed_tracks_version16 version_supported() { return acl::compressed_tracks_version16::latest; }
+};
+
+// Same as debug settings for now since everything is allowed
+using UE4CustomDecompressionSettings = UE4DebugDecompressionSettings;
 
 struct UE4SafeDecompressionSettings final : public UE4DefaultDecompressionSettings
 {
@@ -93,7 +100,7 @@ struct UE4DefaultDBDecompressionSettings final : public UE4DefaultDecompressionS
 
 using UE4DebugDatabaseSettings = acl::debug_database_settings;
 
-struct UE4DebugDBDecompressionSettings final : public acl::debug_transform_decompression_settings
+struct UE4DebugDBDecompressionSettings final : public UE4DebugDecompressionSettings
 {
 	using database_settings_type = UE4DebugDatabaseSettings;
 };
