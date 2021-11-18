@@ -122,10 +122,8 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UE4S
 	FReferenceSkeleton& RefSkeleton = const_cast<FReferenceSkeleton&>(UE4Skeleton->GetReferenceSkeleton());
 	FReferenceSkeletonModifier SkeletonModifier(RefSkeleton, UE4Skeleton);
 
-	const uint32 NumBones = Tracks.get_num_tracks();
-	for (uint32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	for (const acl::track_qvvf& Track : Tracks)
 	{
-		const acl::track_qvvf& Track = Tracks[BoneIndex];
 		const acl::track_desc_transformf& Desc = Track.get_description();
 
 		const FString BoneName = ANSI_TO_TCHAR(Track.get_name().c_str());
