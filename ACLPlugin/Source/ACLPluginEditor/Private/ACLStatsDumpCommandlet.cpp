@@ -1017,6 +1017,36 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 	}
 }
 
+static void FixupForBindPoseStripping(const UACLStatsDumpCommandlet& StatsCommandlet, USkeleton* UE4Skeleton, acl::track_array_qvvf& ACLTracks)
+{
+	// When bind pose stripping is enabled, the default value is modified
+	// When reading the tracks from a file, the default value is the bind pose
+	// but we don't want to strip every bone
+	if (StatsCommandlet.TryACLCompression && StatsCommandlet.ACLCodec->bStripBindPose)
+	{
+		TArray<FBoneData> BoneData;
+		FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, BoneData);
+
+		const int32 NumBones = BoneData.Num();
+		for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+		{
+			const FBoneData& UE4Bone = BoneData[BoneIndex];
+
+			acl::track_qvvf& Track = ACLTracks[BoneIndex];
+			acl::track_desc_transformf& Desc = Track.get_description();
+
+			const uint32 TrackIndex = Track.get_output_index();
+			const bool bIsRootBone = TrackIndex == 0;
+
+			if (bIsRootBone || StatsCommandlet.ACLCodec->BindPoseStrippingBoneExclusionList.Contains(UE4Bone.Name))
+			{
+				// This bone is excluded, make sure the default value is the identity since it won't be stripped
+				Desc.default_value = rtm::qvv_identity();
+			}
+		}
+	}
+}
+
 struct CompressAnimationsFunctor
 {
 	template<typename ObjectType>
@@ -1112,6 +1142,8 @@ struct CompressAnimationsFunctor
 
 				// Make sure any pending async compression that might have started during load or construction is done
 				UE4Clip->WaitOnExistingCompression();
+
+				FixupForBindPoseStripping(*StatsCommandlet, UE4Skeleton, Context.ACLTracks);
 
 				UE4SJSONStreamWriter StreamWriter(OutputWriter);
 				sjson::Writer Writer(StreamWriter);
@@ -1329,6 +1361,8 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 				// Make sure any pending async compression that might have started during load or construction is done
 				UE4Clip->WaitOnExistingCompression();
+
+				FixupForBindPoseStripping(*this, UE4Skeleton, ACLTracks);
 
 				FCompressionContext Context;
 				Context.AutoCompressor = AutoCompressionSettings;
