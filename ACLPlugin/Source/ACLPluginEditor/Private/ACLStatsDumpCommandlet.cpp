@@ -278,6 +278,40 @@ struct SimpleTransformWriter final : public acl::track_writer
 	}
 };
 
+static void FixupForBindPoseStripping(const UAnimBoneCompressionCodec_ACLBase& ACLCodec, USkeleton* UE4Skeleton, acl::track_array_qvvf& ACLTracks)
+{
+	// When reading the tracks from a file, the default value is the bind pose
+	// but we don't always want to strip every bone
+
+	TArray<FBoneData> BoneData;
+	FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, BoneData);
+
+	const int32 NumBones = BoneData.Num();
+	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	{
+		const FBoneData& UE4Bone = BoneData[BoneIndex];
+
+		acl::track_qvvf& Track = ACLTracks[BoneIndex];
+		acl::track_desc_transformf& Desc = Track.get_description();
+
+		const uint32 TrackIndex = Track.get_output_index();
+		const bool bIsRootBone = TrackIndex == 0;
+
+		if (
+			// If we aren't doing bind pose stripping
+			!ACLCodec.bStripBindPose
+			// Root bone is always excluded from stripping
+			|| bIsRootBone
+			// This bone is explicitly excluded from stripping
+			|| ACLCodec.BindPoseStrippingBoneExclusionList.Contains(UE4Bone.Name)
+			)
+		{
+			// Make sure the default value is the identity to prevent stripping
+			Desc.default_value = rtm::qvv_identity();
+		}
+	}
+}
+
 static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimSequence* UE4Clip, USkeleton* UE4Skeleton, uint32& OutWorstBone, float& OutMaxError, float& OutWorstSampleTime)
 {
 	// Use the ACL code if we can to calculate the error instead of approximating it with UE4.
@@ -681,6 +715,13 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
+		UAnimBoneCompressionCodec_ACLBase* ACLCodec = Cast<UAnimBoneCompressionCodec_ACLBase>(Context.UE4Clip->CompressedData.BoneCompressionCodec);
+		if (ACLCodec != nullptr)
+		{
+			// Not ideal, this modifies the raw tracks but we shouldn't need them after we measure the error below
+			FixupForBindPoseStripping(*ACLCodec, Context.UE4Skeleton, Context.ACLTracks);
+		}
+
 		const AnimationErrorStats UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
 
 		uint32 WorstBone;
@@ -1017,36 +1058,6 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 	}
 }
 
-static void FixupForBindPoseStripping(const UACLStatsDumpCommandlet& StatsCommandlet, USkeleton* UE4Skeleton, acl::track_array_qvvf& ACLTracks)
-{
-	// When bind pose stripping is enabled, the default value is modified
-	// When reading the tracks from a file, the default value is the bind pose
-	// but we don't want to strip every bone
-	if (StatsCommandlet.TryACLCompression && StatsCommandlet.ACLCodec->bStripBindPose)
-	{
-		TArray<FBoneData> BoneData;
-		FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, BoneData);
-
-		const int32 NumBones = BoneData.Num();
-		for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
-		{
-			const FBoneData& UE4Bone = BoneData[BoneIndex];
-
-			acl::track_qvvf& Track = ACLTracks[BoneIndex];
-			acl::track_desc_transformf& Desc = Track.get_description();
-
-			const uint32 TrackIndex = Track.get_output_index();
-			const bool bIsRootBone = TrackIndex == 0;
-
-			if (bIsRootBone || StatsCommandlet.ACLCodec->BindPoseStrippingBoneExclusionList.Contains(UE4Bone.Name))
-			{
-				// This bone is excluded, make sure the default value is the identity since it won't be stripped
-				Desc.default_value = rtm::qvv_identity();
-			}
-		}
-	}
-}
-
 struct CompressAnimationsFunctor
 {
 	template<typename ObjectType>
@@ -1142,8 +1153,6 @@ struct CompressAnimationsFunctor
 
 				// Make sure any pending async compression that might have started during load or construction is done
 				UE4Clip->WaitOnExistingCompression();
-
-				FixupForBindPoseStripping(*StatsCommandlet, UE4Skeleton, Context.ACLTracks);
 
 				UE4SJSONStreamWriter StreamWriter(OutputWriter);
 				sjson::Writer Writer(StreamWriter);
@@ -1361,8 +1370,6 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 
 				// Make sure any pending async compression that might have started during load or construction is done
 				UE4Clip->WaitOnExistingCompression();
-
-				FixupForBindPoseStripping(*this, UE4Skeleton, ACLTracks);
 
 				FCompressionContext Context;
 				Context.AutoCompressor = AutoCompressionSettings;
