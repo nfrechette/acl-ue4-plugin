@@ -55,6 +55,8 @@ void UAnimBoneCompressionCodec_ACLSafe::DecompressBone(FAnimSequenceDecompressio
 	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
 	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
+	HandleDecompressBoneBindPose(bStripBindPose, AnimData, TrackIndex, OutAtom);
+
 	acl::decompression_context<UE4SafeDecompressionSettings> ACLContext;
 	ACLContext.initialize(*CompressedClipData);
 
