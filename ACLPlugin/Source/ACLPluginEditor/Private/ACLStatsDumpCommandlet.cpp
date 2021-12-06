@@ -252,6 +252,13 @@ static bool UE4ClipHasScale(const UAnimSequence* UE4Clip)
 
 struct SimpleTransformWriter final : public acl::track_writer
 {
+	//////////////////////////////////////////////////////////////////////////
+	// For performance reasons, this writer skips all default sub-tracks.
+	// It is the responsibility of the caller to pre-populate them by calling initialize_with_defaults().
+	static constexpr acl::default_sub_track_mode get_default_rotation_mode() { return acl::default_sub_track_mode::skipped; }
+	static constexpr acl::default_sub_track_mode get_default_translation_mode() { return acl::default_sub_track_mode::skipped; }
+	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return acl::default_sub_track_mode::skipped; }
+
 	explicit SimpleTransformWriter(TArray<rtm::qvvf>& Transforms_) : Transforms(Transforms_) {}
 
 	TArray<rtm::qvvf>& Transforms;
@@ -494,10 +501,21 @@ static void DumpClipDetailedError(const acl::track_array_qvvf& Tracks, UAnimSequ
 		acl::decompression_context<acl::debug_transform_decompression_settings> Context;
 		Context.initialize(*CompressedClipData);
 
+		SimpleTransformWriter PoseWriter(LossyLocalPoseTransforms);
+
+		// Initialize the output pose with our default values (possibly bind pose) since default sub-tracks will be skipped
+		// to handle stripping
+		for (const acl::track_qvvf& track : Tracks)
+		{
+			const acl::track_desc_transformf& desc = track.get_description();
+			if (desc.output_index == acl::k_invalid_track_index)
+				continue;	// Stripped, skip it
+
+			LossyLocalPoseTransforms[desc.output_index] = desc.default_value;
+		}
+
 		Writer["error_per_frame_and_bone"] = [&](sjson::ArrayWriter& Writer)
 		{
-			SimpleTransformWriter PoseWriter(LossyLocalPoseTransforms);
-
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				// Sample our streams and calculate the error
