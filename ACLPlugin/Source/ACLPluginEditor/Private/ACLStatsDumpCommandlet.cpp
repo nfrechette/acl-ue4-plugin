@@ -669,12 +669,19 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
-		const AnimationErrorStats UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+		const bool bHasClipData = Context.UE4Clip->CompressedData.CompressedDataStructure != nullptr;
 
-		uint32 WorstBone;
-		float MaxError;
-		float WorstSampleTime;
-		CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		AnimationErrorStats UE4ErrorStats;
+		uint32 WorstBone = INDEX_NONE;
+		float MaxError = 0.0f;
+		float WorstSampleTime = 0.0f;
+
+		if (bHasClipData)
+		{
+			UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+
+			CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		}
 
 		const int32 CompressedSize = Context.UE4Clip->GetApproxCompressedSize();
 		const double UE4CompressionRatio = double(Context.UE4RawSize) / double(CompressedSize);
@@ -696,7 +703,9 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 			Writer["acl_worst_bone"] = WorstBone;
 			Writer["acl_worst_time"] = WorstSampleTime;
 
-			if (Context.UE4Clip->CompressedData.BoneCompressionCodec != nullptr && Context.UE4Clip->CompressedData.BoneCompressionCodec->IsA<UAnimCompress>())
+			if (Context.UE4Clip->CompressedData.BoneCompressionCodec != nullptr
+				&& Context.UE4Clip->CompressedData.BoneCompressionCodec->IsA<UAnimCompress>()
+				&& bHasClipData)
 			{
 				const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
 				Writer["rotation_format"] = TCHAR_TO_ANSI(*FAnimationUtils::GetAnimationCompressionFormatString(AnimData.RotationCompressionFormat));
@@ -704,7 +713,7 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 				Writer["scale_format"] = TCHAR_TO_ANSI(*FAnimationUtils::GetAnimationCompressionFormatString(AnimData.ScaleCompressionFormat));
 			}
 
-			if (PerformExhaustiveDump)
+			if (PerformExhaustiveDump && bHasClipData)
 			{
 				DumpClipDetailedError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, Writer);
 			}
@@ -733,19 +742,26 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
+		const bool bHasClipData = Context.UE4Clip->CompressedData.CompressedDataStructure != nullptr;
+
 		UAnimBoneCompressionCodec_ACLBase* ACLCodec = Cast<UAnimBoneCompressionCodec_ACLBase>(Context.UE4Clip->CompressedData.BoneCompressionCodec);
-		if (ACLCodec != nullptr)
+		if (ACLCodec != nullptr && bHasClipData)
 		{
 			// Not ideal, this modifies the raw tracks but we shouldn't need them after we measure the error below
 			FixupForBindPoseStripping(*ACLCodec, Context.UE4Skeleton, Context.ACLTracks);
 		}
 
-		const AnimationErrorStats UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+		AnimationErrorStats UE4ErrorStats;
+		uint32 WorstBone = INDEX_NONE;
+		float MaxError = 0.0f;
+		float WorstSampleTime = 0.0f;
 
-		uint32 WorstBone;
-		float MaxError;
-		float WorstSampleTime;
-		CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		if (bHasClipData)
+		{
+			UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+
+			CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		}
 
 		const int32 CompressedSize = Context.UE4Clip->GetApproxCompressedSize();
 		const double UE4CompressionRatio = double(Context.UE4RawSize) / double(CompressedSize);
@@ -767,7 +783,7 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 			Writer["acl_worst_bone"] = WorstBone;
 			Writer["acl_worst_time"] = WorstSampleTime;
 
-			if (PerformExhaustiveDump)
+			if (PerformExhaustiveDump && bHasClipData)
 			{
 				DumpClipDetailedError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, Writer);
 			}
@@ -811,10 +827,6 @@ static bool IsKeyDropped(int32 NumFrames, const uint8* FrameTable, int32 NumKeys
 
 static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool PerformExhaustiveDump, sjson::Writer& Writer)
 {
-	if (Context.UE4Clip->GetRawNumberOfFrames() <= 1)
-	{
-		return;
-	}
 	// Force recompression and avoid the DDC
 	TGuardValue<int32> CompressGuard(Context.UE4Clip->CompressCommandletVersion, INDEX_NONE);
 
@@ -830,13 +842,19 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
-		const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
-		const AnimationErrorStats UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+		const bool bHasClipData = Context.UE4Clip->CompressedData.CompressedDataStructure != nullptr;
 
-		uint32 WorstBone;
-		float MaxError;
-		float WorstSampleTime;
-		CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		AnimationErrorStats UE4ErrorStats;
+		uint32 WorstBone = INDEX_NONE;
+		float MaxError = 0.0f;
+		float WorstSampleTime = 0.0f;
+
+		if (bHasClipData)
+		{
+			UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+
+			CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		}
 
 		const int32 CompressedSize = Context.UE4Clip->GetApproxCompressedSize();
 		const double UE4CompressionRatio = double(Context.UE4RawSize) / double(CompressedSize);
@@ -858,7 +876,7 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 			Writer["acl_worst_bone"] = WorstBone;
 			Writer["acl_worst_time"] = WorstSampleTime;
 
-			if (PerformExhaustiveDump)
+			if (PerformExhaustiveDump && bHasClipData)
 			{
 				DumpClipDetailedError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, Writer);
 			}
@@ -874,6 +892,13 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 			Writer["dropped_track_keys"] = [&](sjson::ArrayWriter& Writer)
 			{
+				if (!bHasClipData)
+				{
+					return;	// No data, nothing to append
+				}
+
+				const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
+
 				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
 				const int32 NumTracks = RawTracks.Num();
 				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
@@ -945,6 +970,13 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 			Writer["dropped_pose_keys"] = [&](sjson::ArrayWriter& Writer)
 			{
+				if (!bHasClipData)
+				{
+					return;	// No data, nothing to append
+				}
+
+				const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
+
 				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
 				const int32 NumTracks = RawTracks.Num();
 				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
