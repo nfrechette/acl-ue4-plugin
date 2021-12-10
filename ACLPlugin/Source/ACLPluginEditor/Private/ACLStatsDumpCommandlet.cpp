@@ -750,6 +750,8 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 	{
 		return;
 	}
+	// Force recompression and avoid the DDC
+	TGuardValue<int32> CompressGuard(Context.UE4Clip->CompressCommandletVersion, INDEX_NONE);
 
 	const uint64 UE4StartTimeCycles = FPlatformTime::Cycles64();
 
