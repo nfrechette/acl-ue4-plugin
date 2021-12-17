@@ -10,6 +10,7 @@ namespace UnrealBuildTool.Rules
 		{
 			PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 			//OptimizeCode = CodeOptimization.Never;
+			//bUseUnity = false;
 
 			PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
 
