@@ -32,9 +32,20 @@ struct FACLCompressedAnimData final : public ICompressedAnimData
 	/** Holds the compressed_tracks instance */
 	TArrayView<uint8> CompressedByteStream;
 
+#if WITH_EDITORONLY_DATA
+	/** Holds the default pose used when bind pose stripping is enabled */
+	TArray<FTransform> StrippedBindPose;
+#endif
+
+#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
+	/** Holds an ACL type bitset for each UE4 track to tell if it was excluded from bind pose stripping or not */
+	TArray<uint32> TracksExcludedFromStrippingBitSet;
+#endif
+
 	const acl::compressed_tracks* GetCompressedTracks() const { return acl::make_compressed_tracks(CompressedByteStream.GetData()); }
 
 	// ICompressedAnimData implementation
+	virtual void SerializeCompressedData(class FArchive& Ar) override;
 	virtual void Bind(const TArrayView<uint8> BulkData) override { CompressedByteStream = BulkData; }
 	virtual int64 GetApproxCompressedSize() const override { return CompressedByteStream.Num(); }
 	virtual bool IsValid() const override;
@@ -62,14 +73,25 @@ class UAnimBoneCompressionCodec_ACLBase : public UAnimBoneCompressionCodec
 	/** The error threshold to use when optimizing and compressing the animation sequence. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float ErrorThreshold;
+#endif
+
+	/** Whether or not to strip the bind pose from compressed clips. Note that this is only used in cooked builds and runtime behavior may differ from the editor, see documentation for details. */
+	UPROPERTY(EditAnywhere, Category = "ACL Bind Pose (Experimental)")
+	bool bStripBindPose;
+
+#if WITH_EDITORONLY_DATA
+	/** Bones in this list will not be stripped even when equal to their bind pose value. */
+	UPROPERTY(EditAnywhere, Category = "ACL Bind Pose (Experimental)", meta = (DisplayName = "Exclusion List"))
+	TArray<FName> BindPoseStrippingBoneExclusionList;
 
 	// UAnimBoneCompressionCodec implementation
 	virtual bool Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) override;
 	virtual void PopulateDDCKey(FArchive& Ar) override;
 
 	// Our implementation
-	virtual bool UseDatabase() const { return false; }
-	virtual void RegisterWithDatabase(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) {}
+	virtual void PostCompression(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) const {}
+	virtual void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, ICompressedAnimData& AnimData) const;
+	virtual void SetExcludedFromStrippingBitSet(const TArray<uint32>& TracksExcludedFromStrippingBitSet, ICompressedAnimData& AnimData) const;
 	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const PURE_VIRTUAL(UAnimBoneCompressionCodec_ACLBase::GetCompressionSettings, );
 	virtual TArray<class USkeletalMesh*> GetOptimizationTargets() const { return TArray<class USkeletalMesh*>(); }
 	virtual ACLSafetyFallbackResult ExecuteSafetyFallback(acl::iallocator& Allocator, const acl::compression_settings& Settings, const acl::track_array_qvvf& RawClip, const acl::track_array_qvvf& BaseClip, const acl::compressed_tracks& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult);

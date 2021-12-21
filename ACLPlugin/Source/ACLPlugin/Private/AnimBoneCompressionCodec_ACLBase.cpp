@@ -14,10 +14,62 @@
 #include <acl/compression/compress.h>
 #include <acl/compression/transform_error_metrics.h>
 #include <acl/compression/track_error.h>
+#include <acl/core/bitset.h>
 #include <acl/decompression/decompress.h>
 #endif	// WITH_EDITORONLY_DATA
 
 #include <acl/core/compressed_tracks.h>
+
+void FACLCompressedAnimData::SerializeCompressedData(class FArchive& Ar)
+{
+	ICompressedAnimData::SerializeCompressedData(Ar);
+
+#if WITH_EDITORONLY_DATA
+	if (!Ar.IsFilterEditorOnly())
+	{
+		Ar << StrippedBindPose;
+	}
+#endif
+
+#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
+	int32 TracksExcludedFromStrippingBitSetCount = TracksExcludedFromStrippingBitSet.Num();
+	Ar << TracksExcludedFromStrippingBitSetCount;
+
+	// Checks are enabled, serialize our data (in editor and non-shipping cooked builds)
+	if (Ar.IsLoading())
+	{
+		TArray<uint32> ExcludedBitSetData;
+		ExcludedBitSetData.AddUninitialized(TracksExcludedFromStrippingBitSetCount);
+
+		Ar.Serialize(ExcludedBitSetData.GetData(), TracksExcludedFromStrippingBitSetCount * sizeof(int32));
+
+		Swap(TracksExcludedFromStrippingBitSet, ExcludedBitSetData);
+	}
+	else if (Ar.IsSaving() || Ar.IsCountingMemory())
+	{
+		Ar.Serialize(TracksExcludedFromStrippingBitSet.GetData(), TracksExcludedFromStrippingBitSetCount * sizeof(int32));
+	}
+#else
+	int32 TracksExcludedFromStrippingBitSetCount = 0;
+	Ar << TracksExcludedFromStrippingBitSetCount;
+
+	if (Ar.IsLoading())
+	{
+		// If checks are disabled, skip the data in the archive since we don't need it
+		const int64 CurrentPos = Ar.Tell();
+		Ar.Seek(CurrentPos + TracksExcludedFromStrippingBitSetCount * sizeof(int32));
+	}
+	else if (Ar.IsCountingMemory())
+	{
+		// Nothing to count since we don't use the data
+	}
+	else
+	{
+		// Should never happen since stripping checks should always be enabled in the editor and during cooking where saving happens
+		UE_LOG(LogAnimationCompression, Fatal, TEXT("Cannot save ACL excluded from stripping bitset data in this configuration"));
+	}
+#endif
+}
 
 bool FACLCompressedAnimData::IsValid() const
 {
@@ -43,6 +95,8 @@ UAnimBoneCompressionCodec_ACLBase::UAnimBoneCompressionCodec_ACLBase(const FObje
 	SafeVirtualVertexDistance = 100.0f;		// 100cm
 
 	ErrorThreshold = 0.01f;					// 0.01cm, conservative enough for cinematographic quality
+
+	bStripBindPose = false;					// Disabled by default since it could be destructive depending whether bones are decompressed individually or not
 #endif	// WITH_EDITORONLY_DATA
 }
 
@@ -173,6 +227,84 @@ static void PopulateShellDistanceFromOptimizationTargets(const FCompressibleAnim
 	}
 }
 
+static TArray<uint32> StripBindPose(const FCompressibleAnimData& CompressibleAnimData, const TArray<FName>& BindPoseStrippingBoneExclusionList, acl::track_array_qvvf& ACLTracks)
+{
+	const int32 NumTracks = CompressibleAnimData.TrackToSkeletonMapTable.Num();
+	const acl::bitset_description ExcludedBitsetDesc = acl::bitset_description::make_from_num_bits(NumTracks);
+
+	TArray<uint32> TracksExcludedFromStrippingBitSet;
+	TracksExcludedFromStrippingBitSet.AddZeroed(ExcludedBitsetDesc.get_size());
+
+	const int32 NumBones = CompressibleAnimData.BoneData.Num();
+	const rtm::vector4f DefaultScale = rtm::vector_set(1.0f);
+
+	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	{
+		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[BoneIndex];
+
+		acl::track_qvvf& Track = ACLTracks[BoneIndex];
+		acl::track_desc_transformf& Desc = Track.get_description();
+
+		// When we decompress a whole pose, the output buffer will already contain the bind pose.
+		// As such, we skip all default sub-tracks and avoid writing anything to the output pose.
+		// By setting the default value to the bind pose, default sub-tracks will be equal to the bind pose
+		// and be stripped from the compressed data buffer entirely.
+		// However, when we decompress a single bone, we cannot recover what the bind pose is at the codec level.
+		// Since we can't output nothing, we must exclude these bones to make sure the bind pose is still
+		// contained in the compressed data buffer. Only if these are equal to the default sub-track value
+		// will they be skipped and stripped (e.g. identity rotation/translation/scale).
+
+		// As such, here are the potential behaviors for non-animated bones equal to the default_value below:
+		//     A stripped bone equal to the bind pose (stripped)
+		//         Skipped during whole pose decompression, already present in output buffer
+		//         Single bone decompression will output the identity which is INCORRECT! Hence why if this is needed, we must exclude this bone
+		//     A stripped bone not equal to the bind pose (it won't be stripped nor skipped)
+		//         Decompressed normally with the rest of the pose and written to the output buffer
+		//         Single bone decompression will output the correct value
+		//     An excluded bone that is equal to the identity (stripped, normal pre ACL 2.1 behavior)
+		//         Skipped during whole pose decompression, already present in output buffer
+		//         Single bone decompression will output the identity
+		//     An excluded bone that is not equal to the identity (it won't be stripped nor skipped)
+		//         Decompressed normally with the rest of the pose and written to the output buffer
+		//         Single bone decompression will output the correct value
+
+		const uint32 TrackIndex = Track.get_output_index();
+
+		// The root bone is always excluded from bind pose stripping since we query it during normal decompression
+		// UE4 only allows a single root bone but it could have a parent that is stripped during compression
+		// As such, we use the output track index to tell it apart
+		// If there are more root bones, it doesn't matter, only track 0 is queried for root motion manually
+		const bool bIsRootBone = TrackIndex == 0;
+
+		if (!bIsRootBone && !BindPoseStrippingBoneExclusionList.Contains(UE4Bone.Name))
+		{
+			// This bone isn't excluded, set the default value to the bind pose so that it can be stripped
+			Desc.default_value = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), DefaultScale);
+		}
+		else if (TrackIndex != acl::k_invalid_track_index)
+		{
+			// This bone is excluded from stripping and is used
+			acl::bitset_set(TracksExcludedFromStrippingBitSet.GetData(), ExcludedBitsetDesc, TrackIndex, true);
+		}
+	}
+
+	return TracksExcludedFromStrippingBitSet;
+}
+
+void UAnimBoneCompressionCodec_ACLBase::PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, ICompressedAnimData& AnimData) const
+{
+	FACLCompressedAnimData& ACLAnimData = static_cast<FACLCompressedAnimData&>(AnimData);
+	::PopulateStrippedBindPose(CompressibleAnimData, ACLTracks, ACLAnimData.StrippedBindPose);
+}
+
+void UAnimBoneCompressionCodec_ACLBase::SetExcludedFromStrippingBitSet(const TArray<uint32>& TracksExcludedFromStrippingBitSet, ICompressedAnimData& AnimData) const
+{
+#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
+	FACLCompressedAnimData& ACLAnimData = static_cast<FACLCompressedAnimData&>(AnimData);
+	ACLAnimData.TracksExcludedFromStrippingBitSet = TracksExcludedFromStrippingBitSet;
+#endif
+}
+
 bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
 {
 	acl::track_array_qvvf ACLTracks = BuildACLTransformTrackArray(ACLAllocatorImpl, CompressibleAnimData, DefaultVirtualVertexDistance, SafeVirtualVertexDistance, false);
@@ -202,6 +334,18 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 			Track.get_description().constant_rotation_threshold_angle = 0.0f;
 	}
 
+	TArray<uint32> TracksExcludedFromStrippingBitSet;
+
+	// Enable bind pose stripping if we need to.
+	// Additive sequences have their bind pose equivalent as the identity transform and as
+	// such, ACL performs stripping by default and everything works great.
+	// We thus disable the custom behavior and the exclusion list.
+	const bool bUsesBindPoseStripping = bStripBindPose && !CompressibleAnimData.bIsValidAdditive;
+	if (bUsesBindPoseStripping)
+	{
+		TracksExcludedFromStrippingBitSet = StripBindPose(CompressibleAnimData, BindPoseStrippingBoneExclusionList, ACLTracks);
+	}
+
 	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
@@ -217,12 +361,6 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	}
 
 	const acl::additive_clip_format8 AdditiveFormat = acl::additive_clip_format8::additive0;
-	const bool bUseStreamingDatabase = UseDatabase();
-
-	if (bUseStreamingDatabase)
-	{
-		Settings.enable_database_support = true;
-	}
 
 	acl::output_stats Stats;
 	acl::compressed_tracks* CompressedTracks = nullptr;
@@ -263,7 +401,8 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 #if !NO_LOGGING
 	{
-		acl::decompression_context<UE4DebugDBDecompressionSettings> Context;
+		// Use debug settings in case codec picked is the fallback
+		acl::decompression_context<UE4DebugDecompressionSettings> Context;
 		Context.initialize(*CompressedTracks);
 
 		const acl::track_error TrackError = acl::calculate_compression_error(ACLAllocatorImpl, ACLTracks, Context, *Settings.error_metric, ACLBaseTracks);
@@ -275,10 +414,17 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 	ACLAllocatorImpl.deallocate(CompressedTracks, CompressedClipDataSize);
 
-	if (bUseStreamingDatabase)
+	if (bUsesBindPoseStripping)
 	{
-		RegisterWithDatabase(CompressibleAnimData, OutResult);
+		// Cache the stripped bind pose since we need it in the editor
+		PopulateStrippedBindPose(CompressibleAnimData, ACLTracks, *OutResult.AnimData);
+
+		// Allow codecs to cache which tracks are excluded from stripping for debug purposes
+		SetExcludedFromStrippingBitSet(TracksExcludedFromStrippingBitSet, *OutResult.AnimData);
 	}
+
+	// Allow codecs to override final anim data and result
+	PostCompression(CompressibleAnimData, OutResult);
 
 	// Bind our compressed sequence data buffer
 	OutResult.AnimData->Bind(OutResult.CompressedByteStream);
@@ -290,7 +436,7 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 {
 	Super::PopulateDDCKey(Ar);
 
-	uint32 ForceRebuildVersion = 2;
+	uint32 ForceRebuildVersion = 10;
 
 	Ar << ForceRebuildVersion << DefaultVirtualVertexDistance << SafeVirtualVertexDistance << ErrorThreshold;
 	Ar << CompressionLevel;
@@ -302,6 +448,8 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 		uint32 MatchNameHash = GetTypeHash(MatchName);
 		Ar << MatchNameHash;
 	}
+
+	Ar << bStripBindPose << BindPoseStrippingBoneExclusionList;
 }
 
 ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACLBase::ExecuteSafetyFallback(acl::iallocator& Allocator, const acl::compression_settings& Settings, const acl::track_array_qvvf& RawClip, const acl::track_array_qvvf& BaseClip, const acl::compressed_tracks& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)

@@ -44,6 +44,7 @@
 //		-auto: Uses automatic compression
 //		-acl: Uses ACL compression
 //		-MasterTolerance=<tolerance>: The error threshold used by automatic compression
+//		-strip: Enables ACL bind pose stripping
 //		-resume: If present, clip extraction or compression will continue where it left off
 //////////////////////////////////////////////////////////////////////////
 
@@ -121,10 +122,8 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UE4S
 	FReferenceSkeleton& RefSkeleton = const_cast<FReferenceSkeleton&>(UE4Skeleton->GetReferenceSkeleton());
 	FReferenceSkeletonModifier SkeletonModifier(RefSkeleton, UE4Skeleton);
 
-	const uint32 NumBones = Tracks.get_num_tracks();
-	for (uint32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	for (const acl::track_qvvf& Track : Tracks)
 	{
-		const acl::track_qvvf& Track = Tracks[BoneIndex];
 		const acl::track_desc_transformf& Desc = Track.get_description();
 
 		const FString BoneName = ANSI_TO_TCHAR(Track.get_name().c_str());
@@ -134,7 +133,9 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UE4S
 		UE4Bone.ParentIndex = Desc.parent_index == acl::k_invalid_track_index ? INDEX_NONE : Desc.parent_index;
 		UE4Bone.ExportName = BoneName;
 
-		SkeletonModifier.Add(UE4Bone, FTransform::Identity);
+		const FTransform BindPose(QuatCast(Desc.default_value.rotation), VectorCast(Desc.default_value.translation), VectorCast(Desc.default_value.scale));
+
+		SkeletonModifier.Add(UE4Bone, BindPose);
 	}
 
 	// When our modifier is destroyed here, it will rebuild the skeleton
@@ -251,6 +252,13 @@ static bool UE4ClipHasScale(const UAnimSequence* UE4Clip)
 
 struct SimpleTransformWriter final : public acl::track_writer
 {
+	//////////////////////////////////////////////////////////////////////////
+	// For performance reasons, this writer skips all default sub-tracks.
+	// It is the responsibility of the caller to pre-populate them by calling initialize_with_defaults().
+	static constexpr acl::default_sub_track_mode get_default_rotation_mode() { return acl::default_sub_track_mode::skipped; }
+	static constexpr acl::default_sub_track_mode get_default_translation_mode() { return acl::default_sub_track_mode::skipped; }
+	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return acl::default_sub_track_mode::skipped; }
+
 	explicit SimpleTransformWriter(TArray<rtm::qvvf>& Transforms_) : Transforms(Transforms_) {}
 
 	TArray<rtm::qvvf>& Transforms;
@@ -277,6 +285,40 @@ struct SimpleTransformWriter final : public acl::track_writer
 	}
 };
 
+static void FixupForBindPoseStripping(const UAnimBoneCompressionCodec_ACLBase& ACLCodec, USkeleton* UE4Skeleton, acl::track_array_qvvf& ACLTracks)
+{
+	// When reading the tracks from a file, the default value is the bind pose
+	// but we don't always want to strip every bone
+
+	TArray<FBoneData> BoneData;
+	FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, BoneData);
+
+	const int32 NumBones = BoneData.Num();
+	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	{
+		const FBoneData& UE4Bone = BoneData[BoneIndex];
+
+		acl::track_qvvf& Track = ACLTracks[BoneIndex];
+		acl::track_desc_transformf& Desc = Track.get_description();
+
+		const uint32 TrackIndex = Track.get_output_index();
+		const bool bIsRootBone = TrackIndex == 0;
+
+		if (
+			// If we aren't doing bind pose stripping
+			!ACLCodec.bStripBindPose
+			// Root bone is always excluded from stripping
+			|| bIsRootBone
+			// This bone is explicitly excluded from stripping
+			|| ACLCodec.BindPoseStrippingBoneExclusionList.Contains(UE4Bone.Name)
+			)
+		{
+			// Make sure the default value is the identity to prevent stripping
+			Desc.default_value = rtm::qvv_identity();
+		}
+	}
+}
+
 static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimSequence* UE4Clip, USkeleton* UE4Skeleton, uint32& OutWorstBone, float& OutMaxError, float& OutWorstSampleTime)
 {
 	// Use the ACL code if we can to calculate the error instead of approximating it with UE4.
@@ -287,7 +329,8 @@ static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimS
 
 		const acl::qvvf_transform_error_metric ErrorMetric;
 
-		acl::decompression_context<acl::debug_transform_decompression_settings> Context;
+		// Use debug settings since we don't know the specific codec used
+		acl::decompression_context<UE4DebugDecompressionSettings> Context;
 		Context.initialize(*CompressedClipData);
 		const acl::track_error TrackError = acl::calculate_compression_error(ACLAllocatorImpl, Tracks, Context, ErrorMetric);
 
@@ -374,9 +417,13 @@ static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimS
 
 			float Error;
 			if (HasScale)
+			{
 				Error = rtm::scalar_cast(ErrorMetric.calculate_error(calculate_error_args));
+			}
 			else
+			{
 				Error = rtm::scalar_cast(ErrorMetric.calculate_error_no_scale(calculate_error_args));
+			}
 
 			if (Error > MaxError)
 			{
@@ -454,10 +501,21 @@ static void DumpClipDetailedError(const acl::track_array_qvvf& Tracks, UAnimSequ
 		acl::decompression_context<acl::debug_transform_decompression_settings> Context;
 		Context.initialize(*CompressedClipData);
 
+		SimpleTransformWriter PoseWriter(LossyLocalPoseTransforms);
+
+		// Initialize the output pose with our default values (possibly bind pose) since default sub-tracks will be skipped
+		// to handle stripping
+		for (const acl::track_qvvf& track : Tracks)
+		{
+			const acl::track_desc_transformf& desc = track.get_description();
+			if (desc.output_index == acl::k_invalid_track_index)
+				continue;	// Stripped, skip it
+
+			LossyLocalPoseTransforms[desc.output_index] = desc.default_value;
+		}
+
 		Writer["error_per_frame_and_bone"] = [&](sjson::ArrayWriter& Writer)
 		{
-			SimpleTransformWriter PoseWriter(LossyLocalPoseTransforms);
-
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				// Sample our streams and calculate the error
@@ -611,12 +669,19 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
-		const AnimationErrorStats UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+		const bool bHasClipData = Context.UE4Clip->CompressedData.CompressedDataStructure != nullptr;
 
-		uint32 WorstBone;
-		float MaxError;
-		float WorstSampleTime;
-		CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		AnimationErrorStats UE4ErrorStats;
+		uint32 WorstBone = INDEX_NONE;
+		float MaxError = 0.0f;
+		float WorstSampleTime = 0.0f;
+
+		if (bHasClipData)
+		{
+			UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+
+			CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		}
 
 		const int32 CompressedSize = Context.UE4Clip->GetApproxCompressedSize();
 		const double UE4CompressionRatio = double(Context.UE4RawSize) / double(CompressedSize);
@@ -638,7 +703,9 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 			Writer["acl_worst_bone"] = WorstBone;
 			Writer["acl_worst_time"] = WorstSampleTime;
 
-			if (Context.UE4Clip->CompressedData.BoneCompressionCodec != nullptr && Context.UE4Clip->CompressedData.BoneCompressionCodec->IsA<UAnimCompress>())
+			if (Context.UE4Clip->CompressedData.BoneCompressionCodec != nullptr
+				&& Context.UE4Clip->CompressedData.BoneCompressionCodec->IsA<UAnimCompress>()
+				&& bHasClipData)
 			{
 				const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
 				Writer["rotation_format"] = TCHAR_TO_ANSI(*FAnimationUtils::GetAnimationCompressionFormatString(AnimData.RotationCompressionFormat));
@@ -646,7 +713,7 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 				Writer["scale_format"] = TCHAR_TO_ANSI(*FAnimationUtils::GetAnimationCompressionFormatString(AnimData.ScaleCompressionFormat));
 			}
 
-			if (PerformExhaustiveDump)
+			if (PerformExhaustiveDump && bHasClipData)
 			{
 				DumpClipDetailedError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, Writer);
 			}
@@ -675,12 +742,26 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
-		const AnimationErrorStats UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+		const bool bHasClipData = Context.UE4Clip->CompressedData.CompressedDataStructure != nullptr;
 
-		uint32 WorstBone;
-		float MaxError;
-		float WorstSampleTime;
-		CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		UAnimBoneCompressionCodec_ACLBase* ACLCodec = Cast<UAnimBoneCompressionCodec_ACLBase>(Context.UE4Clip->CompressedData.BoneCompressionCodec);
+		if (ACLCodec != nullptr && bHasClipData)
+		{
+			// Not ideal, this modifies the raw tracks but we shouldn't need them after we measure the error below
+			FixupForBindPoseStripping(*ACLCodec, Context.UE4Skeleton, Context.ACLTracks);
+		}
+
+		AnimationErrorStats UE4ErrorStats;
+		uint32 WorstBone = INDEX_NONE;
+		float MaxError = 0.0f;
+		float WorstSampleTime = 0.0f;
+
+		if (bHasClipData)
+		{
+			UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+
+			CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		}
 
 		const int32 CompressedSize = Context.UE4Clip->GetApproxCompressedSize();
 		const double UE4CompressionRatio = double(Context.UE4RawSize) / double(CompressedSize);
@@ -702,7 +783,7 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 			Writer["acl_worst_bone"] = WorstBone;
 			Writer["acl_worst_time"] = WorstSampleTime;
 
-			if (PerformExhaustiveDump)
+			if (PerformExhaustiveDump && bHasClipData)
 			{
 				DumpClipDetailedError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, Writer);
 			}
@@ -746,10 +827,8 @@ static bool IsKeyDropped(int32 NumFrames, const uint8* FrameTable, int32 NumKeys
 
 static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool PerformExhaustiveDump, sjson::Writer& Writer)
 {
-	if (Context.UE4Clip->GetRawNumberOfFrames() <= 1)
-	{
-		return;
-	}
+	// Force recompression and avoid the DDC
+	TGuardValue<int32> CompressGuard(Context.UE4Clip->CompressCommandletVersion, INDEX_NONE);
 
 	const uint64 UE4StartTimeCycles = FPlatformTime::Cycles64();
 
@@ -763,13 +842,19 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 	if (Context.UE4Clip->IsCompressedDataValid())
 	{
-		const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
-		const AnimationErrorStats UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+		const bool bHasClipData = Context.UE4Clip->CompressedData.CompressedDataStructure != nullptr;
 
-		uint32 WorstBone;
-		float MaxError;
-		float WorstSampleTime;
-		CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		AnimationErrorStats UE4ErrorStats;
+		uint32 WorstBone = INDEX_NONE;
+		float MaxError = 0.0f;
+		float WorstSampleTime = 0.0f;
+
+		if (bHasClipData)
+		{
+			UE4ErrorStats = Context.UE4Clip->CompressedData.CompressedDataStructure->BoneCompressionErrorStats;
+
+			CalculateClipError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, WorstBone, MaxError, WorstSampleTime);
+		}
 
 		const int32 CompressedSize = Context.UE4Clip->GetApproxCompressedSize();
 		const double UE4CompressionRatio = double(Context.UE4RawSize) / double(CompressedSize);
@@ -791,7 +876,7 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 			Writer["acl_worst_bone"] = WorstBone;
 			Writer["acl_worst_time"] = WorstSampleTime;
 
-			if (PerformExhaustiveDump)
+			if (PerformExhaustiveDump && bHasClipData)
 			{
 				DumpClipDetailedError(Context.ACLTracks, Context.UE4Clip, Context.UE4Skeleton, Writer);
 			}
@@ -807,6 +892,13 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 			Writer["dropped_track_keys"] = [&](sjson::ArrayWriter& Writer)
 			{
+				if (!bHasClipData)
+				{
+					return;	// No data, nothing to append
+				}
+
+				const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
+
 				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
 				const int32 NumTracks = RawTracks.Num();
 				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
@@ -878,6 +970,13 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 			Writer["dropped_pose_keys"] = [&](sjson::ArrayWriter& Writer)
 			{
+				if (!bHasClipData)
+				{
+					return;	// No data, nothing to append
+				}
+
+				const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
+
 				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
 				const int32 NumTracks = RawTracks.Num();
 				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
@@ -1229,6 +1328,8 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 	{
 		ACLCompressionSettings = NewObject<UAnimBoneCompressionSettings>(this, UAnimBoneCompressionSettings::StaticClass());
 		ACLCodec = NewObject<UAnimBoneCompressionCodec_ACL>(this, UAnimBoneCompressionCodec_ACL::StaticClass());
+		ACLCodec->bStripBindPose = Switches.Contains(TEXT("strip"));
+
 		ACLCompressionSettings->Codecs.Add(ACLCodec);
 		ACLCompressionSettings->AddToRoot();
 	}
@@ -1242,6 +1343,7 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 		KeyReductionCodec->ScaleCompressionFormat = ACF_None;
 		KeyReductionCodec->bActuallyFilterLinearKeys = true;
 		KeyReductionCodec->bRetarget = TryKeyReductionRetarget;
+
 		KeyReductionCompressionSettings->Codecs.Add(KeyReductionCodec);
 		KeyReductionCompressionSettings->AddToRoot();
 	}

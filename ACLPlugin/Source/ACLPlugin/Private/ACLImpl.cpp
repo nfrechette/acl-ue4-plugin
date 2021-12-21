@@ -157,12 +157,41 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 			const rtm::qvvf BindTransform = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), ACLDefaultScale);
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			{
 				Track[SampleIndex] = BindTransform;
+			}
 		}
 
 		Tracks[BoneIndex] = MoveTemp(Track);
 	}
 
 	return Tracks;
+}
+
+void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, TArray<FTransform>& OutStrippedBindPose)
+{
+	const int32 NumTracks = CompressibleAnimData.TrackToSkeletonMapTable.Num();
+
+	TArray<FTransform> StrippedBindPose;
+	StrippedBindPose.AddUninitialized(NumTracks);
+
+	for (const acl::track_qvvf& Track : ACLTracks)
+	{
+		const uint32 TrackIndex = Track.get_output_index();
+		if (TrackIndex == acl::k_invalid_track_index)
+		{
+			continue;	// Track is stripped, skip it
+		}
+
+		const acl::track_desc_transformf& Desc = Track.get_description();
+
+		const FQuat Rotation = QuatCast(Desc.default_value.rotation);
+		const FVector Translation = VectorCast(Desc.default_value.translation);
+		const FVector Scale = VectorCast(Desc.default_value.scale);
+
+		StrippedBindPose[TrackIndex] = FTransform(Rotation, Translation, Scale);
+	}
+
+	Swap(OutStrippedBindPose, StrippedBindPose);
 }
 #endif	// WITH_EDITOR

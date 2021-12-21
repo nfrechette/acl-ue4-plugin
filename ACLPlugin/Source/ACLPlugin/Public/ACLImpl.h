@@ -20,6 +20,9 @@
 	#define ACL_USE_POPCOUNT
 #endif
 
+// In non-shipping builds, if we can log errors we enable the checks at runtime
+#define WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS (!UE_BUILD_SHIPPING && !NO_LOGGING)
+
 #include <acl/core/error.h>
 #include <acl/core/iallocator.h>
 #include <acl/decompression/decompress.h>
@@ -69,7 +72,14 @@ struct UE4DefaultDecompressionSettings : public acl::default_transform_decompres
 #endif
 };
 
-using UE4CustomDecompressionSettings = acl::debug_transform_decompression_settings;
+struct UE4DebugDecompressionSettings : public acl::debug_transform_decompression_settings
+{
+	// Only support our latest version
+	static constexpr acl::compressed_tracks_version16 version_supported() { return acl::compressed_tracks_version16::latest; }
+};
+
+// Same as debug settings for now since everything is allowed
+using UE4CustomDecompressionSettings = UE4DebugDecompressionSettings;
 
 struct UE4SafeDecompressionSettings final : public UE4DefaultDecompressionSettings
 {
@@ -90,7 +100,7 @@ struct UE4DefaultDBDecompressionSettings final : public UE4DefaultDecompressionS
 
 using UE4DebugDatabaseSettings = acl::debug_database_settings;
 
-struct UE4DebugDBDecompressionSettings final : public acl::debug_transform_decompression_settings
+struct UE4DebugDBDecompressionSettings final : public UE4DebugDecompressionSettings
 {
 	using database_settings_type = UE4DebugDatabaseSettings;
 };
@@ -134,4 +144,6 @@ ACLPLUGIN_API acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
 ACLPLUGIN_API acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Level);
 
 ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase);
+
+ACLPLUGIN_API void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, TArray<FTransform>& OutStrippedBindPose);
 #endif // WITH_EDITOR

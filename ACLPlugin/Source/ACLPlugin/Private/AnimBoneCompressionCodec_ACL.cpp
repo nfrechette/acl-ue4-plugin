@@ -9,6 +9,7 @@
 #include "ACLImpl.h"
 
 #include <acl/compression/track_error.h>
+#include <acl/core/bitset.h>
 #include <acl/decompression/decompress.h>
 #endif	// WITH_EDITORONLY_DATA
 
@@ -16,10 +17,10 @@
 
 UAnimBoneCompressionCodec_ACL::UAnimBoneCompressionCodec_ACL(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-{
 #if WITH_EDITORONLY_DATA
-	SafetyFallbackThreshold = 1.0f;			// 1cm, should be very rarely exceeded
-#endif	// WITH_EDITORONLY_DATA
+	, SafetyFallbackThreshold(1.0f)			// 1cm, should be very rarely exceeded
+#endif
+{
 }
 
 #if WITH_EDITORONLY_DATA
@@ -67,7 +68,7 @@ ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACL::ExecuteSafetyFallback(acl
 	{
 		checkSlow(CompressedClipData.is_valid(true).empty());
 
-		acl::decompression_context<UE4DefaultDBDecompressionSettings> Context;
+		acl::decompression_context<UE4DefaultDecompressionSettings> Context;
 		Context.initialize(CompressedClipData);
 
 		const acl::track_error TrackError = acl::calculate_compression_error(Allocator, RawClip, Context, *Settings.error_metric, BaseClip);
@@ -134,7 +135,7 @@ void UAnimBoneCompressionCodec_ACL::DecompressPose(FAnimSequenceDecompressionCon
 	acl::decompression_context<UE4DefaultDecompressionSettings> ACLContext;
 	ACLContext.initialize(*CompressedClipData);
 
-	::DecompressPose(DecompContext, ACLContext, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
+	::DecompressPose(DecompContext, ACLContext, bStripBindPose, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
 }
 
 void UAnimBoneCompressionCodec_ACL::DecompressBone(FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex, FTransform& OutAtom) const
@@ -142,6 +143,8 @@ void UAnimBoneCompressionCodec_ACL::DecompressBone(FAnimSequenceDecompressionCon
 	const FACLCompressedAnimData& AnimData = static_cast<const FACLCompressedAnimData&>(DecompContext.CompressedAnimData);
 	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
 	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
+
+	HandleDecompressBoneBindPose(bStripBindPose, AnimData, TrackIndex, OutAtom);
 
 	acl::decompression_context<UE4DefaultDecompressionSettings> ACLContext;
 	ACLContext.initialize(*CompressedClipData);
