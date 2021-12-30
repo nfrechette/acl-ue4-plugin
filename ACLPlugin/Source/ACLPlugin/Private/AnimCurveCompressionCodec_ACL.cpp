@@ -238,7 +238,7 @@ struct UE4CurveWriter final : public acl::track_writer
 	{
 	}
 
-	void write_float1(uint32_t TrackIndex, rtm::scalarf_arg0 Value)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_float1(uint32_t TrackIndex, rtm::scalarf_arg0 Value)
 	{
 		const FSmartName& CurveName = CompressedCurveNames[TrackIndex];
 		if (Curves.IsEnabled(CurveName.UID))
@@ -278,7 +278,7 @@ struct UE4ScalarCurveWriter final : public acl::track_writer
 	{
 	}
 
-	void write_float1(uint32_t /*TrackIndex*/, rtm::scalarf_arg0 Value)
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_float1(uint32_t /*TrackIndex*/, rtm::scalarf_arg0 Value)
 	{
 		SampleValue = rtm::scalar_cast(Value);
 	}
