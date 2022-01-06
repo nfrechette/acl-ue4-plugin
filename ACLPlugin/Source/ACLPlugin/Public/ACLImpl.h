@@ -146,4 +146,8 @@ ACLPLUGIN_API acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Le
 ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase);
 
 ACLPLUGIN_API void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, TArray<FTransform>& OutStrippedBindPose);
+
+/** Compatibility utilities */
+ACLPLUGIN_API uint32 GetNumSamples(const FCompressibleAnimData& CompressibleAnimData);
+ACLPLUGIN_API float GetSequenceLength(const UAnimSequence& AnimSeq);
 #endif // WITH_EDITOR

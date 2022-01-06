@@ -21,6 +21,11 @@ namespace UnrealBuildTool.Rules
 			PublicDependencyModuleNames.Add("CoreUObject");
 			PublicDependencyModuleNames.Add("Engine");
 
+			if (Target.Version.MajorVersion >= 5)
+			{
+				PublicDependencyModuleNames.Add("AnimationDataController");
+			}
+
 			PrivateDependencyModuleNames.Add("EditorStyle");
 			PrivateDependencyModuleNames.Add("Slate");
 			PrivateDependencyModuleNames.Add("SlateCore");

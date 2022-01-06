@@ -125,9 +125,13 @@ void UAnimationCompressionLibraryDatabase::PreSave(const ITargetPlatform* Target
 
 	if (TargetPlatform != nullptr && TargetPlatform->RequiresCookedData())
 	{
+#if ENGINE_MAJOR_VERSION >= 5
+		const bool bStripLowestTier = StripLowestImportanceTier.GetValueForPlatform(*TargetPlatform->IniPlatformName());
+#else
 		const bool bStripLowestTier = StripLowestImportanceTier.GetValueForPlatformIdentifiers(
 			TargetPlatform->GetPlatformInfo().PlatformGroupName,
 			TargetPlatform->GetPlatformInfo().VanillaPlatformName);
+#endif
 
 		TArray<uint8> BulkData;
 		BuildDatabase(CookedCompressedBytes, CookedAnimSequenceMappings, BulkData, bStripLowestTier);
