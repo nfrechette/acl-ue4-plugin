@@ -100,9 +100,9 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	// To avoid wasting memory, we just grab the first frame.
 
 	const TArray<FRawAnimSequenceTrack>& RawTracks = bBuildAdditiveBase ? CompressibleAnimData.AdditiveBaseAnimationData : CompressibleAnimData.RawAnimationData;
-	const uint32 NumSamples = CompressibleAnimData.NumFrames;
+	const uint32 NumSamples = GetNumSamples(CompressibleAnimData);
 	const bool bIsStaticPose = NumSamples <= 1 || CompressibleAnimData.SequenceLength < 0.0001f;
-	const float SampleRate = bIsStaticPose ? 30.0f : (float(CompressibleAnimData.NumFrames - 1) / CompressibleAnimData.SequenceLength);
+	const float SampleRate = bIsStaticPose ? 30.0f : (float(NumSamples - 1) / CompressibleAnimData.SequenceLength);
 	const int32 NumBones = CompressibleAnimData.BoneData.Num();
 
 	// Additive animations have 0,0,0 scale as the default since we add it
@@ -193,5 +193,23 @@ void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData,
 	}
 
 	Swap(OutStrippedBindPose, StrippedBindPose);
+}
+
+uint32 GetNumSamples(const FCompressibleAnimData& CompressibleAnimData)
+{
+#if ENGINE_MAJOR_VERSION >= 5
+	return CompressibleAnimData.NumberOfKeys;
+#else
+	return CompressibleAnimData.NumFrames;
+#endif
+}
+
+float GetSequenceLength(const UAnimSequence& AnimSeq)
+{
+#if ENGINE_MAJOR_VERSION >= 5
+	return AnimSeq.GetDataModel()->GetPlayLength();
+#else
+	return AnimSeq.SequenceLength;
+#endif
 }
 #endif	// WITH_EDITOR
