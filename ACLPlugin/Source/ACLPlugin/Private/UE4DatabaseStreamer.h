@@ -24,9 +24,7 @@ public:
 	{
 		BulkData[0] = BulkData[1] = nullptr;
 
-		uint32 BulkDataMediumSize = CompressedDatabase.get_bulk_data_size(acl::quality_tier::medium_importance);
-		BulkDataMediumSize = acl::align_to(BulkDataMediumSize, acl::k_database_bulk_data_alignment);
-
+		const uint32 BulkDataMediumSize = CompressedDatabase.get_bulk_data_size(acl::quality_tier::medium_importance);
 		const uint32 BulkDataLowSize = CompressedDatabase.get_bulk_data_size(acl::quality_tier::lowest_importance);
 
 		BulkDataSize[0] = BulkDataMediumSize;

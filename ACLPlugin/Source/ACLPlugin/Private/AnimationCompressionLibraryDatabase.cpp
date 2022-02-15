@@ -383,7 +383,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 	uint32 BulkDataSize = BulkDataSizeMedium;
 	if (!bStripLowestTier && BulkDataEffectiveSizeLow != 0)
 	{
-		BulkDataSize = acl::align_to(BulkDataSize, acl::k_database_bulk_data_alignment) + BulkDataEffectiveSizeLow;
+		BulkDataSize += BulkDataEffectiveSizeLow;
 	}
 
 	OutBulkData.Empty(BulkDataSize);
@@ -392,7 +392,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 
 	if (!bStripLowestTier && BulkDataEffectiveSizeLow != 0)
 	{
-		FMemory::Memcpy(acl::align_to(OutBulkData.GetData() + BulkDataSizeMedium, acl::k_database_bulk_data_alignment), SplitDBBulkDataLow, BulkDataEffectiveSizeLow);
+		FMemory::Memcpy(OutBulkData.GetData() + BulkDataSizeMedium, SplitDBBulkDataLow, BulkDataEffectiveSizeLow);
 	}
 
 	// Free the split instance we no longer need
