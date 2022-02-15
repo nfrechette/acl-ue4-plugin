@@ -23,7 +23,7 @@ public:
 
 		const uint8* BulkDataMedium = BulkData_.GetData();
 		BulkData[0] = BulkDataMedium;
-		BulkData[1] = acl::align_to(BulkDataMedium + BulkDataMediumSize, acl::k_database_bulk_data_alignment);
+		BulkData[1] = BulkDataMedium + BulkDataMediumSize;
 	}
 
 	virtual bool is_initialized() const override { return true; }
