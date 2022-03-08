@@ -331,7 +331,9 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	{
 		// Disable constant rotation track detection
 		for (acl::track_qvvf& Track : ACLTracks)
+		{
 			Track.get_description().constant_rotation_threshold_angle = 0.0f;
+		}
 	}
 
 	TArray<uint32> TracksExcludedFromStrippingBitSet;
