@@ -126,7 +126,10 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 	// Override the OutputWriter behavior
 	static constexpr acl::default_sub_track_mode get_default_rotation_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::constant; }
 	static constexpr acl::default_sub_track_mode get_default_translation_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::constant; }
-	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::legacy; }
+
+	// TODO: use the right identity value if we are additive! until then we can't skip default sub-tracks
+	//static constexpr acl::default_sub_track_mode get_default_scale_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::legacy; }
+	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return acl::default_sub_track_mode::legacy; }
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
@@ -286,9 +289,10 @@ FORCEINLINE_DEBUGGABLE void InitializeBoneAtomWithBindPose(bool bIsBindPoseStrip
 	else
 	{
 		// We still skip default sub-tracks even if stripping is disabled
-		// Additive clips have the identity as the bind pose, so stripping or not this is safe
+		// Additive clips have the identity (with zero scale) as the bind pose, so stripping or not this is safe
 		// Non-additive clips that stripped this bone will fail the check below and return an incorrect result
 		// Non-additive clips that excluded this bone will only strip if the value is the identity
+		// TODO: use the right identity value if we are additive!
 		OutAtom = FTransform::Identity;
 	}
 #else
@@ -296,6 +300,7 @@ FORCEINLINE_DEBUGGABLE void InitializeBoneAtomWithBindPose(bool bIsBindPoseStrip
 	// Additive clips have the identity as the bind pose, so stripping or not this is safe
 	// Non-additive clips that stripped this bone will fail the check below and return an incorrect result
 	// Non-additive clips that excluded this bone will only strip if the value is the identity
+	// TODO: use the right identity value if we are additive!
 	OutAtom = FTransform::Identity;
 #endif
 
