@@ -229,6 +229,9 @@ static void PopulateShellDistanceFromOptimizationTargets(const FCompressibleAnim
 
 static TArray<uint32> StripBindPose(const FCompressibleAnimData& CompressibleAnimData, const TArray<FName>& BindPoseStrippingBoneExclusionList, acl::track_array_qvvf& ACLTracks)
 {
+	// Additive sequences use the identity as their bind pose, no need for stripping
+	check(!CompressibleAnimData.bIsValidAdditive);
+
 	const int32 NumTracks = CompressibleAnimData.TrackToSkeletonMapTable.Num();
 	const acl::bitset_description ExcludedBitsetDesc = acl::bitset_description::make_from_num_bits(NumTracks);
 
@@ -284,6 +287,7 @@ static TArray<uint32> StripBindPose(const FCompressibleAnimData& CompressibleAni
 		else if (TrackIndex != acl::k_invalid_track_index)
 		{
 			// This bone is excluded from stripping and is used
+			// Leave the default value as the identity
 			acl::bitset_set(TracksExcludedFromStrippingBitSet.GetData(), ExcludedBitsetDesc, TrackIndex, true);
 		}
 	}
