@@ -153,8 +153,18 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 		}
 		else
 		{
-			// No track data for this bone, it must be new. Use the bind pose instead
-			const rtm::qvvf BindTransform = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), ACLDefaultScale);
+			// No track data for this bone, it must be new. Use the bind pose instead.
+			// Additive animations have the identity with 0 scale as their bind pose.
+			rtm::qvvf BindTransform;
+			if (bIsAdditive)
+			{
+				BindTransform = rtm::qvv_identity();
+				BindTransform.scale = ACLDefaultScale;
+			}
+			else
+			{
+				BindTransform = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), ACLDefaultScale);
+			}
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 				Track[SampleIndex] = BindTransform;
