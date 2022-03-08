@@ -404,7 +404,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressBone(FAnimSequenceDecompre
 	}
 #endif
 
-	HandleDecompressBoneBindPose(bStripBindPose, AnimData, TrackIndex, OutAtom);
+	InitializeBoneAtomWithBindPose(bStripBindPose, AnimData, TrackIndex, OutAtom);
 
 	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
 }

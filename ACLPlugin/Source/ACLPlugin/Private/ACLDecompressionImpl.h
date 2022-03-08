@@ -160,7 +160,7 @@ FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& De
 	// At runtime, the bind pose is only stripped from the data if the track is never
 	// queried here at runtime (it has been excluded from stripping) or if the clip
 	// is additive in which case the output is properly initialized to the identity
-	// See: HandleDecompressBoneBindPose(..)
+	// See: InitializeBoneAtomWithBindPose(..)
 	constexpr bool bSkipDefaultSubTracks = true;
 
 	UE4OutputTrackWriter<bSkipDefaultSubTracks> Writer(OutAtom);
@@ -273,7 +273,7 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 }
 
 template<class AnimDataType>
-FORCEINLINE_DEBUGGABLE void HandleDecompressBoneBindPose(bool bIsBindPoseStripped, const AnimDataType& AnimData, int32 TrackIndex, FTransform& OutAtom)
+FORCEINLINE_DEBUGGABLE void InitializeBoneAtomWithBindPose(bool bIsBindPoseStripped, const AnimDataType& AnimData, int32 TrackIndex, FTransform& OutAtom)
 {
 #if WITH_EDITORONLY_DATA
 	if (bIsBindPoseStripped && AnimData.StrippedBindPose.Num() != 0)
