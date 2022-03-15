@@ -282,7 +282,7 @@ static TArray<uint32> StripBindPose(const FCompressibleAnimData& CompressibleAni
 		if (!bIsRootBone && !BindPoseStrippingBoneExclusionList.Contains(UE4Bone.Name))
 		{
 			// This bone isn't excluded, set the default value to the bind pose so that it can be stripped
-			Desc.default_value = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), DefaultScale);
+			Desc.default_value = rtm::qvv_set(UEQuatToACL(UE4Bone.Orientation), UEVector3ToACL(UE4Bone.Position), DefaultScale);
 		}
 		else if (TrackIndex != acl::k_invalid_track_index)
 		{

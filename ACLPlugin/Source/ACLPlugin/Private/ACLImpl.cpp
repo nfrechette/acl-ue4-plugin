@@ -143,15 +143,15 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
-				const FQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
-				Track[SampleIndex].rotation = QuatCast(RotationSample);
+				const FRawAnimTrackQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
+				Track[SampleIndex].rotation = UEQuatToACL(RotationSample);
 
 
-				const FVector& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
-				Track[SampleIndex].translation = VectorCast(TranslationSample);
+				const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
+				Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
 
-				const FVector& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
-				Track[SampleIndex].scale = VectorCast(ScaleSample);
+				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
+				Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
 			}
 		}
 		else
@@ -166,7 +166,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 			}
 			else
 			{
-				BindTransform = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), ACLDefaultScale);
+				BindTransform = rtm::qvv_set(UEQuatToACL(UE4Bone.Orientation), UEVector3ToACL(UE4Bone.Position), ACLDefaultScale);
 			}
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
@@ -197,12 +197,7 @@ void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData,
 		}
 
 		const acl::track_desc_transformf& Desc = Track.get_description();
-
-		const FQuat Rotation = QuatCast(Desc.default_value.rotation);
-		const FVector Translation = VectorCast(Desc.default_value.translation);
-		const FVector Scale = VectorCast(Desc.default_value.scale);
-
-		StrippedBindPose[TrackIndex] = FTransform(Rotation, Translation, Scale);
+		StrippedBindPose[TrackIndex] = ACLTransformToUE(Desc.default_value);
 	}
 
 	Swap(OutStrippedBindPose, StrippedBindPose);
