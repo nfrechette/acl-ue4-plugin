@@ -137,7 +137,7 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UE4S
 		UE4Bone.ParentIndex = Desc.parent_index == acl::k_invalid_track_index ? INDEX_NONE : Desc.parent_index;
 		UE4Bone.ExportName = BoneName;
 
-		const FTransform BindPose(QuatCast(Desc.default_value.rotation), VectorCast(Desc.default_value.translation), VectorCast(Desc.default_value.scale));
+		const FTransform BindPose = ACLTransformToUE(Desc.default_value);
 
 		SkeletonModifier.Add(UE4Bone, BindPose);
 	}
@@ -181,19 +181,19 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4C
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
-				const FQuat Rotation = QuatCast(rtm::quat_normalize(Track[SampleIndex].rotation));
+				const FRawAnimTrackQuat Rotation = ACLQuatToUE(rtm::quat_normalize(Track[SampleIndex].rotation));
 				RawTrack.RotKeys.Add(Rotation);
 			}
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
-				const FVector Translation = VectorCast(Track[SampleIndex].translation);
+				const FRawAnimTrackVector3 Translation = ACLVector3ToUE(Track[SampleIndex].translation);
 				RawTrack.PosKeys.Add(Translation);
 			}
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
-				const FVector Scale = VectorCast(Track[SampleIndex].scale);
+				const FRawAnimTrackVector3 Scale = ACLVector3ToUE(Track[SampleIndex].scale);
 				RawTrack.ScaleKeys.Add(Scale);
 			}
 
@@ -258,9 +258,9 @@ static void SampleUE4Clip(const acl::track_array_qvvf& Tracks, USkeleton* UE4Ske
 			BoneTransform = RefSkeletonPose[BoneTreeIndex];
 		}
 
-		const rtm::quatf Rotation = QuatCast(BoneTransform.GetRotation());
-		const rtm::vector4f Translation = VectorCast(BoneTransform.GetTranslation());
-		const rtm::vector4f Scale = VectorCast(BoneTransform.GetScale3D());
+		const rtm::quatf Rotation = UEQuatToACL(BoneTransform.GetRotation());
+		const rtm::vector4f Translation = UEVector3ToACL(BoneTransform.GetTranslation());
+		const rtm::vector4f Scale = UEVector3ToACL(BoneTransform.GetScale3D());
 		LossyPoseTransforms[BoneIndex] = rtm::qvv_set(Rotation, Translation, Scale);
 	}
 }

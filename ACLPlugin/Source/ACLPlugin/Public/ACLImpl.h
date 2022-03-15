@@ -48,13 +48,38 @@ public:
 
 extern ACLPLUGIN_API ACLAllocator ACLAllocatorImpl;
 
-/** RTM <-> UE4 conversion utilities */
-inline rtm::vector4f RTM_SIMD_CALL VectorCast(const FVector& Input) { return rtm::vector_set(Input.X, Input.Y, Input.Z); }
-inline FVector RTM_SIMD_CALL VectorCast(rtm::vector4f_arg0 Input) { return FVector(rtm::vector_get_x(Input), rtm::vector_get_y(Input), rtm::vector_get_z(Input)); }
-inline rtm::quatf RTM_SIMD_CALL QuatCast(const FQuat& Input) { return rtm::quat_set(Input.X, Input.Y, Input.Z, Input.W); }
-inline FQuat RTM_SIMD_CALL QuatCast(rtm::quatf_arg0 Input) { return FQuat(rtm::quat_get_x(Input), rtm::quat_get_y(Input), rtm::quat_get_z(Input), rtm::quat_get_w(Input)); }
-inline rtm::qvvf RTM_SIMD_CALL TransformCast(const FTransform& Input) { return rtm::qvv_set(QuatCast(Input.GetRotation()), VectorCast(Input.GetTranslation()), VectorCast(Input.GetScale3D())); }
-inline FTransform RTM_SIMD_CALL TransformCast(rtm::qvvf_arg0 Input) { return FTransform(QuatCast(Input.rotation), VectorCast(Input.translation), VectorCast(Input.scale)); }
+/** RTM <-> UE conversion utilities and aliases. */
+#if ENGINE_MAJOR_VERSION >= 5
+inline FQuat RTM_SIMD_CALL UEQuatCast(const FQuat4f& Input) { return FQuat(Input.X, Input.Y, Input.Z, Input.W); }
+inline FVector RTM_SIMD_CALL UEVector3Cast(const FVector3f& Input) { return FVector(Input.X, Input.Y, Input.Z); }
+
+inline rtm::vector4f RTM_SIMD_CALL UEVector3ToACL(const FVector3f& Input) { return rtm::vector_set(Input.X, Input.Y, Input.Z); }
+inline rtm::vector4f RTM_SIMD_CALL UEVector3ToACL(const FVector& Input) { return rtm::vector_cast(rtm::vector_set(Input.X, Input.Y, Input.Z)); }
+inline FVector3f RTM_SIMD_CALL ACLVector3ToUE(rtm::vector4f_arg0 Input) { return FVector3f(rtm::vector_get_x(Input), rtm::vector_get_y(Input), rtm::vector_get_z(Input)); }
+
+inline rtm::quatf RTM_SIMD_CALL UEQuatToACL(const FQuat4f& Input) { return rtm::quat_set(Input.X, Input.Y, Input.Z, Input.W); }
+inline rtm::quatf RTM_SIMD_CALL UEQuatToACL(const FQuat& Input) { return rtm::quat_cast(rtm::quat_set(Input.X, Input.Y, Input.Z, Input.W)); }
+inline FQuat4f RTM_SIMD_CALL ACLQuatToUE(rtm::quatf_arg0 Input) { return FQuat4f(rtm::quat_get_x(Input), rtm::quat_get_y(Input), rtm::quat_get_z(Input), rtm::quat_get_w(Input)); }
+
+inline FTransform RTM_SIMD_CALL ACLTransformToUE(rtm::qvvf_arg0 Input) { return FTransform(UEQuatCast(ACLQuatToUE(Input.rotation)), UEVector3Cast(ACLVector3ToUE(Input.translation)), UEVector3Cast(ACLVector3ToUE(Input.scale))); }
+
+using FRawAnimTrackQuat = FQuat4f;
+using FRawAnimTrackVector3 = FVector3f;
+#else
+inline FQuat RTM_SIMD_CALL UEQuatCast(const FQuat& Input) { return Input; }
+inline FVector RTM_SIMD_CALL UEVector3Cast(const FVector& Input) { return Input; }
+
+inline rtm::vector4f RTM_SIMD_CALL UEVector3ToACL(const FVector& Input) { return rtm::vector_set(Input.X, Input.Y, Input.Z); }
+inline FVector RTM_SIMD_CALL ACLVector3ToUE(rtm::vector4f_arg0 Input) { return FVector(rtm::vector_get_x(Input), rtm::vector_get_y(Input), rtm::vector_get_z(Input)); }
+
+inline rtm::quatf RTM_SIMD_CALL UEQuatToACL(const FQuat& Input) { return rtm::quat_set(Input.X, Input.Y, Input.Z, Input.W); }
+inline FQuat RTM_SIMD_CALL ACLQuatToUE(rtm::quatf_arg0 Input) { return FQuat(rtm::quat_get_x(Input), rtm::quat_get_y(Input), rtm::quat_get_z(Input), rtm::quat_get_w(Input)); }
+
+inline FTransform RTM_SIMD_CALL ACLTransformToUE(rtm::qvvf_arg0 Input) { return FTransform(ACLQuatToUE(Input.rotation), ACLVector3ToUE(Input.translation), ACLVector3ToUE(Input.scale)); }
+
+using FRawAnimTrackQuat = FQuat;
+using FRawAnimTrackVector3 = FVector;
+#endif
 
 /** The decompression settings used by ACL */
 struct UE4DefaultDecompressionSettings : public acl::default_transform_decompression_settings

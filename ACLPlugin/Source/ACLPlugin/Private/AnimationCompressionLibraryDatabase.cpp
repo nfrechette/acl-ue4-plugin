@@ -17,6 +17,10 @@
 #include "Interfaces/ITargetPlatform.h"
 #include "UObject/UObjectIterator.h"
 
+#if ENGINE_MAJOR_VERSION >= 5
+#include "UObject/ObjectSaveContext.h"
+#endif
+
 #include "UE4DatabasePreviewStreamer.h"
 
 #include <acl/compression/compress.h>
@@ -114,9 +118,19 @@ void UAnimationCompressionLibraryDatabase::PostEditChangeProperty(FPropertyChang
 	}
 }
 
+#if ENGINE_MAJOR_VERSION >= 5
+void UAnimationCompressionLibraryDatabase::PreSave(FObjectPreSaveContext SaveContext)
+#else
 void UAnimationCompressionLibraryDatabase::PreSave(const ITargetPlatform* TargetPlatform)
+#endif
 {
+#if ENGINE_MAJOR_VERSION >= 5
+	Super::PreSave(SaveContext);
+
+	const ITargetPlatform* TargetPlatform = SaveContext.GetTargetPlatform();
+#else
 	Super::PreSave(TargetPlatform);
+#endif
 
 	// Clear any stale cooked data we might have
 	CookedCompressedBytes.Empty(0);
@@ -535,7 +549,7 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 	// Remove our ticker if we have one
 	if (FidelityUpdateTickerHandle.IsValid())
 	{
-		FTicker::GetCoreTicker().RemoveTicker(FidelityUpdateTickerHandle);
+		FTickerType::GetCoreTicker().RemoveTicker(FidelityUpdateTickerHandle);
 		FidelityUpdateTickerHandle.Reset();
 	}
 
@@ -741,7 +755,7 @@ uint32 UAnimationCompressionLibraryDatabase::SetVisualFidelityImpl(ACLVisualFide
 	{
 		check(!FidelityUpdateTickerHandle.IsValid());
 		auto UpdateVisualFidelity = [this](float DeltaTime) { return UpdateVisualFidelityTicker(DeltaTime); };
-		FidelityUpdateTickerHandle = FTicker::GetCoreTicker().AddTicker(TEXT("ACLDBStreamOut"), 0.0F, UpdateVisualFidelity);
+		FidelityUpdateTickerHandle = FTickerType::GetCoreTicker().AddTicker(TEXT("ACLDBStreamOut"), 0.0F, UpdateVisualFidelity);
 	}
 
 	return RequestID;
