@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #if DO_GUARD_SLOW
 	// ACL has a lot of asserts, only enabled in Debug
@@ -163,6 +164,9 @@ enum ACLCompressionLevel
 #if WITH_EDITOR
 #include <acl/compression/track_array.h>
 #include <acl/compression/compression_level.h>
+
+struct FCompressibleAnimData;
+class UAnimSequence;
 
 ACLPLUGIN_API acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format);
 ACLPLUGIN_API acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
