@@ -355,8 +355,10 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
 
+	constexpr acl::additive_clip_format8 AdditiveFormat = acl::additive_clip_format8::additive1;
+
 	acl::qvvf_transform_error_metric DefaultErrorMetric;
-	acl::additive_qvvf_transform_error_metric<acl::additive_clip_format8::additive1> AdditiveErrorMetric;
+	acl::additive_qvvf_transform_error_metric<AdditiveFormat> AdditiveErrorMetric;
 	if (!ACLBaseTracks.is_empty())
 	{
 		Settings.error_metric = &AdditiveErrorMetric;
@@ -365,8 +367,6 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	{
 		Settings.error_metric = &DefaultErrorMetric;
 	}
-
-	const acl::additive_clip_format8 AdditiveFormat = acl::additive_clip_format8::additive1;
 
 	acl::output_stats Stats;
 	acl::compressed_tracks* CompressedTracks = nullptr;
