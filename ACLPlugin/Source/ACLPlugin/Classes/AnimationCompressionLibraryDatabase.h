@@ -14,6 +14,15 @@
 #include "UObject/ObjectMacros.h"
 #include "AnimationCompressionLibraryDatabase.generated.h"
 
+// Aliases to work with tickers
+#if ENGINE_MAJOR_VERSION >= 5
+using FTickerType = FTSTicker;
+using FTickerDelegateHandleType = FTSTicker::FDelegateHandle;
+#else
+using FTickerType = FTicker;
+using FTickerDelegateHandleType = FDelegateHandle;
+#endif
+
 /** An enum to represent the ACL visual fidelity level. */
 UENUM()
 enum class ACLVisualFidelity : uint8
@@ -88,7 +97,7 @@ private:
 	TArray<FFidelityChangeRequest> FidelityChangeRequests;
 
 	/** The handle to the fidelity update ticket. */
-	FDelegateHandle FidelityUpdateTickerHandle;
+	FTickerDelegateHandleType FidelityUpdateTickerHandle;
 
 #if WITH_EDITORONLY_DATA
 	/** What percentage of the key frames should remain in the anim sequences. */
@@ -137,7 +146,12 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// UObject implementation
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+#if ENGINE_MAJOR_VERSION >= 5
+	virtual void PreSave(FObjectPreSaveContext SaveContext) override;
+#else
 	virtual void PreSave(const class ITargetPlatform* TargetPlatform) override;
+#endif
 
 	/** Updates the internal list of anim sequences that reference this database. Returns whether or not anything changed. */
 	ACLPLUGIN_API bool UpdateReferencingAnimSequenceList();

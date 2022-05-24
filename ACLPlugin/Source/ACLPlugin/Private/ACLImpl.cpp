@@ -100,13 +100,13 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	// To avoid wasting memory, we just grab the first frame.
 
 	const TArray<FRawAnimSequenceTrack>& RawTracks = bBuildAdditiveBase ? CompressibleAnimData.AdditiveBaseAnimationData : CompressibleAnimData.RawAnimationData;
-	const uint32 NumSamples = CompressibleAnimData.NumFrames;
+	const uint32 NumSamples = GetNumSamples(CompressibleAnimData);
 	const bool bIsStaticPose = NumSamples <= 1 || CompressibleAnimData.SequenceLength < 0.0001f;
-	const float SampleRate = bIsStaticPose ? 30.0f : (float(CompressibleAnimData.NumFrames - 1) / CompressibleAnimData.SequenceLength);
+	const float SampleRate = bIsStaticPose ? 30.0f : (float(NumSamples - 1) / CompressibleAnimData.SequenceLength);
 	const int32 NumBones = CompressibleAnimData.BoneData.Num();
 
 	// Additive animations have 0,0,0 scale as the default since we add it
-	const FVector UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
+	const FRawAnimTrackVector3 UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
 	const rtm::vector4f ACLDefaultScale = rtm::vector_set(bIsAdditive ? 0.0f : 1.0f);
 
 	acl::track_array_qvvf Tracks(AllocatorImpl, NumBones);
@@ -140,15 +140,14 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
-				const FQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
-				Track[SampleIndex].rotation = QuatCast(RotationSample);
+				const FRawAnimTrackQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
+				Track[SampleIndex].rotation = UEQuatToACL(RotationSample);
 
+				const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
+				Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
 
-				const FVector& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
-				Track[SampleIndex].translation = VectorCast(TranslationSample);
-
-				const FVector& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
-				Track[SampleIndex].scale = VectorCast(ScaleSample);
+				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
+				Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
 			}
 		}
 		else
@@ -163,7 +162,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 			}
 			else
 			{
-				BindTransform = rtm::qvv_set(QuatCast(UE4Bone.Orientation), VectorCast(UE4Bone.Position), ACLDefaultScale);
+				BindTransform = rtm::qvv_set(UEQuatToACL(UE4Bone.Orientation), UEVector3ToACL(UE4Bone.Position), ACLDefaultScale);
 			}
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
@@ -174,5 +173,23 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	}
 
 	return Tracks;
+}
+
+uint32 GetNumSamples(const FCompressibleAnimData& CompressibleAnimData)
+{
+#if ENGINE_MAJOR_VERSION >= 5
+	return CompressibleAnimData.NumberOfKeys;
+#else
+	return CompressibleAnimData.NumFrames;
+#endif
+}
+
+float GetSequenceLength(const UAnimSequence& AnimSeq)
+{
+#if ENGINE_MAJOR_VERSION >= 5
+	return AnimSeq.GetDataModel()->GetPlayLength();
+#else
+	return AnimSeq.SequenceLength;
+#endif
 }
 #endif	// WITH_EDITOR

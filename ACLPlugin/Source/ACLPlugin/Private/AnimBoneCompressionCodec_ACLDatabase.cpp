@@ -8,6 +8,10 @@
 #include "Animation/AnimBoneCompressionSettings.h"
 #include "Rendering/SkeletalMeshModel.h"
 
+#if ENGINE_MAJOR_VERSION >= 5
+#include "UObject/ObjectSaveContext.h"
+#endif
+
 #include "ACLImpl.h"
 #include "EditorDatabaseMonitor.h"
 
@@ -123,9 +127,17 @@ void UAnimBoneCompressionCodec_ACLDatabase::GetPreloadDependencies(TArray<UObjec
 	}
 }
 
+#if ENGINE_MAJOR_VERSION >= 5
+void UAnimBoneCompressionCodec_ACLDatabase::PreSave(FObjectPreSaveContext SaveContext)
+#else
 void UAnimBoneCompressionCodec_ACLDatabase::PreSave(const class ITargetPlatform* TargetPlatform)
+#endif
 {
+#if ENGINE_MAJOR_VERSION >= 5
+	Super::PreSave(SaveContext);
+#else
 	Super::PreSave(TargetPlatform);
+#endif
 
 	UAnimBoneCompressionSettings* Settings = Cast<UAnimBoneCompressionSettings>(GetOuter());
 	if (Settings != nullptr && Settings->Codecs.Num() != 1)
