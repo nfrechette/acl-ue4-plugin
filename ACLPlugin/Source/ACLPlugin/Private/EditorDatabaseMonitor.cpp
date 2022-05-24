@@ -7,7 +7,16 @@
 
 namespace EditorDatabaseMonitor
 {
-	static FDelegateHandle MonitorTickerHandle;
+	// Aliases to work with tickers
+#if ENGINE_MAJOR_VERSION >= 5
+	using FTickerType = FTSTicker;
+	using FTickerDelegateHandleType = FTSTicker::FDelegateHandle;
+#else
+	using FTickerType = FTicker;
+	using FTickerDelegateHandleType = FDelegateHandle;
+#endif
+
+	static FTickerDelegateHandleType MonitorTickerHandle;
 	static TArray<TWeakObjectPtr<UAnimationCompressionLibraryDatabase>> DirtyDatabases;
 	static FCriticalSection DirtyDatabasesCS;
 
@@ -43,14 +52,14 @@ namespace EditorDatabaseMonitor
 		// Tick every 300ms
 		const float TickerDelay = 0.3F;
 
-		MonitorTickerHandle = FTicker::GetCoreTicker().AddTicker(TEXT("ACLEditorDatabaseMonitor"), TickerDelay, MonitorTicker);
+		MonitorTickerHandle = FTickerType::GetCoreTicker().AddTicker(TEXT("ACLEditorDatabaseMonitor"), TickerDelay, MonitorTicker);
 	}
 
 	void UnregisterMonitor()
 	{
 		if (MonitorTickerHandle.IsValid())
 		{
-			FTicker::GetCoreTicker().RemoveTicker(MonitorTickerHandle);
+			FTickerType::GetCoreTicker().RemoveTicker(MonitorTickerHandle);
 			MonitorTickerHandle.Reset();
 		}
 	}

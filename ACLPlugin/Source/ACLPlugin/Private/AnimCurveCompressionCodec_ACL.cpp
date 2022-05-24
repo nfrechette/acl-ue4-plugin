@@ -51,10 +51,20 @@ void UAnimCurveCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
 	Ar << SettingsHash;
 }
 
+static const TArray<FFloatCurve>& GetRawCurves(const FCompressibleAnimData& AnimSeq)
+{
+#if ENGINE_MAJOR_VERSION >= 5
+	return AnimSeq.RawFloatCurves;
+#else
+	return AnimSeq.RawCurveData.FloatCurves;
+#endif
+}
+
 // For each curve, returns its largest position delta if the curve is for a morph target, 0.0 otherwise
 static TArray<float> GetMorphTargetMaxPositionDeltas(const FCompressibleAnimData& AnimSeq, const USkeletalMesh* MorphTargetSource)
 {
-	const int32 NumCurves = AnimSeq.RawCurveData.FloatCurves.Num();
+	const TArray<FFloatCurve>& RawCurves = GetRawCurves(AnimSeq);
+	const int32 NumCurves = RawCurves.Num();
 
 	TArray<float> MorphTargetMaxPositionDeltas;
 	MorphTargetMaxPositionDeltas.AddZeroed(NumCurves);
@@ -67,8 +77,8 @@ static TArray<float> GetMorphTargetMaxPositionDeltas(const FCompressibleAnimData
 	for (int32 CurveIndex = 0; CurveIndex < NumCurves; ++CurveIndex)
 	{
 		float MaxDeltaPosition = 0.0f;
+		const FFloatCurve& Curve = RawCurves[CurveIndex];
 
-		const FFloatCurve& Curve = AnimSeq.RawCurveData.FloatCurves[CurveIndex];
 		UMorphTarget* Target = MorphTargetSource->FindMorphTarget(Curve.Name.DisplayName);
 		if (Target != nullptr)
 		{
@@ -92,8 +102,9 @@ static TArray<float> GetMorphTargetMaxPositionDeltas(const FCompressibleAnimData
 bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimSeq, FAnimCurveCompressionResult& OutResult)
 {
 	const TArray<float> MorphTargetMaxPositionDeltas = GetMorphTargetMaxPositionDeltas(AnimSeq, MorphTargetSource);
+	const TArray<FFloatCurve>& RawCurves = GetRawCurves(AnimSeq);
 
-	const int32 NumCurves = AnimSeq.RawCurveData.FloatCurves.Num();
+	const int32 NumCurves = RawCurves.Num();
 	if (NumCurves == 0)
 	{
 		// Nothing to compress
@@ -102,7 +113,7 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 		return true;
 	}
 
-	const int32 NumSamples = AnimSeq.NumFrames;
+	const int32 NumSamples = GetNumSamples(AnimSeq);
 	const float SequenceLength = AnimSeq.SequenceLength;
 
 	const bool bIsStaticPose = NumSamples <= 1 || SequenceLength < 0.0001f;
@@ -113,7 +124,7 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 
 	for (int32 CurveIndex = 0; CurveIndex < NumCurves; ++CurveIndex)
 	{
-		const FFloatCurve& Curve = AnimSeq.RawCurveData.FloatCurves[CurveIndex];
+		const FFloatCurve& Curve = RawCurves[CurveIndex];
 		const float MaxPositionDelta = MorphTargetMaxPositionDeltas[CurveIndex];
 
 		// If our curve drives a morph target, we use a different precision value with world space units.
