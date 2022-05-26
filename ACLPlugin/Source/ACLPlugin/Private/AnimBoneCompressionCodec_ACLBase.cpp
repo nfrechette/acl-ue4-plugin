@@ -148,9 +148,12 @@ static void AppendMaxVertexDistances(USkeletalMesh* OptimizationTarget, TMap<FNa
 	{
 		const FSkelMeshSection& Section = MeshModel->LODModels[0].Sections[SectionIndex];
 		const uint32 NumVertices = Section.SoftVertices.Num();
+
 		for (uint32 VertexIndex = 0; VertexIndex < NumVertices; ++VertexIndex)
 		{
 			const FSoftSkinVertex& VertexInfo = Section.SoftVertices[VertexIndex];
+			const FVector& VertexPosition = UEVector3Cast(VertexInfo.Position);
+
 			for (uint32 InfluenceIndex = 0; InfluenceIndex < MAX_TOTAL_INFLUENCES; ++InfluenceIndex)
 			{
 				if (VertexInfo.InfluenceWeights[InfluenceIndex] != 0)
@@ -159,8 +162,9 @@ static void AppendMaxVertexDistances(USkeletalMesh* OptimizationTarget, TMap<FNa
 					const uint32 BoneIndex = Section.BoneMap[SectionBoneIndex];
 
 					const FTransform& BoneTransform = RefSkeletonObjectSpacePose[BoneIndex];
+					const FVector BoneTranslation = UEVector3Cast(BoneTransform.GetTranslation());
 
-					const float VertexDistanceToBone = FVector::Distance(VertexInfo.Position, BoneTransform.GetTranslation());
+					const float VertexDistanceToBone = FVector::Distance(VertexPosition, BoneTranslation);
 
 					float& MostDistantVertexDistance = MostDistantVertexDistancePerBone[BoneIndex];
 					MostDistantVertexDistance = FMath::Max(MostDistantVertexDistance, VertexDistanceToBone);

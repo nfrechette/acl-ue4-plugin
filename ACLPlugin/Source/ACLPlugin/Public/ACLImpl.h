@@ -53,6 +53,7 @@ extern ACLPLUGIN_API ACLAllocator ACLAllocatorImpl;
 #if ENGINE_MAJOR_VERSION >= 5
 inline FQuat RTM_SIMD_CALL UEQuatCast(const FQuat4f& Input) { return FQuat(Input.X, Input.Y, Input.Z, Input.W); }
 inline FVector RTM_SIMD_CALL UEVector3Cast(const FVector3f& Input) { return FVector(Input.X, Input.Y, Input.Z); }
+inline FVector RTM_SIMD_CALL UEVector3Cast(const FVector3d& Input) { return FVector(Input.X, Input.Y, Input.Z); }
 
 inline rtm::vector4f RTM_SIMD_CALL UEVector3ToACL(const FVector3f& Input) { return rtm::vector_set(Input.X, Input.Y, Input.Z); }
 inline rtm::vector4f RTM_SIMD_CALL UEVector3ToACL(const FVector& Input) { return rtm::vector_cast(rtm::vector_set(Input.X, Input.Y, Input.Z)); }

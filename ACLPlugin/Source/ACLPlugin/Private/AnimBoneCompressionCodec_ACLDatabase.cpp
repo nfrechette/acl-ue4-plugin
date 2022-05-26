@@ -8,6 +8,10 @@
 #include "Animation/AnimBoneCompressionSettings.h"
 #include "Rendering/SkeletalMeshModel.h"
 
+#if ENGINE_MAJOR_VERSION >= 5
+#include "UObject/ObjectSaveContext.h"
+#endif
+
 #include "ACLImpl.h"
 #include "EditorDatabaseMonitor.h"
 

@@ -106,7 +106,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	const int32 NumBones = CompressibleAnimData.BoneData.Num();
 
 	// Additive animations have 0,0,0 scale as the default since we add it
-	const FVector UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
+	const FRawAnimTrackVector3 UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
 	const rtm::vector4f ACLDefaultScale = rtm::vector_set(bIsAdditive ? 0.0f : 1.0f);
 
 	acl::track_array_qvvf Tracks(AllocatorImpl, NumBones);

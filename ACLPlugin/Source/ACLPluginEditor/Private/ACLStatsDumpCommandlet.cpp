@@ -148,7 +148,7 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UE4S
 static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4Clip, USkeleton* UE4Skeleton)
 {
 	const uint32 NumSamples = Tracks.get_num_samples_per_track();
-	const float SequenceLength = FGenericPlatformMath::Max<float>(Tracks.get_duration(), MINIMUM_ANIMATION_LENGTH);
+	const float SequenceLength = FGenericPlatformMath::Max<float>(Tracks.get_finite_duration(), MINIMUM_ANIMATION_LENGTH);
 
 #if ENGINE_MAJOR_VERSION >= 5
 	const float SampleRate = Tracks.get_sample_rate();
@@ -156,10 +156,15 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4C
 	// This is incorrect because the true sample rate can be fractional but UE doesn't support it
 	const uint32 FrameRate = FGenericPlatformMath::RoundToInt(SampleRate);
 
-	UAnimDataController* UE4ClipController = NewObject<UAnimDataController>();
-	UE4ClipController->SetModel(UE4Clip->GetDataModel());
-	UE4ClipController->SetFrameRate(FFrameRate(FrameRate, 1));
-	UE4ClipController->SetPlayLength(SequenceLength);
+	IAnimationDataController& UE4ClipController = UE4Clip->GetController();
+	UE4ClipController.SetFrameRate(FFrameRate(FrameRate, 1));
+	UE4ClipController.SetPlayLength(SequenceLength);
+
+	// Ensure our frame rate update propagates first to avoid re-sampling below
+	UE4ClipController.NotifyPopulated();
+
+	UE4ClipController.OpenBracket(FText::FromString("Generating Animation Data"));
+	UE4ClipController.RemoveAllBoneTracks();
 #else
 	UE4Clip->SequenceLength = SequenceLength;
 	UE4Clip->SetRawNumberOfFrame(NumSamples);
@@ -200,7 +205,8 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4C
 			const FName BoneName(Track.get_name().c_str());
 
 #if ENGINE_MAJOR_VERSION >= 5
-			UE4ClipController->SetBoneTrackKeys(BoneName, RawTrack.PosKeys, RawTrack.RotKeys, RawTrack.ScaleKeys);
+			UE4ClipController.AddBoneTrack(BoneName);
+			UE4ClipController.SetBoneTrackKeys(BoneName, RawTrack.PosKeys, RawTrack.RotKeys, RawTrack.ScaleKeys);
 #else
 			UE4Clip->AddNewRawTrack(BoneName, &RawTrack);
 #endif
@@ -208,7 +214,8 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4C
 	}
 
 #if ENGINE_MAJOR_VERSION >= 5
-	UE4ClipController->Modify();
+	UE4ClipController.NotifyPopulated();
+	UE4ClipController.CloseBracket();
 #else
 	UE4Clip->MarkRawDataAsModified();
 	UE4Clip->PostProcessSequence();
