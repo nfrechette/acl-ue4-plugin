@@ -1,5 +1,11 @@
 # Significant changes per release
 
+## 2.0.5
+
+*  Add support for UE 5.0
+*  Upgraded to ACL v2.0.4
+*  Improve additive animation support
+
 ## 2.0.4
 
 *  Fix rare potential use after free in database
