@@ -8,6 +8,7 @@
 #include <acl/decompression/database/database_streamer.h>
 
 #include "CoreMinimal.h"
+#include "Containers/Ticker.h"
 #include "PerPlatformProperties.h"
 #include "Engine/LatentActionManager.h"
 #include "Serialization/BulkData.h"
