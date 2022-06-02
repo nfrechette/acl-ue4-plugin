@@ -1,5 +1,9 @@
 # Significant changes per release
 
+## 2.0.6
+
+*  Add missing include
+
 ## 2.0.5
 
 *  Add support for UE 5.0
