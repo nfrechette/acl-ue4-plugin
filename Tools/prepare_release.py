@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import sys
@@ -20,6 +21,14 @@ if __name__ == "__main__":
 
 	if not os.path.exists(staging_dir):
 		os.makedirs(staging_dir)
+
+	plugin_version = None
+	with open(os.path.join(root_dir, 'ACLPLugin', 'ACLPlugin.uplugin'), 'r') as f:
+		data = json.load(f)
+		if not 'VersionName' in data:
+			print('UE Plugin version not found in ACLPlugin.uplugin')
+			sys.exit(1)
+		plugin_version = data['VersionName']
 
 	print('Copying plugin content ...')
 	plugin_src_dir = os.path.join(root_dir, 'ACLPlugin')
@@ -48,7 +57,7 @@ if __name__ == "__main__":
 		f.write(uplugin_file_content)
 
 	print('Zipping ACLPlugin ...')
-	zip_filename = os.path.join(root_dir, 'ACLPlugin_' + target_ue4_version)
+	zip_filename = os.path.join(root_dir, 'ACLPlugin_v' + plugin_version + '_' + target_ue4_version)
 	shutil.make_archive(zip_filename, 'zip', staging_dir)
 
 	print('Done!')
