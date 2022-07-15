@@ -32,7 +32,12 @@ class UAnimBoneCompressionCodec_ACL : public UAnimBoneCompressionCodec_ACLBase
 
 	// UAnimBoneCompressionCodec implementation
 	virtual bool IsCodecValid() const override;
+
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+	virtual void PopulateDDCKey(const UAnimSequenceBase& AnimSeq, FArchive& Ar) override;
+#else
 	virtual void PopulateDDCKey(FArchive& Ar) override;
+#endif
 
 	// UAnimBoneCompressionCodec_ACLBase implementation
 	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const override;

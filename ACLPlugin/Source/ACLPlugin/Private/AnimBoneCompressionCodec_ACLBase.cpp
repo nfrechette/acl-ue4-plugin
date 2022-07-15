@@ -301,9 +301,17 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	return true;
 }
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(const UAnimSequenceBase& AnimSeq, FArchive& Ar)
+#else
 void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
+#endif
 {
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+	Super::PopulateDDCKey(AnimSeq, Ar);
+#else
 	Super::PopulateDDCKey(Ar);
+#endif
 
 	uint32 ForceRebuildVersion = 3;
 
