@@ -6,10 +6,15 @@
 
 #include "AnimationCompression.h"
 #include "AnimationUtils.h"
-#include "AssetRegistryModule.h"
 #include "FileHelpers.h"
 #include "ISourceControlModule.h"
 #include "SourceControlOperations.h"
+
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -42,7 +47,13 @@ int32 UACLDatabaseBuildCommandlet::Main(const FString& Params)
 		UE_LOG(LogAnimationCompression, Log, TEXT("Retrieving all ACL databases from current project ..."));
 
 		FARFilter DatabaseFilter;
+
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+		DatabaseFilter.ClassPaths.Add(UAnimationCompressionLibraryDatabase::StaticClass()->GetClassPathName());
+#else
 		DatabaseFilter.ClassNames.Add(UAnimationCompressionLibraryDatabase::StaticClass()->GetFName());
+#endif
+
 		AssetRegistryModule.Get().GetAssets(DatabaseFilter, DatabaseAssets);
 	}
 
@@ -57,7 +68,13 @@ int32 UACLDatabaseBuildCommandlet::Main(const FString& Params)
 		UE_LOG(LogAnimationCompression, Log, TEXT("Retrieving all animation sequences from current project ..."));
 
 		FARFilter AnimSequenceFilter;
+
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+		AnimSequenceFilter.ClassPaths.Add(UAnimSequence::StaticClass()->GetClassPathName());
+#else
 		AnimSequenceFilter.ClassNames.Add(UAnimSequence::StaticClass()->GetFName());
+#endif
+
 		AssetRegistryModule.Get().GetAssets(AnimSequenceFilter, AnimSequenceAssets);
 	}
 
