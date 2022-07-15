@@ -332,7 +332,9 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 
 	// Set our error threshold
 	for (acl::track_qvvf& Track : ACLTracks)
+	{
 		Track.get_description().precision = ErrorThreshold;
+	}
 
 	// Override track settings if we need to
 	if (IsA<UAnimBoneCompressionCodec_ACLSafe>())
