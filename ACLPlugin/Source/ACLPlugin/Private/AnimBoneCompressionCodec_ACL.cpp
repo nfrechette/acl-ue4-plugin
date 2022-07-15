@@ -85,9 +85,17 @@ ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACL::ExecuteSafetyFallback(acl
 	return ACLSafetyFallbackResult::Ignored;
 }
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+void UAnimBoneCompressionCodec_ACL::PopulateDDCKey(const UAnimSequenceBase& AnimSeq, FArchive& Ar)
+#else
 void UAnimBoneCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
+#endif
 {
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+	Super::PopulateDDCKey(AnimSeq, Ar);
+#else
 	Super::PopulateDDCKey(Ar);
+#endif
 
 	acl::compression_settings Settings;
 	GetCompressionSettings(Settings);
@@ -108,7 +116,11 @@ void UAnimBoneCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
 
 	if (SafetyFallbackCodec != nullptr)
 	{
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+		SafetyFallbackCodec->PopulateDDCKey(AnimSeq, Ar);
+#else
 		SafetyFallbackCodec->PopulateDDCKey(Ar);
+#endif
 	}
 }
 #endif // WITH_EDITORONLY_DATA
