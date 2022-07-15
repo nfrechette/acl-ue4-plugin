@@ -32,7 +32,11 @@ void FAssetTypeActions_AnimationCompressionLibraryDatabase::AddToolbarExtension(
 		NAME_None,
 		FText::FromString(TEXT("Build")),
 		FText::FromString(TEXT("Builds the database from all the animation sequences that reference this database through their codec.")),
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Persona.ApplyCompression")
+#else
 		FSlateIcon(FEditorStyle::GetStyleSetName(), "Persona.ApplyCompression")
+#endif
 	);
 	Builder.EndSection();
 }
@@ -49,7 +53,11 @@ void FAssetTypeActions_AnimationCompressionLibraryDatabase::GetActions(const TAr
 	MenuBuilder.AddMenuEntry(
 		FText::FromString(TEXT("Build")),
 		FText::FromString(TEXT("Builds the database from all the animation sequences that reference this database through their codec.")),
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Persona.ApplyCompression.Small"),
+#else
 		FSlateIcon(FEditorStyle::GetStyleSetName(), "Persona.ApplyCompression.Small"),
+#endif
 		FUIAction(
 			FExecuteAction::CreateSP(this, &FAssetTypeActions_AnimationCompressionLibraryDatabase::ExecuteBuild, DatabaseAssets[0])
 		)
