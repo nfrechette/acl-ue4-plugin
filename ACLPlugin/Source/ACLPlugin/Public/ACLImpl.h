@@ -21,8 +21,45 @@
 	#define ACL_USE_POPCOUNT
 #endif
 
-// In non-shipping builds, if we can log errors we enable the checks at runtime
-#define WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS (!UE_BUILD_SHIPPING && !NO_LOGGING)
+//////////////////////////////////////////////////////////////////////////
+// [Bind pose stripping]
+// Bind pose stripping allows ACL to remove the redundant bind pose often present in the compressed
+// data of joints that aren't animated. For this to work properly, we must have access to the bind
+// pose during decompression which is not accessible in UE 5.0 and earlier.
+//
+// When stripping is disabled, here is what happens:
+//     Non-additive anim sequence
+//         - During compression, sub-tracks have their default value set to the identity.
+//           Sub-tracks equal to the identity will be stripped (uncommon).
+//         - When we decompress a whole pose, sub-tracks equal to the identity are processed
+//           and the identity is written out.
+//         - When we decompress a single bone, sub-tracks equal to the identity are processed
+//           and the identity is written out.
+// 
+//     Additive anim sequence
+//         - During compression, sub-tracks have their default value set to the additive identity.
+//           Sub-tracks equal to the identity will be stripped (common).
+//         - When we decompress a whole pose, sub-tracks equal to the additive identity are skipped entirely.
+//           This is possible because the output pose is initialized with the additive identity before decompression.
+//         - When we decompress a single bone, sub-tracks equal to the identity are processed
+//           and the identity is written out.
+// 
+// When stripping is enabled, here is what happens:
+//     Non-additive anim sequence
+//         - During compression, sub-tracks have their default value set to the bind pose.
+//           Sub-tracks equal to the bind pose will be stripped (common).
+//         - When we decompress a whole pose, sub-tracks equal to the bind pose are skipped entirely.
+//           This is possible because the output pose is initialized with the bind pose before decompression.
+//         - When we decompress a single bone, sub-tracks equal to the bind pose are processed
+//           and the bind pose is written out.
+// 
+//     Additive anim sequence
+//         - Additive sequences do not have a traditional bind pose, instead their default pose is
+//           the additive identity. As such, ACL always does stripping by default for this scenario.
+//           The behavior is identical as above.
+//////////////////////////////////////////////////////////////////////////
+
+#define ACL_WITH_BIND_POSE_STRIPPING (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
 
 #include <acl/core/error.h>
 #include <acl/core/iallocator.h>
@@ -174,8 +211,6 @@ ACLPLUGIN_API acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
 ACLPLUGIN_API acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Level);
 
 ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase);
-
-ACLPLUGIN_API void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, TArray<FTransform>& OutStrippedBindPose);
 
 /** Compatibility utilities */
 ACLPLUGIN_API uint32 GetNumSamples(const FCompressibleAnimData& CompressibleAnimData);

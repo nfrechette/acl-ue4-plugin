@@ -33,46 +33,6 @@ void FACLDatabaseCompressedAnimData::SerializeCompressedData(FArchive& Ar)
 	if (!Ar.IsFilterEditorOnly())
 	{
 		Ar << CompressedClip;
-		Ar << StrippedBindPose;
-	}
-#endif
-
-#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
-	int32 TracksExcludedFromStrippingBitSetCount = TracksExcludedFromStrippingBitSet.Num();
-	Ar << TracksExcludedFromStrippingBitSetCount;
-
-	// Checks are enabled, serialize our data (in editor and non-shipping cooked builds)
-	if (Ar.IsLoading())
-	{
-		TArray<uint32> ExcludedBitSetData;
-		ExcludedBitSetData.AddUninitialized(TracksExcludedFromStrippingBitSetCount);
-
-		Ar.Serialize(ExcludedBitSetData.GetData(), TracksExcludedFromStrippingBitSetCount * sizeof(int32));
-
-		Swap(TracksExcludedFromStrippingBitSet, ExcludedBitSetData);
-	}
-	else if (Ar.IsSaving() || Ar.IsCountingMemory())
-	{
-		Ar.Serialize(TracksExcludedFromStrippingBitSet.GetData(), TracksExcludedFromStrippingBitSetCount * sizeof(int32));
-	}
-#else
-	int32 TracksExcludedFromStrippingBitSetCount = 0;
-	Ar << TracksExcludedFromStrippingBitSetCount;
-
-	if (Ar.IsLoading())
-	{
-		// If checks are disabled, skip the data in the archive since we don't need it
-		const int64 CurrentPos = Ar.Tell();
-		Ar.Seek(CurrentPos + TracksExcludedFromStrippingBitSetCount * sizeof(int32));
-	}
-	else if (Ar.IsCountingMemory())
-	{
-		// Nothing to count since we don't use the data
-	}
-	else
-	{
-		// Should never happen since stripping checks should always be enabled in the editor and during cooking where saving happens
-		UE_LOG(LogAnimationCompression, Fatal, TEXT("Cannot save ACL excluded from stripping bitset data in this configuration"));
 	}
 #endif
 }
@@ -221,20 +181,6 @@ void UAnimBoneCompressionCodec_ACLDatabase::GetCompressionSettings(acl::compress
 
 	OutSettings.level = GetCompressionLevel(CompressionLevel);
 	OutSettings.enable_database_support = true;
-}
-
-void UAnimBoneCompressionCodec_ACLDatabase::PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, ICompressedAnimData& AnimData) const
-{
-	FACLDatabaseCompressedAnimData& ACLAnimData = static_cast<FACLDatabaseCompressedAnimData&>(AnimData);
-	::PopulateStrippedBindPose(CompressibleAnimData, ACLTracks, ACLAnimData.StrippedBindPose);
-}
-
-void UAnimBoneCompressionCodec_ACLDatabase::SetExcludedFromStrippingBitSet(const TArray<uint32>& TracksExcludedFromStrippingBitSet, ICompressedAnimData& AnimData) const
-{
-#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
-	FACLDatabaseCompressedAnimData& ACLAnimData = static_cast<FACLDatabaseCompressedAnimData&>(AnimData);
-	ACLAnimData.TracksExcludedFromStrippingBitSet = TracksExcludedFromStrippingBitSet;
-#endif
 }
 
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
@@ -424,7 +370,5 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressBone(FAnimSequenceDecompre
 	}
 #endif
 
-	InitializeBoneAtomWithBindPose(bStripBindPose, AnimData, TrackIndex, OutAtom);
-
-	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
+	::DecompressBone(DecompContext, ACLContext, bStripBindPose, TrackIndex, OutAtom);
 }

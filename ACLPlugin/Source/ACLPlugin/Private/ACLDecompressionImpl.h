@@ -114,24 +114,45 @@ struct FUE4OutputWriter final : public acl::track_writer
 /*
 * Output track writer for a single track.
 */
-template<bool bSkipDefaultSubTracks>
+template<bool bUseBindPose>
 struct UE4OutputTrackWriter final : public acl::track_writer
 {
+	// The bind pose
+	const FTransform* RefPoses;
+
 	// Raw reference for performance reasons, caller is responsible for ensuring data is valid
 	FACLTransform& Atom;
 
 	explicit UE4OutputTrackWriter(FTransform& Atom_)
-		: Atom(static_cast<FACLTransform&>(Atom_))
+		: RefPoses(nullptr)
+		, Atom(static_cast<FACLTransform&>(Atom_))
 	{}
+
+	UE4OutputTrackWriter(const TArrayView<const FTransform>& RefPoses_, FTransform& Atom_)
+		: RefPoses(RefPoses_.GetData())
+		, Atom(static_cast<FACLTransform&>(Atom_))
+	{}
+
+	// TODO: UE5 FTransform uses doubles, we should convert the default values to use doubles to speed it up
+	// But to do this, we have to add support for it in ACL:
+	//    - We have to use 'auto' when we cache the value we query from the writer
+	//    - We have to use a new compile time parameter in the writer, if float64 output is enabled, etc
+	//      ACL would benefit from knowing this as we could convert floats in SOA form before caching but maybe not worth it
 
 	//////////////////////////////////////////////////////////////////////////
 	// Override the OutputWriter behavior
-	static constexpr acl::default_sub_track_mode get_default_rotation_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::constant; }
-	static constexpr acl::default_sub_track_mode get_default_translation_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::constant; }
+	// If we use the bind pose, each default sub-track will grab the bind pose value
+	// Otherwise we output the constant default values
+	static constexpr acl::default_sub_track_mode get_default_rotation_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::constant; }
+	static constexpr acl::default_sub_track_mode get_default_translation_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::constant; }
+	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::legacy; }
 
-	// TODO: use the right identity value if we are additive! until then we can't skip default sub-tracks
-	//static constexpr acl::default_sub_track_mode get_default_scale_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::legacy; }
-	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return acl::default_sub_track_mode::legacy; }
+	// TODO: There is a performance impact here because the ref pose might use doubles on PC
+	FORCEINLINE_DEBUGGABLE rtm::quatf RTM_SIMD_CALL get_variable_default_rotation(uint32_t TrackIndex) const { return UEQuatToACL(RefPoses[TrackIndex].GetRotation()); }
+	FORCEINLINE_DEBUGGABLE rtm::vector4f RTM_SIMD_CALL get_variable_default_translation(uint32_t TrackIndex) const { return UEVector3ToACL(RefPoses[TrackIndex].GetTranslation()); }
+	// Only called if bind pose stripping is enabled and we are non-additive.
+	// If this is the case, we can output 1.0 since there is no scale value in the bind pose.
+	FORCEINLINE_DEBUGGABLE rtm::vector4f RTM_SIMD_CALL get_variable_default_scale(uint32_t TrackIndex) const { return rtm::vector_set(1.0F); }
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
@@ -156,27 +177,56 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 };
 
 template<class ACLContextType>
-FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, int32 TrackIndex, FTransform& OutAtom)
+FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, bool bIsBindPoseStripped, int32 TrackIndex, FTransform& OutAtom)
 {
-	ACLContext.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+	const float Time = DecompContext.GetEvaluationTime();
+#else
+	const float Time = DecompContext.Time;
+#endif
 
-	// We always skip default sub-tracks
-	// In the editor we cache the bind pose and always initialize the output with it
-	// At runtime, the bind pose is only stripped from the data if the track is never
-	// queried here at runtime (it has been excluded from stripping) or if the clip
-	// is additive in which case the output is properly initialized to the identity
-	// See: InitializeBoneAtomWithBindPose(..)
-	constexpr bool bSkipDefaultSubTracks = true;
+	ACLContext.seek(Time, get_rounding_policy(DecompContext.Interpolation));
 
-	UE4OutputTrackWriter<bSkipDefaultSubTracks> Writer(OutAtom);
-	ACLContext.decompress_track(TrackIndex, Writer);
+#if ACL_WITH_BIND_POSE_STRIPPING
+	// See [Bind pose stripping] for details
+	const acl::compressed_tracks* CompressedClipData = ACLContext.get_compressed_tracks();
+	if (bIsBindPoseStripped &&
+		// Are we non-additive?
+		CompressedClipData->get_default_scale() != 0)
+	{
+		// Non-additive anim sequences must write out the bind pose for default sub-tracks since they
+		// have been stripped from the data. Additive anim sequences always have the additive identity
+		// stripped, no need for the bind pose.
+		constexpr bool bUseBindPose = true;
+
+		UE4OutputTrackWriter<bUseBindPose> Writer(DecompContext.GetRefLocalPoses(), OutAtom);
+		ACLContext.decompress_track(TrackIndex, Writer);
+	}
+	else
+#endif
+	{
+		// Additive anim sequences have the identity stripped out, we'll output it.
+		// We also output the regular identity if bind pose stripping isn't enabled.
+		constexpr bool bUseBindPose = false;
+
+		UE4OutputTrackWriter<bUseBindPose> Writer(OutAtom);
+		ACLContext.decompress_track(TrackIndex, Writer);
+	}
 }
 
 template<class ACLContextType>
-FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, bool bIsBindPoseStripped, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms)
+FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, bool bIsBindPoseStripped,
+	const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs,
+	TArrayView<FTransform>& OutAtoms)
 {
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+	const float Time = DecompContext.GetEvaluationTime();
+#else
+	const float Time = DecompContext.Time;
+#endif
+
 	// Seek first, we'll start prefetching ahead right away
-	ACLContext.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
+	ACLContext.seek(Time, get_rounding_policy(DecompContext.Interpolation));
 
 	const acl::compressed_tracks* CompressedClipData = ACLContext.get_compressed_tracks();
 	const int32 TrackCount = CompressedClipData->get_num_tracks();
@@ -253,73 +303,27 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 	// We will decompress the whole pose even if we only care about a smaller subset of bone tracks.
 	// This ensures we read the compressed pose data once, linearly.
 
-	// TODO: By default, UE4 always populates the bind pose before decompressing a pose
-	// As such, it should be safe to always skip default tracks
-	// Even if bind pose stripping is disabled, tracks that have their default value the identity are
-	// stripped and populated regardless at runtime before decompression
-
-	if (bIsBindPoseStripped)
+#if ACL_WITH_BIND_POSE_STRIPPING
+	// See [Bind pose stripping] for details
+	if (bIsBindPoseStripped ||
+		// Are we additive?
+		CompressedClipData->get_default_scale() == 0)
 	{
-		// If our bind pose has been stripped, we can skip default sub-tracks since the caller will have pre-filled
+		// If our default pose has been stripped, we can skip default sub-tracks since the caller will have pre-filled
 		// the output pose buffer with it.
+		// For non-additive anim sequences, this is the bind pose. For additive sequences, it is the additive identity.
 		constexpr bool bSkipDefaultSubTracks = true;
 
 		FUE4OutputWriter<bSkipDefaultSubTracks> PoseWriter(OutAtoms, TrackToAtomsMap);
 		ACLContext.decompress_tracks(PoseWriter);
 	}
 	else
+#endif
 	{
-		// Bind pose isn't stripped, don't skip anything
+		// Default pose isn't stripped, don't skip anything
 		constexpr bool bSkipDefaultSubTracks = false;
 
 		FUE4OutputWriter<bSkipDefaultSubTracks> PoseWriter(OutAtoms, TrackToAtomsMap);
 		ACLContext.decompress_tracks(PoseWriter);
 	}
-}
-
-template<class AnimDataType>
-FORCEINLINE_DEBUGGABLE void InitializeBoneAtomWithBindPose(bool bIsBindPoseStripped, const AnimDataType& AnimData, int32 TrackIndex, FTransform& OutAtom)
-{
-#if WITH_EDITORONLY_DATA
-	if (bIsBindPoseStripped && AnimData.StrippedBindPose.Num() != 0)
-	{
-		// If the bind pose has been stripped, we can recover it in the editor since we cache the data
-		// Single bone decompression is often used in the editor, sadly, and the bind pose isn't
-		// provided in FAnimSequenceDecompressionContext
-		OutAtom = AnimData.StrippedBindPose[TrackIndex];
-	}
-	else
-	{
-		// We still skip default sub-tracks even if stripping is disabled
-		// Additive clips have the identity (with zero scale) as the bind pose, so stripping or not this is safe
-		// Non-additive clips that stripped this bone will fail the check below and return an incorrect result
-		// Non-additive clips that excluded this bone will only strip if the value is the identity
-		// TODO: use the right identity value if we are additive!
-		OutAtom = FTransform::Identity;
-	}
-#else
-	// We still skip default sub-tracks even if stripping is disabled
-	// Additive clips have the identity as the bind pose, so stripping or not this is safe
-	// Non-additive clips that stripped this bone will fail the check below and return an incorrect result
-	// Non-additive clips that excluded this bone will only strip if the value is the identity
-	// TODO: use the right identity value if we are additive!
-	OutAtom = FTransform::Identity;
-#endif
-
-#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS && !WITH_EDITORONLY_DATA
-	// Make sure this bone hasn't been stripped with bind pose stripping in cooked games
-	if (bIsBindPoseStripped && AnimData.TracksExcludedFromStrippingBitSet.Num() != 0)
-	{
-		const acl::bitset_description ExcludedBitsetDesc = acl::bitset_description::make_from_num_bits(AnimData.TracksExcludedFromStrippingBitSet.Num() * 32);
-		const bool bIsTrackExcludedFromStripping = acl::bitset_test(AnimData.TracksExcludedFromStrippingBitSet.GetData(), ExcludedBitsetDesc, TrackIndex);
-		if (!bIsTrackExcludedFromStripping)
-		{
-			// If a bone hasn't been excluded from bind pose stripping, then its data is no longer present in the compressed buffer.
-			// As such, we cannot recover its value here.
-			// DecompressPose() avoids this issue by always pre-filling the output pose with the bind pose.
-			// However, here we are out of luck until Epic exposes the bind pose through the FAnimSequenceDecompressionContext.
-			UE_LOG(LogAnimationCompression, Error, TEXT("ACL: Track index %u is queried explicitly at runtime but can been stripped if equal to the bind pose. Make sure this bone is excluded or results will be incorrect!"), TrackIndex);
-		}
-	}
-#endif
 }

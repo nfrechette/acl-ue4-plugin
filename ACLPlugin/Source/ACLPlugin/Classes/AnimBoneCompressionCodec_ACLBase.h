@@ -32,20 +32,9 @@ struct FACLCompressedAnimData final : public ICompressedAnimData
 	/** Holds the compressed_tracks instance */
 	TArrayView<uint8> CompressedByteStream;
 
-#if WITH_EDITORONLY_DATA
-	/** Holds the default pose used when bind pose stripping is enabled */
-	TArray<FTransform> StrippedBindPose;
-#endif
-
-#if WITH_ACL_EXCLUDED_FROM_STRIPPING_CHECKS
-	/** Holds an ACL type bitset for each UE4 track to tell if it was excluded from bind pose stripping or not */
-	TArray<uint32> TracksExcludedFromStrippingBitSet;
-#endif
-
 	const acl::compressed_tracks* GetCompressedTracks() const { return acl::make_compressed_tracks(CompressedByteStream.GetData()); }
 
 	// ICompressedAnimData implementation
-	virtual void SerializeCompressedData(class FArchive& Ar) override;
 	virtual void Bind(const TArrayView<uint8> BulkData) override { CompressedByteStream = BulkData; }
 	virtual int64 GetApproxCompressedSize() const override { return CompressedByteStream.Num(); }
 	virtual bool IsValid() const override;
@@ -75,15 +64,17 @@ class UAnimBoneCompressionCodec_ACLBase : public UAnimBoneCompressionCodec
 	float ErrorThreshold;
 #endif
 
-	/** Whether or not to strip the bind pose from compressed clips. Note that this is only used in cooked builds and runtime behavior may differ from the editor, see documentation for details. */
-	UPROPERTY(EditAnywhere, Category = "ACL Bind Pose (Experimental)")
+	/** Whether or not to strip the bind pose from compressed clips. UE 5.1+ */
+	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (EditCondition = "bIsBindPoseStrippingSupported", HideEditConditionToggle))
 	bool bStripBindPose;
 
 #if WITH_EDITORONLY_DATA
-	/** Bones in this list will not be stripped even when equal to their bind pose value. */
-	UPROPERTY(EditAnywhere, Category = "ACL Bind Pose (Experimental)", meta = (DisplayName = "Exclusion List"))
-	TArray<FName> BindPoseStrippingBoneExclusionList;
+	/** Whether bind pose stripping is supported or not. Only used in the editor to enable/disable the feature. */
+	UPROPERTY(Transient)
+	bool bIsBindPoseStrippingSupported;
+#endif
 
+#if WITH_EDITORONLY_DATA
 	// UAnimBoneCompressionCodec implementation
 	virtual bool Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) override;
 
@@ -95,8 +86,6 @@ class UAnimBoneCompressionCodec_ACLBase : public UAnimBoneCompressionCodec
 
 	// Our implementation
 	virtual void PostCompression(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) const {}
-	virtual void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, ICompressedAnimData& AnimData) const;
-	virtual void SetExcludedFromStrippingBitSet(const TArray<uint32>& TracksExcludedFromStrippingBitSet, ICompressedAnimData& AnimData) const;
 	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const PURE_VIRTUAL(UAnimBoneCompressionCodec_ACLBase::GetCompressionSettings, );
 	virtual TArray<class USkeletalMesh*> GetOptimizationTargets() const { return TArray<class USkeletalMesh*>(); }
 	virtual ACLSafetyFallbackResult ExecuteSafetyFallback(acl::iallocator& Allocator, const acl::compression_settings& Settings, const acl::track_array_qvvf& RawClip, const acl::track_array_qvvf& BaseClip, const acl::compressed_tracks& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult);

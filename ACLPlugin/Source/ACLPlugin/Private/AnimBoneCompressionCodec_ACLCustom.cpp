@@ -83,10 +83,8 @@ void UAnimBoneCompressionCodec_ACLCustom::DecompressBone(FAnimSequenceDecompress
 	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
 	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-	InitializeBoneAtomWithBindPose(bStripBindPose, AnimData, TrackIndex, OutAtom);
-
 	acl::decompression_context<UE4CustomDecompressionSettings> ACLContext;
 	ACLContext.initialize(*CompressedClipData);
 
-	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
+	::DecompressBone(DecompContext, ACLContext, bStripBindPose, TrackIndex, OutAtom);
 }

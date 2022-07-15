@@ -181,28 +181,6 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	return Tracks;
 }
 
-void PopulateStrippedBindPose(const FCompressibleAnimData& CompressibleAnimData, const acl::track_array_qvvf& ACLTracks, TArray<FTransform>& OutStrippedBindPose)
-{
-	const int32 NumTracks = CompressibleAnimData.TrackToSkeletonMapTable.Num();
-
-	TArray<FTransform> StrippedBindPose;
-	StrippedBindPose.AddUninitialized(NumTracks);
-
-	for (const acl::track_qvvf& Track : ACLTracks)
-	{
-		const uint32 TrackIndex = Track.get_output_index();
-		if (TrackIndex == acl::k_invalid_track_index)
-		{
-			continue;	// Track is stripped, skip it
-		}
-
-		const acl::track_desc_transformf& Desc = Track.get_description();
-		StrippedBindPose[TrackIndex] = ACLTransformToUE(Desc.default_value);
-	}
-
-	Swap(OutStrippedBindPose, StrippedBindPose);
-}
-
 uint32 GetNumSamples(const FCompressibleAnimData& CompressibleAnimData)
 {
 #if ENGINE_MAJOR_VERSION >= 5
