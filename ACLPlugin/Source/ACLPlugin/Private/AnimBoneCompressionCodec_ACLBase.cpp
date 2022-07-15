@@ -449,6 +449,8 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	return true;
 }
 
+// TODO: Use CompressibleAnimData::RefLocalPoses for bind pose instance of BoneData
+
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
 void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(const UAnimSequenceBase& AnimSeq, FArchive& Ar)
 #else
