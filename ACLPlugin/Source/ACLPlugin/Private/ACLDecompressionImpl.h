@@ -17,6 +17,8 @@ constexpr acl::sample_rounding_policy get_rounding_policy(EAnimInterpolationType
  */
 struct FACLTransform final : public FTransform
 {
+	// Under UE5, these convert from float32 to float64
+
 	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL SetRotationRaw(rtm::quatf_arg0 Rotation_)
 	{
 #if PLATFORM_ENABLE_VECTORINTRINSICS
