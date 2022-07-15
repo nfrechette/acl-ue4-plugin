@@ -82,7 +82,11 @@ class UAnimBoneCompressionCodec_ACLDatabase : public UAnimBoneCompressionCodec_A
 #endif
 
 	// UAnimBoneCompressionCodec implementation
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+	virtual void PopulateDDCKey(const UAnimSequenceBase& AnimSeq, FArchive& Ar) override;
+#else
 	virtual void PopulateDDCKey(FArchive& Ar) override;
+#endif
 
 	// UAnimBoneCompressionCodec_ACLBase implementation
 	virtual void PostCompression(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) const override;
