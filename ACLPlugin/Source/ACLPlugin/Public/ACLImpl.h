@@ -16,7 +16,12 @@
 	#define ACL_ASSERT(expression, format, ...) checkf(expression, TEXT(format), #__VA_ARGS__)
 #endif
 
-#if PLATFORM_PS4
+// Enable popcount usage on PS4.
+// We cannot use PLATFORM_ENABLE_POPCNT_INTRINSIC as that might be unsafe.
+// UE uses that macro to determine if the GCC intrinsic is present, not if the instruction
+// is supported.
+// UE 5.1 removed the PS4 define and we can no longer rely on it
+#if (ENGINE_MAJOR_VERSION <= 5 && ENGINE_MINOR_VERSION <= 0) && PLATFORM_PS4
 	// Enable usage of popcount instruction
 	#define ACL_USE_POPCOUNT
 #endif
