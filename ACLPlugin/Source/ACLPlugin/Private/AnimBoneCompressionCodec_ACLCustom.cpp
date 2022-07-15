@@ -27,8 +27,6 @@ UAnimBoneCompressionCodec_ACLCustom::UAnimBoneCompressionCodec_ACLCustom(const F
 #if WITH_EDITORONLY_DATA
 void UAnimBoneCompressionCodec_ACLCustom::GetCompressionSettings(acl::compression_settings& OutSettings) const
 {
-	using namespace acl;
-
 	OutSettings = acl::compression_settings();
 	OutSettings.rotation_format = GetRotationFormat(RotationFormat);
 	OutSettings.translation_format = GetVectorFormat(TranslationFormat);
