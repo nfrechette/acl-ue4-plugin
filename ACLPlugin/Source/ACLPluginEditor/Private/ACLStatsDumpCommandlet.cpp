@@ -338,6 +338,7 @@ struct SimpleTransformWriter final : public acl::track_writer
 	}
 };
 
+#if ACL_WITH_BIND_POSE_STRIPPING
 static void FixupForBindPoseStripping(const UAnimBoneCompressionCodec_ACLBase& ACLCodec, USkeleton* UE4Skeleton, acl::track_array_qvvf& ACLTracks)
 {
 	// When reading the tracks from a file, the default value is the bind pose
@@ -357,20 +358,15 @@ static void FixupForBindPoseStripping(const UAnimBoneCompressionCodec_ACLBase& A
 		const uint32 TrackIndex = Track.get_output_index();
 		const bool bIsRootBone = TrackIndex == 0;
 
-		if (
-			// If we aren't doing bind pose stripping
-			!ACLCodec.bStripBindPose
-			// Root bone is always excluded from stripping
-			|| bIsRootBone
-			// This bone is explicitly excluded from stripping
-			|| ACLCodec.BindPoseStrippingBoneExclusionList.Contains(UE4Bone.Name)
-			)
+		// If we aren't doing bind pose stripping
+		if (!ACLCodec.bStripBindPose)
 		{
 			// Make sure the default value is the identity to prevent stripping
 			Desc.default_value = rtm::qvv_identity();
 		}
 	}
 }
+#endif
 
 static void CalculateClipError(const acl::track_array_qvvf& Tracks, const UAnimSequence* UE4Clip, USkeleton* UE4Skeleton, uint32& OutWorstBone, float& OutMaxError, float& OutWorstSampleTime)
 {
@@ -798,11 +794,14 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 		const bool bHasClipData = Context.UE4Clip->CompressedData.CompressedDataStructure != nullptr;
 
 		UAnimBoneCompressionCodec_ACLBase* ACLCodec = Cast<UAnimBoneCompressionCodec_ACLBase>(Context.UE4Clip->CompressedData.BoneCompressionCodec);
+
+#if ACL_WITH_BIND_POSE_STRIPPING
 		if (ACLCodec != nullptr && bHasClipData)
 		{
 			// Not ideal, this modifies the raw tracks but we shouldn't need them after we measure the error below
 			FixupForBindPoseStripping(*ACLCodec, Context.UE4Skeleton, Context.ACLTracks);
 		}
+#endif
 
 		AnimationErrorStats UE4ErrorStats;
 		uint32 WorstBone = INDEX_NONE;
@@ -1426,7 +1425,10 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 	{
 		ACLCompressionSettings = NewObject<UAnimBoneCompressionSettings>(this, UAnimBoneCompressionSettings::StaticClass());
 		ACLCodec = NewObject<UAnimBoneCompressionCodec_ACL>(this, UAnimBoneCompressionCodec_ACL::StaticClass());
+
+#if ACL_WITH_BIND_POSE_STRIPPING
 		ACLCodec->bStripBindPose = Switches.Contains(TEXT("strip"));
+#endif
 
 		ACLCompressionSettings->Codecs.Add(ACLCodec);
 		ACLCompressionSettings->AddToRoot();
