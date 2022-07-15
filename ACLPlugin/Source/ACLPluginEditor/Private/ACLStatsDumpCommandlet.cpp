@@ -45,11 +45,17 @@
 //		-compress: Commandlet will compress the input clips and output stats
 //		-extract: Commandlet will extract the input clips into output *acl.sjson clips
 //		-error: Enables the exhaustive error dumping
-//		-auto: Uses automatic compression
-//		-acl: Uses ACL compression
-//		-MasterTolerance=<tolerance>: The error threshold used by automatic compression
-//		-strip: Enables ACL bind pose stripping
 //		-resume: If present, clip extraction or compression will continue where it left off
+// 
+// Codec specific:
+//		-auto: Uses automatic compression
+//		-MasterTolerance=<tolerance>: The error threshold used by automatic compression
+// 
+//		-acl: Uses ACL compression
+//		-strip: Enables ACL bind pose stripping (UE 5.1+)
+// 
+//		-keyreduction: Use linear key reduction
+//		-keyreductionrt: Use linear key reduction with retargetting (error compensation)
 //////////////////////////////////////////////////////////////////////////
 
 class UE4SJSONStreamWriter final : public sjson::StreamWriter
