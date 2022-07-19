@@ -8,11 +8,14 @@ namespace UnrealBuildTool.Rules
 	{
 		public ACLPluginEditor(ReadOnlyTargetRules Target) : base(Target)
 		{
+			string ACLSDKDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../ThirdParty"));
+
 			PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 			//OptimizeCode = CodeOptimization.Never;
 			//bUseUnity = false;
 
 			PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/external/sjson-cpp/includes"));
 
 			PrivateIncludePaths.Add("ACLPluginEditor/Private");
 
