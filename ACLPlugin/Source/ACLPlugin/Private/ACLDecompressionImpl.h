@@ -120,16 +120,21 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 	// The bind pose
 	const FTransform* RefPoses;
 
+	// Maps track indices to bone indices
+	const FTrackToSkeletonMap* TrackToBoneMapping;
+
 	// Raw reference for performance reasons, caller is responsible for ensuring data is valid
 	FACLTransform& Atom;
 
 	explicit UE4OutputTrackWriter(FTransform& Atom_)
 		: RefPoses(nullptr)
+		, TrackToBoneMapping(nullptr)
 		, Atom(static_cast<FACLTransform&>(Atom_))
 	{}
 
-	UE4OutputTrackWriter(const TArrayView<const FTransform>& RefPoses_, FTransform& Atom_)
+	UE4OutputTrackWriter(const TArrayView<const FTransform>& RefPoses_, const TArrayView<const FTrackToSkeletonMap>& TrackToSkeletonMap, FTransform& Atom_)
 		: RefPoses(RefPoses_.GetData())
+		, TrackToBoneMapping(TrackToSkeletonMap.GetData())
 		, Atom(static_cast<FACLTransform&>(Atom_))
 	{}
 
@@ -148,8 +153,16 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::legacy; }
 
 	// TODO: There is a performance impact here because the ref pose might use doubles on PC
-	FORCEINLINE_DEBUGGABLE rtm::quatf RTM_SIMD_CALL get_variable_default_rotation(uint32_t TrackIndex) const { return UEQuatToACL(RefPoses[TrackIndex].GetRotation()); }
-	FORCEINLINE_DEBUGGABLE rtm::vector4f RTM_SIMD_CALL get_variable_default_translation(uint32_t TrackIndex) const { return UEVector3ToACL(RefPoses[TrackIndex].GetTranslation()); }
+	FORCEINLINE_DEBUGGABLE rtm::quatf RTM_SIMD_CALL get_variable_default_rotation(uint32_t TrackIndex) const
+	{
+		return UEQuatToACL(RefPoses[TrackToBoneMapping[TrackIndex].BoneTreeIndex].GetRotation());
+	}
+
+	FORCEINLINE_DEBUGGABLE rtm::vector4f RTM_SIMD_CALL get_variable_default_translation(uint32_t TrackIndex) const
+	{
+		return UEVector3ToACL(RefPoses[TrackToBoneMapping[TrackIndex].BoneTreeIndex].GetTranslation());
+	}
+
 	// Only called if bind pose stripping is enabled and we are non-additive.
 	// If this is the case, we can output 1.0 since there is no scale value in the bind pose.
 	FORCEINLINE_DEBUGGABLE rtm::vector4f RTM_SIMD_CALL get_variable_default_scale(uint32_t TrackIndex) const { return rtm::vector_set(1.0F); }
@@ -199,7 +212,7 @@ FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& De
 		// stripped, no need for the bind pose.
 		constexpr bool bUseBindPose = true;
 
-		UE4OutputTrackWriter<bUseBindPose> Writer(DecompContext.GetRefLocalPoses(), OutAtom);
+		UE4OutputTrackWriter<bUseBindPose> Writer(DecompContext.GetRefLocalPoses(), DecompContext.GetTrackToSkeletonMap(), OutAtom);
 		ACLContext.decompress_track(TrackIndex, Writer);
 	}
 	else
