@@ -9,7 +9,7 @@ if __name__ == "__main__":
 		print('Usage: python prepare_release.py <version> (e.g. 4.25)')
 		sys.exit(1)
 
-	target_ue4_version = sys.argv[1]
+	target_ue_version = sys.argv[1]
 
 	tools_dir = os.path.dirname(os.path.realpath(__file__))
 	root_dir = os.path.join(tools_dir, '..')
@@ -48,16 +48,16 @@ if __name__ == "__main__":
 	shutil.rmtree(os.path.join(acl_root_dir, 'external', 'benchmark'))
 	shutil.rmtree(os.path.join(rtm_root_dir, 'external', 'benchmark'))
 
-	print('Setting uplugin version to: {} ...'.format(target_ue4_version))
+	print('Setting uplugin version to: {} ...'.format(target_ue_version))
 	uplugin_file = os.path.join(plugin_dst_dir, 'ACLPlugin.uplugin')
 	with open(uplugin_file) as f:
 		uplugin_file_content = f.read()
-	uplugin_file_content = uplugin_file_content.replace('4.25.0', target_ue4_version + '.0')
+	uplugin_file_content = uplugin_file_content.replace('4.25.0', target_ue_version + '.0')
 	with open(uplugin_file, 'w') as f:
 		f.write(uplugin_file_content)
 
 	print('Zipping ACLPlugin ...')
-	zip_filename = os.path.join(root_dir, 'ACLPlugin_v' + plugin_version + '_' + target_ue4_version)
+	zip_filename = os.path.join(root_dir, 'ACLPlugin_v' + plugin_version + '_' + target_ue_version)
 	shutil.make_archive(zip_filename, 'zip', staging_dir)
 
 	print('Done!')
