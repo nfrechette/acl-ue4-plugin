@@ -144,7 +144,7 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UE4S
 
 static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4Clip, USkeleton* UE4Skeleton)
 {
-	const uint32 NumSamples = Tracks.get_num_samples_per_track();
+	const int32 NumSamples = Tracks.get_num_samples_per_track();
 	const float SequenceLength = FGenericPlatformMath::Max<float>(Tracks.get_finite_duration(), MINIMUM_ANIMATION_LENGTH);
 
 #if ENGINE_MAJOR_VERSION >= 5
@@ -155,7 +155,12 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4C
 
 	IAnimationDataController& UE4ClipController = UE4Clip->GetController();
 	UE4ClipController.SetFrameRate(FFrameRate(FrameRate, 1));
+
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2)
+	UE4ClipController.SetNumberOfFrames(FFrameNumber(NumSamples));
+#else
 	UE4ClipController.SetPlayLength(SequenceLength);
+#endif
 
 	// Ensure our frame rate update propagates first to avoid re-sampling below
 	UE4ClipController.NotifyPopulated();
@@ -181,19 +186,19 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4C
 			RawTrack.RotKeys.Empty();
 			RawTrack.ScaleKeys.Empty();
 
-			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				const FRawAnimTrackQuat Rotation = ACLQuatToUE(rtm::quat_normalize(Track[SampleIndex].rotation));
 				RawTrack.RotKeys.Add(Rotation);
 			}
 
-			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				const FRawAnimTrackVector3 Translation = ACLVector3ToUE(Track[SampleIndex].translation);
 				RawTrack.PosKeys.Add(Translation);
 			}
 
-			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				const FRawAnimTrackVector3 Scale = ACLVector3ToUE(Track[SampleIndex].scale);
 				RawTrack.ScaleKeys.Add(Scale);
@@ -255,7 +260,11 @@ static void SampleUE4Clip(const acl::track_array_qvvf& Tracks, USkeleton* UE4Ske
 		FTransform BoneTransform;
 		if (BoneTrackIndex != INDEX_NONE)
 		{
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+			UE4Clip->GetBoneTransform(BoneTransform, BoneTrackIndex, double(SampleTime), false);
+#else
 			UE4Clip->GetBoneTransform(BoneTransform, BoneTrackIndex, SampleTime, false);
+#endif
 		}
 		else
 		{
@@ -819,6 +828,14 @@ static int32 GetCompressedNumberOfKeys(const FUECompressedAnimData& AnimData)
 
 static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool PerformExhaustiveDump, sjson::Writer& Writer)
 {
+#if ENGINE_MAJOR_VERSION >= 5
+#if ENGINE_MINOR_VERSION >= 2
+	using AnimDataModelType = IAnimationDataModel;
+#else
+	using AnimDataModelType = UAnimDataModel;
+#endif
+#endif
+
 	// Force recompression and avoid the DDC
 	TGuardValue<int32> CompressGuard(Context.UE4Clip->CompressCommandletVersion, INDEX_NONE);
 
@@ -892,7 +909,7 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 				const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
 
 #if ENGINE_MAJOR_VERSION >= 5
-				const UAnimDataModel* ClipData = Context.UE4Clip->GetDataModel();
+				const AnimDataModelType* ClipData = Context.UE4Clip->GetDataModel();
 				const TArray<FBoneAnimationTrack>& RawTracks = ClipData->GetBoneAnimationTracks();
 				const int32 NumSamples = ClipData->GetNumberOfFrames();
 #else
@@ -977,7 +994,7 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 				const FUECompressedAnimData& AnimData = static_cast<FUECompressedAnimData&>(*Context.UE4Clip->CompressedData.CompressedDataStructure);
 
 #if ENGINE_MAJOR_VERSION >= 5
-				const UAnimDataModel* ClipData = Context.UE4Clip->GetDataModel();
+				const AnimDataModelType* ClipData = Context.UE4Clip->GetDataModel();
 				const TArray<FBoneAnimationTrack>& RawTracks = ClipData->GetBoneAnimationTracks();
 				const int32 NumSamples = ClipData->GetNumberOfFrames();
 #else
