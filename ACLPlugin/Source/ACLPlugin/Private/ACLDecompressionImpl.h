@@ -141,7 +141,13 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 template<class ACLContextType>
 FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, int32 TrackIndex, FTransform& OutAtom)
 {
-	ACLContext.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+	const float Time = DecompContext.GetEvaluationTime();
+#else
+	const float Time = DecompContext.Time;
+#endif
+
+	ACLContext.seek(Time, get_rounding_policy(DecompContext.Interpolation));
 
 	UE4OutputTrackWriter Writer(OutAtom);
 	ACLContext.decompress_track(TrackIndex, Writer);
@@ -150,8 +156,14 @@ FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& De
 template<class ACLContextType>
 FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs, TArrayView<FTransform>& OutAtoms)
 {
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+	const float Time = DecompContext.GetEvaluationTime();
+#else
+	const float Time = DecompContext.Time;
+#endif
+
 	// Seek first, we'll start prefetching ahead right away
-	ACLContext.seek(DecompContext.Time, get_rounding_policy(DecompContext.Interpolation));
+	ACLContext.seek(Time, get_rounding_policy(DecompContext.Interpolation));
 
 	const acl::compressed_tracks* CompressedClipData = ACLContext.get_compressed_tracks();
 	const int32 TrackCount = CompressedClipData->get_num_tracks();
