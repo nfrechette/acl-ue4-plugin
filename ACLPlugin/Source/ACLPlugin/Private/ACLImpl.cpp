@@ -104,14 +104,25 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	const bool bIsStaticPose = NumSamples <= 1 || CompressibleAnimData.SequenceLength < 0.0001f;
 	const float SampleRate = bIsStaticPose ? 30.0f : (float(NumSamples - 1) / CompressibleAnimData.SequenceLength);
 	const int32 NumBones = CompressibleAnimData.BoneData.Num();
+	const int32 NumUETracks = CompressibleAnimData.TrackToSkeletonMapTable.Num();
 
 	// Additive animations have 0,0,0 scale as the default since we add it
 	const FRawAnimTrackVector3 UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
 	const rtm::vector4f ACLDefaultScale = rtm::vector_set(bIsAdditive ? 0.0f : 1.0f);
 
-	acl::track_array_qvvf Tracks(AllocatorImpl, NumBones);
+	// We need to make sure to allocate enough ACL tracks. It is very common to have a skeleton with a number of bones
+	// and to have anim sequences that use that skeleton that have fewer tracks. This might happen if bones are added
+	// and when this happens, we'll populate the bind pose for that missing track. A less common case can happen where
+	// a sequence has compressed tracks for bones that no longer exist. We still need to compress this unused data to
+	// ensure the track indices remain in sync with the CompressedTrackToSkeletonMapTable.
+	const int32 NumInputACLTracks = FMath::Max(NumBones, NumUETracks);
+
+	acl::track_array_qvvf Tracks(AllocatorImpl, NumInputACLTracks);
 	Tracks.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*CompressibleAnimData.FullName)));
 
+	TBitArray<> PopulatedUETracks(false, NumUETracks);
+
+	// Populate all our track based on our skeleton, even if some end up stripped
 	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
 		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[BoneIndex];
@@ -124,11 +135,19 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 		const int32 ParentBoneIndex = UE4Bone.GetParent();
 		Desc.parent_index = ParentBoneIndex >= 0 ? ParentBoneIndex : acl::k_invalid_track_index;
 
-		const int32 TrackIndex = FindAnimationTrackIndex(CompressibleAnimData, BoneIndex);
+		const int32 UETrackIndex = FindAnimationTrackIndex(CompressibleAnimData, BoneIndex);
 
-		// We output bone data in UE4 track order. If a track isn't present, we will use the bind pose and strip it from the
+		// We output bone data in UE track order. If a track isn't present, we will use the bind pose and strip it from the
 		// compressed stream.
-		Desc.output_index = TrackIndex >= 0 ? TrackIndex : acl::k_invalid_track_index;
+		if (UETrackIndex >= 0)
+		{
+			PopulatedUETracks[UETrackIndex] = true;
+			Desc.output_index = UETrackIndex;
+		}
+		else
+		{
+			Desc.output_index = acl::k_invalid_track_index;
+		}
 
 		// Make sure the default scale value is consistent whether we are additive or not
 		Desc.default_value.scale = ACLDefaultScale;
@@ -136,10 +155,10 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 		acl::track_qvvf Track = acl::track_qvvf::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
 		Track.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*UE4Bone.Name.ToString())));
 
-		if (TrackIndex >= 0)
+		if (UETrackIndex >= 0)
 		{
 			// We have a track for this bone, use it
-			const FRawAnimSequenceTrack& RawTrack = RawTracks[TrackIndex];
+			const FRawAnimSequenceTrack& RawTrack = RawTracks[UETrackIndex];
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
@@ -176,6 +195,54 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 		}
 
 		Tracks[BoneIndex] = MoveTemp(Track);
+	}
+
+	if (NumBones < NumUETracks)
+	{
+		// If we have leftover tracks that do not map to any bone in our skeleton, compress them anyway to keep indices consistent
+		// TODO: Can we just set them to identity to strip them? Is it possible for them to be used at runtime?
+		int32 ACLTrackIndex = NumBones;	// Start inserting at the end
+		for (int32 UETrackIndex = 0; UETrackIndex < NumUETracks; ++UETrackIndex)
+		{
+			if (PopulatedUETracks[UETrackIndex])
+			{
+				// This track has been populated, skip it
+				continue;
+			}
+
+			// This track has no corresponding skeleton bone, add it anyway
+			acl::track_desc_transformf Desc;
+
+			// Without a bone, we have no way of knowing if we require special treatment
+			Desc.shell_distance = DefaultVirtualVertexDistance;
+
+			// Without a bone, no way to know if we have a parent, assume we are a root bone
+			Desc.parent_index = acl::k_invalid_track_index;
+
+			// Output index is our UE track index
+			Desc.output_index = UETrackIndex;
+
+			acl::track_qvvf Track = acl::track_qvvf::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
+
+			// We have raw track data, use it
+			const FRawAnimSequenceTrack& RawTrack = RawTracks[UETrackIndex];
+
+			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			{
+				const FRawAnimTrackQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
+				Track[SampleIndex].rotation = UEQuatToACL(RotationSample);
+
+				const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
+				Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
+
+				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
+				Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
+			}
+
+			// Add our extra track
+			Tracks[ACLTrackIndex] = MoveTemp(Track);
+			ACLTrackIndex++;
+		}
 	}
 
 	return Tracks;
