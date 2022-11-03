@@ -141,7 +141,7 @@ private:
 
 	/** The anim sequences contained within the database. Built manually from the asset UI, content browser, or with a commandlet. */
 	UPROPERTY(VisibleAnywhere, Category = "Metadata")
-	TArray<%ACL_IMPL_ANIM_SEQUENCE_PTR%> AnimSequences;
+	TArray<class UAnimSequence*> AnimSequences;
 
 public:
 	//////////////////////////////////////////////////////////////////////////

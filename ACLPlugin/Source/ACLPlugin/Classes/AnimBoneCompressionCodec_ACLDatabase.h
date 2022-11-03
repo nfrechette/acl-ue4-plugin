@@ -56,12 +56,12 @@ class UAnimBoneCompressionCodec_ACLDatabase : public UAnimBoneCompressionCodec_A
 
 	/** The database asset that will hold the compressed animation data. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	%ACL_IMPL_ANIMATION_COMPRESSION_LIBRARY_DATABASE_PTR% DatabaseAsset;
+	UAnimationCompressionLibraryDatabase* DatabaseAsset;
 
 #if WITH_EDITORONLY_DATA
 	/** The skeletal meshes used to estimate the skinning deformation during compression. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	TArray<%ACL_IMPL_SKELETAL_MESH_PTR%> OptimizationTargets;
+	TArray<class USkeletalMesh*> OptimizationTargets;
 
 	//////////////////////////////////////////////////////////////////////////
 	// UObject
