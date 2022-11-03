@@ -40,7 +40,7 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 
 	/** The skeletal meshes used to estimate the skinning deformation during compression. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	TArray<%ACL_IMPL_SKELETAL_MESH_PTR%> OptimizationTargets;
+	TArray<class USkeletalMesh*> OptimizationTargets;
 
 	//////////////////////////////////////////////////////////////////////////
 
