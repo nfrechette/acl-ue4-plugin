@@ -197,52 +197,51 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 		Tracks[BoneIndex] = MoveTemp(Track);
 	}
 
-	if (NumBones < NumUETracks)
+	// If we have leftover tracks that do not map to any bone in our skeleton, compress them anyway to keep indices consistent
+	// TODO: Can we just set them to identity to strip them? Is it possible for them to be used at runtime?
+	int32 ACLTrackIndex = NumBones;	// Start inserting at the end
+	for (int32 UETrackIndex = 0; UETrackIndex < NumUETracks; ++UETrackIndex)
 	{
-		// If we have leftover tracks that do not map to any bone in our skeleton, compress them anyway to keep indices consistent
-		// TODO: Can we just set them to identity to strip them? Is it possible for them to be used at runtime?
-		int32 ACLTrackIndex = NumBones;	// Start inserting at the end
-		for (int32 UETrackIndex = 0; UETrackIndex < NumUETracks; ++UETrackIndex)
+		if (PopulatedUETracks[UETrackIndex])
 		{
-			if (PopulatedUETracks[UETrackIndex])
-			{
-				// This track has been populated, skip it
-				continue;
-			}
-
-			// This track has no corresponding skeleton bone, add it anyway
-			acl::track_desc_transformf Desc;
-
-			// Without a bone, we have no way of knowing if we require special treatment
-			Desc.shell_distance = DefaultVirtualVertexDistance;
-
-			// Without a bone, no way to know if we have a parent, assume we are a root bone
-			Desc.parent_index = acl::k_invalid_track_index;
-
-			// Output index is our UE track index
-			Desc.output_index = UETrackIndex;
-
-			acl::track_qvvf Track = acl::track_qvvf::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
-
-			// We have raw track data, use it
-			const FRawAnimSequenceTrack& RawTrack = RawTracks[UETrackIndex];
-
-			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
-			{
-				const FRawAnimTrackQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
-				Track[SampleIndex].rotation = UEQuatToACL(RotationSample);
-
-				const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
-				Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
-
-				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
-				Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
-			}
-
-			// Add our extra track
-			Tracks[ACLTrackIndex] = MoveTemp(Track);
-			ACLTrackIndex++;
+			// This track has been populated, skip it
+			continue;
 		}
+
+		// This track has no corresponding skeleton bone, add it anyway
+		acl::track_desc_transformf Desc;
+
+		// Without a bone, we have no way of knowing if we require special treatment
+		Desc.shell_distance = DefaultVirtualVertexDistance;
+
+		// Without a bone, no way to know if we have a parent, assume we are a root bone
+		Desc.parent_index = acl::k_invalid_track_index;
+
+		// Output index is our UE track index
+		Desc.output_index = UETrackIndex;
+
+		acl::track_qvvf Track = acl::track_qvvf::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
+
+		// We have raw track data, use it
+		const FRawAnimSequenceTrack& RawTrack = RawTracks[UETrackIndex];
+
+		for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+		{
+			const FRawAnimTrackQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
+			Track[SampleIndex].rotation = UEQuatToACL(RotationSample);
+
+			const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
+			Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
+
+			const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
+			Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
+		}
+
+		// TODO: Should we warn the user about this? We are compressing extra data that might not be otherwise usable...
+
+		// Add our extra track
+		Tracks[ACLTrackIndex] = MoveTemp(Track);
+		ACLTrackIndex++;
 	}
 
 	return Tracks;
