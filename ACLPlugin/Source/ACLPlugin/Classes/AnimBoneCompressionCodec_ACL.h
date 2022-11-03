@@ -14,7 +14,7 @@ class UAnimBoneCompressionCodec_ACL : public UAnimBoneCompressionCodec_ACLBase
 	GENERATED_UCLASS_BODY()
 
 	UPROPERTY(EditAnywhere, Category = "ACL Options", Instanced, meta = (EditInline))
-	%ACL_IMPL_ANIM_BONE_COMPRESSION_CODEC_PTR% SafetyFallbackCodec;
+	UAnimBoneCompressionCodec* SafetyFallbackCodec;
 
 #if WITH_EDITORONLY_DATA
 	/** The error threshold after which we fallback on a safer encoding. */
@@ -23,7 +23,7 @@ class UAnimBoneCompressionCodec_ACL : public UAnimBoneCompressionCodec_ACLBase
 
 	/** The skeletal meshes used to estimate the skinning deformation during compression. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	TArray<%ACL_IMPL_SKELETAL_MESH_PTR%> OptimizationTargets;
+	TArray<class USkeletalMesh*> OptimizationTargets;
 
 	//////////////////////////////////////////////////////////////////////////
 	// UObject implementation

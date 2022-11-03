@@ -26,7 +26,7 @@ class UAnimCurveCompressionCodec_ACL : public UAnimCurveCompressionCodec
 
 	/** The skeletal mesh used to estimate the morph target deformation during compression. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
-	%ACL_IMPL_SKELETAL_MESH_PTR% MorphTargetSource;
+	class USkeletalMesh* MorphTargetSource;
 
 	//////////////////////////////////////////////////////////////////////////
 	// UAnimCurveCompressionCodec implementation
