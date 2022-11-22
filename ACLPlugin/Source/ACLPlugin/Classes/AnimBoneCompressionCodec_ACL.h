@@ -34,7 +34,7 @@ class UAnimBoneCompressionCodec_ACL : public UAnimBoneCompressionCodec_ACLBase
 	virtual bool IsCodecValid() const override;
 
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
-	virtual void PopulateDDCKey(const UAnimSequenceBase& AnimSeq, FArchive& Ar) override;
+	virtual void PopulateDDCKey(const UE::Anim::Compression::FAnimDDCKeyArgs& KeyArgs, FArchive& Ar) override;
 #else
 	virtual void PopulateDDCKey(FArchive& Ar) override;
 #endif
