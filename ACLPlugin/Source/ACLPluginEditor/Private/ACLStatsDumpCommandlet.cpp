@@ -1211,7 +1211,11 @@ struct CompressAnimationsFunctor
 			Context.UE4Clip = UE4Clip;
 			Context.UE4Skeleton = UE4Skeleton;
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+			FCompressibleAnimData CompressibleData(UE4Clip, false, nullptr);
+#else
 			FCompressibleAnimData CompressibleData(UE4Clip, false);
+#endif
 
 			acl::track_array_qvvf ACLTracks = BuildACLTransformTrackArray(ACLAllocatorImpl, CompressibleData, StatsCommandlet->ACLCodec->DefaultVirtualVertexDistance, StatsCommandlet->ACLCodec->SafeVirtualVertexDistance, false);
 
