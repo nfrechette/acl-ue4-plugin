@@ -35,13 +35,13 @@ void UAnimBoneCompressionCodec_ACLCustom::GetCompressionSettings(acl::compressio
 }
 
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
-void UAnimBoneCompressionCodec_ACLCustom::PopulateDDCKey(const UAnimSequenceBase& AnimSeq, FArchive& Ar)
+void UAnimBoneCompressionCodec_ACLCustom::PopulateDDCKey(const UE::Anim::Compression::FAnimDDCKeyArgs& KeyArgs, FArchive& Ar)
 #else
 void UAnimBoneCompressionCodec_ACLCustom::PopulateDDCKey(FArchive& Ar)
 #endif
 {
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
-	Super::PopulateDDCKey(AnimSeq, Ar);
+	Super::PopulateDDCKey(KeyArgs, Ar);
 #else
 	Super::PopulateDDCKey(Ar);
 #endif
