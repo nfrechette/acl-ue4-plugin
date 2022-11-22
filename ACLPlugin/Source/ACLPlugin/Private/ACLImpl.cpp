@@ -14,7 +14,7 @@ acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format)
 	default:
 	case ACLRF_Quat_128:			return acl::rotation_format8::quatf_full;
 	case ACLRF_QuatDropW_96:		return acl::rotation_format8::quatf_drop_w_full;
-	case ACLRF_QuatDropW_Variable:	return acl::rotation_format8::quatf_drop_w_full;
+	case ACLRF_QuatDropW_Variable:	return acl::rotation_format8::quatf_drop_w_variable;
 	}
 }
 
