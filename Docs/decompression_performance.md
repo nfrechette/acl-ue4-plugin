@@ -48,7 +48,7 @@ To get the above graphs, this process is ran twice: once with the default compre
 
 ### CSV post-process
 
-Because the animation decompression code can run on any worker thread (including the main thread), our stats end up split in multiple columns (one per thread). The stats we care about take the form: `Animation/Thread Name/ExtractPoseFromAnimData`. A [small python script](../Tools/tally_anim_csv.py) is used to accumulate the sum total of each worker thread into a final column.
+Because the animation decompression code can run on any worker thread (including the main thread), our stats end up split in multiple columns (one per thread). The stats we care about take the form: `Animation/Thread Name/ExtractPoseFromAnimData`. A [small python script](../ACLPlugin/Extras/tally_anim_csv.py) is used to accumulate the sum total of each worker thread into a final column.
 
 Simply run it like so on all your input CSVs: `python tally_anim_csv.py <path/to/csv/file.csv>`.
 
