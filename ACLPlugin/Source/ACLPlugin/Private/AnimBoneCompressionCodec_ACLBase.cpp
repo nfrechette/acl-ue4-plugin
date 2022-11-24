@@ -377,7 +377,7 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 
 #if ACL_WITH_BIND_POSE_STRIPPING
 	// Additive sequences use the additive identity as their bind pose, no need for stripping
-	if (bStripBindPose && !AnimSeq.IsValidAdditive())
+	if (bStripBindPose && !KeyArgs.AnimSequence.IsValidAdditive())
 	{
 		// When bind pose stripping is enabled, we have to include the bind pose in the DDC key.
 		// If a sequence is compressed with bind pose A, and we strip a few bones and later modify the bind pose,
@@ -386,7 +386,7 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 
 		// TODO: It would be nice if Epic provided a GUID for the bind pose uniqueness to speed this up
 
-		const USkeleton* Skeleton = AnimSeq.GetSkeleton();
+		const USkeleton* Skeleton = KeyArgs.AnimSequence.GetSkeleton();
 		const TArray<FTransform>& BindPose = Skeleton->GetRefLocalPoses();
 		for (const FTransform& BoneBindTransform : BindPose)
 		{
