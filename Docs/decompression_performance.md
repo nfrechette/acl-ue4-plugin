@@ -16,7 +16,7 @@
 
 A number of interesting things can be seen in the above graphs. ACL is *much* faster: ranging from **3.4x** to **5.1x** on PC and **3.4x** to **8.4x** on mobile. The variance is also much lower as decompression performance remains consistent from frame to frame. As a result, fewer spikes can be seen with ACL.
 
-The Matinee fight scene also shows how UE4 searches for keys when linearly interpolating. The keys are split into two and the codec estimates if our desired keys are more likely to be in the first half or the second half. It then starts searching from that end towards the other. In the wild, most sequences are very short and such a heuristic is a reasonable choice over a more traditional binary search. However, the fight scene is very long at 2000 frames! The graphs highlights how decompressing early or late in the sequence is much faster than near the middle.
+The Matinee fight scene also shows how UE searches for keys when linearly interpolating. The keys are split into two and the codec estimates if our desired keys are more likely to be in the first half or the second half. It then starts searching from that end towards the other. In the wild, most sequences are very short and such a heuristic is a reasonable choice over a more traditional binary search. However, the fight scene is very long at 2000 frames! The graphs highlights how decompressing early or late in the sequence is much faster than near the middle.
 
 ## Data and method used
 
@@ -27,7 +27,7 @@ Two scenarios are tracked:
 
 All the performance metrics were extracted with a **Development** build. This might be a bit slower than the performance you might see under a **Shipping** configuration but not by much.
 
-Decompression performance is extracted using the UE4 CSV profiler. Reproducing the above numbers with your own projects should be fairly straight forward if you follow these steps.
+Decompression performance is extracted using the UE CSV profiler. Reproducing the above numbers with your own projects should be fairly straight forward if you follow these steps.
 
 ### Run your project and dump the stats
 
@@ -44,7 +44,7 @@ The above command does a few things:
 
 Once this is done and you have quit the application, you should see a new CSV file located here: `...\ACLPlayground\Saved\StagedBuilds\WindowsNoEditor\ACLPlayground\Saved\Profiling\CSV`.
 
-To get the above graphs, this process is ran twice: once with the default compression used by UE4 and once more with ACL. This will yield two CSV files for the next step.
+To get the above graphs, this process is ran twice: once with the default compression used by UE and once more with ACL. This will yield two CSV files for the next step.
 
 ### CSV post-process
 
@@ -54,7 +54,7 @@ Simply run it like so on all your input CSVs: `python tally_anim_csv.py <path/to
 
 ### Generate the graph
 
-Once the CSV files are clean, it is time to transform them into our final graph. UE4 conveniently packages a tool that can parse the profiling CSV files and generates SVG graphs: `CSVToSVG`.
+Once the CSV files are clean, it is time to transform them into our final graph. UE conveniently packages a tool that can parse the profiling CSV files and generates SVG graphs: `CSVToSVG`.
 
 It is located here: `...\Engine\Binaries\DotNET\CsvTools`.
 
