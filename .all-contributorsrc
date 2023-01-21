@@ -50,6 +50,16 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "pmsimardeidos",
+      "name": "pmsimardeidos",
+      "avatar_url": "https://avatars.githubusercontent.com/u/58734263?v=4",
+      "profile": "https://github.com/pmsimardeidos",
+      "contributions": [
+        "code",
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
@@ -57,5 +67,6 @@
   "projectOwner": "nfrechette",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "skipCi": true
+  "skipCi": true,
+  "commitConvention": "angular"
 }
