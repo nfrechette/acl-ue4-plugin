@@ -37,13 +37,16 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 <table>
-  <tr>
-    <td align="center"><a href="https://github.com/Meradrin"><img src="https://avatars.githubusercontent.com/u/7066278?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Meradrin</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=Meradrin" title="Code">💻</a> <a href="#platform-Meradrin" title="Packaging/porting to new platform">📦</a></td>
-    <td align="center"><a href="https://github.com/r-lyeh/statvs"><img src="https://avatars.githubusercontent.com/u/35402248?v=4?s=100" width="100px;" alt=""/><br /><sub><b>r-lyeh</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=r-lyeh" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://github.com/nucleiis"><img src="https://avatars.githubusercontent.com/u/20119165?v=4?s=100" width="100px;" alt=""/><br /><sub><b>nucleiis</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/issues?q=author%3Anucleiis" title="Bug reports">🐛</a></td>
-    <td align="center"><a href="https://github.com/fjoanisPhxlabs"><img src="https://avatars.githubusercontent.com/u/90003066?v=4?s=100" width="100px;" alt=""/><br /><sub><b>fjoanisPhxlabs</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=fjoanisPhxlabs" title="Code">💻</a></td>
-    <td align="center"><a href="https://github.com/EAirPeter"><img src="https://avatars.githubusercontent.com/u/5276153?v=4?s=100" width="100px;" alt=""/><br /><sub><b>EAirPeter</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=EAirPeter" title="Code">💻</a></td>
-  </tr>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Meradrin"><img src="https://avatars.githubusercontent.com/u/7066278?v=4?s=100" width="100px;" alt="Meradrin"/><br /><sub><b>Meradrin</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=Meradrin" title="Code">💻</a> <a href="#platform-Meradrin" title="Packaging/porting to new platform">📦</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/r-lyeh/statvs"><img src="https://avatars.githubusercontent.com/u/35402248?v=4?s=100" width="100px;" alt="r-lyeh"/><br /><sub><b>r-lyeh</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=r-lyeh" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/nucleiis"><img src="https://avatars.githubusercontent.com/u/20119165?v=4?s=100" width="100px;" alt="nucleiis"/><br /><sub><b>nucleiis</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/issues?q=author%3Anucleiis" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/fjoanisPhxlabs"><img src="https://avatars.githubusercontent.com/u/90003066?v=4?s=100" width="100px;" alt="fjoanisPhxlabs"/><br /><sub><b>fjoanisPhxlabs</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=fjoanisPhxlabs" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/EAirPeter"><img src="https://avatars.githubusercontent.com/u/5276153?v=4?s=100" width="100px;" alt="EAirPeter"/><br /><sub><b>EAirPeter</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=EAirPeter" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/pmsimardeidos"><img src="https://avatars.githubusercontent.com/u/58734263?v=4?s=100" width="100px;" alt="pmsimardeidos"/><br /><sub><b>pmsimardeidos</b></sub></a><br /><a href="https://github.com/nfrechette/acl-ue4-plugin/commits?author=pmsimardeidos" title="Code">💻</a> <a href="https://github.com/nfrechette/acl-ue4-plugin/issues?q=author%3Apmsimardeidos" title="Bug reports">🐛</a></td>
+    </tr>
+  </tbody>
 </table>
 
 <!-- markdownlint-restore -->
