@@ -33,6 +33,8 @@ namespace UnrealBuildTool.Rules
 			PrivateDependencyModuleNames.Add("Slate");
 			PrivateDependencyModuleNames.Add("SlateCore");
 			PrivateDependencyModuleNames.Add("UnrealEd");
+
+			PrivateDefinitions.Add("ACL_USE_SJSON");
 		}
 	}
 }
