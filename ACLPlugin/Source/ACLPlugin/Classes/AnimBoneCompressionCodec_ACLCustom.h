@@ -26,18 +26,6 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 	UPROPERTY(EditAnywhere, Category = Clip)
 	TEnumAsByte<ACLVectorFormat> ScaleFormat;
 
-	/** The threshold used to detect constant rotation tracks. */
-	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
-	float ConstantRotationThresholdAngle;
-
-	/** The threshold used to detect constant translation tracks. */
-	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
-	float ConstantTranslationThreshold;
-
-	/** The threshold used to detect constant scale tracks. */
-	UPROPERTY(EditAnywhere, Category = Clip, meta = (ClampMin = "0"))
-	float ConstantScaleThreshold;
-
 	/** The skeletal meshes used to estimate the skinning deformation during compression. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
 	TArray<class USkeletalMesh*> OptimizationTargets;

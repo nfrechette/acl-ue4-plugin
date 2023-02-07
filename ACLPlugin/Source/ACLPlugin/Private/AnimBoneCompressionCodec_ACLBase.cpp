@@ -242,16 +242,6 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 		Track.get_description().precision = ErrorThreshold;
 	}
 
-	// Override track settings if we need to
-	if (IsA<UAnimBoneCompressionCodec_ACLSafe>())
-	{
-		// Disable constant rotation track detection
-		for (acl::track_qvvf& Track : ACLTracks)
-		{
-			Track.get_description().constant_rotation_threshold_angle = 0.0f;
-		}
-	}
-
 #if ACL_WITH_BIND_POSE_STRIPPING
 	// Enable bind pose stripping if we need to.
 	// Additive sequences have their bind pose equivalent as the additive identity transform and as
