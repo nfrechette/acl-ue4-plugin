@@ -17,10 +17,6 @@ UAnimBoneCompressionCodec_ACLCustom::UAnimBoneCompressionCodec_ACLCustom(const F
 	RotationFormat = ACLRotationFormat::ACLRF_QuatDropW_Variable;
 	TranslationFormat = ACLVectorFormat::ACLVF_Vector3_Variable;
 	ScaleFormat = ACLVectorFormat::ACLVF_Vector3_Variable;
-
-	ConstantRotationThresholdAngle = 0.00284714461f;	// The smallest angle a float32 can represent in a quaternion is 0.000690533954 so we use a value just slightly larger
-	ConstantTranslationThreshold = 0.001f;				// 0.001cm, very conservative to be safe
-	ConstantScaleThreshold = 0.00001f;					// Very small value to be safe since scale is sensitive
 #endif	// WITH_EDITORONLY_DATA
 }
 
