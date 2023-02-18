@@ -223,9 +223,8 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	}
 
 	// If we have leftover phantom tracks that do not map to any bone in our skeleton, compress them anyway to keep indices consistent
-	// Phantom UE tracks have no associated skeleton bone and as such cannot be queried at runtime. It should be safe to strip or collapse
-	// them to the identity.
-	// TODO: Can we just set them to identity to strip them? Is it possible for them to be used at runtime?
+	// Phantom UE tracks have no associated skeleton bone and as such can only be queried at runtime individually with DecompressBone.
+	// It should be safe to strip and collapse them to the identity.
 	int32 ACLTrackIndex = NumBones;	// Start inserting at the end
 	for (int32 UETrackIndex = 0; UETrackIndex < NumUETracks; ++UETrackIndex)
 	{
