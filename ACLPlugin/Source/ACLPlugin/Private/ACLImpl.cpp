@@ -99,7 +99,9 @@ static TBitArray<> GetMappedUETracks(const FCompressibleAnimData& CompressibleAn
 	return MappedUETracks;
 }
 
-acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase)
+acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData,
+	float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance,
+	bool bBuildAdditiveBase, ACLPhantomTrackMode PhantomTrackMode)
 {
 	const bool bIsAdditive = bBuildAdditiveBase ? false : CompressibleAnimData.bIsValidAdditive;
 	const bool bIsAdditiveBakedIntoRaw = IsAdditiveBakedIntoRaw(CompressibleAnimData);
@@ -252,22 +254,39 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 
 		acl::track_qvvf Track = acl::track_qvvf::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
 
-		// We have raw track data, use it
-		const FRawAnimSequenceTrack& RawTrack = RawTracks[UETrackIndex];
-
-		for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+		if (PhantomTrackMode == ACLPhantomTrackMode::Strip)
 		{
-			const FRawAnimTrackQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
-			Track[SampleIndex].rotation = UEQuatToACL(RotationSample);
+			// We'll collapse the track to the identity transform
+			// It will be compressed to maintain the track ordering but it will only use 6 bits in total
+			const rtm::qvvf IdentityTransform = bIsAdditive ? ACLDefaultAdditiveBindTransform : rtm::qvv_identity();
 
-			const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
-			Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
-
-			const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
-			Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
+			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			{
+				Track[SampleIndex] = IdentityTransform;
+			}
 		}
+		else
+		{
+			if (PhantomTrackMode == ACLPhantomTrackMode::Warn)
+			{
+				UE_LOG(LogAnimationCompression, Warning, TEXT("Animation sequence has phantom tracks that do not map to any skeleton bone. Track %d in [%s]"), UETrackIndex, *CompressibleAnimData.FullName);
+			}
 
-		// TODO: Should we warn the user about this? We are compressing extra data that might not be otherwise usable...
+			// We have raw track data, use it
+			const FRawAnimSequenceTrack& RawTrack = RawTracks[UETrackIndex];
+
+			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			{
+				const FRawAnimTrackQuat& RotationSample = RawTrack.RotKeys.Num() == 1 ? RawTrack.RotKeys[0] : RawTrack.RotKeys[SampleIndex];
+				Track[SampleIndex].rotation = UEQuatToACL(RotationSample);
+
+				const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
+				Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
+
+				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
+				Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
+			}
+		}
 
 		// Add our extra track
 		Tracks[ACLTrackIndex] = MoveTemp(Track);

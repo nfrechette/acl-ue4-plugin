@@ -211,11 +211,33 @@ enum ACLCompressionLevel
 struct FCompressibleAnimData;
 class UAnimSequence;
 
+/**
+* An enum to control how to handle UE phantom tracks.
+* A phantom tracks are present in an animation sequence but aren't mapped to skeleton bones.
+* As such, they cannot be queried by the engine except manually through DecompressBone.
+* It should generally be safe to Strip them but we default to Ignore.
+* Re-importing the animation sequence should clean up any such stale data.
+*/
+UENUM()
+enum class ACLPhantomTrackMode : uint8
+{
+	// Ignore phantom tracks and compress them anyway (same as UE codecs).
+	Ignore,
+
+	// Strip the phantom track to save memory by collapsing them to the identity transform while maintaining the track ordering.
+	Strip,
+
+	// We ignore the phantom tracks and output a warning to the log.
+	Warn,
+};
+
 ACLPLUGIN_API acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format);
 ACLPLUGIN_API acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
 ACLPLUGIN_API acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Level);
 
-ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase);
+ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData,
+	float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance,
+	bool bBuildAdditiveBase, ACLPhantomTrackMode PhantomTrackMode);
 
 /** Compatibility utilities */
 ACLPLUGIN_API uint32 GetNumSamples(const FCompressibleAnimData& CompressibleAnimData);
