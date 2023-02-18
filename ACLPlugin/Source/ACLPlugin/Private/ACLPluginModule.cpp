@@ -7,6 +7,8 @@
 // Enable console commands only in development builds when logging is enabled
 #define WITH_ACL_CONSOLE_COMMANDS (!UE_BUILD_SHIPPING && !UE_BUILD_TEST && !NO_LOGGING)
 
+#include "ACLImpl.h"
+
 #if WITH_ACL_CONSOLE_COMMANDS
 #include "AnimationCompressionLibraryDatabase.h"
 #include "AnimBoneCompressionCodec_ACLDatabase.h"
