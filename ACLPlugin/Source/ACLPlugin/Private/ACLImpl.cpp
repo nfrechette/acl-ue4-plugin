@@ -110,6 +110,9 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	const FRawAnimTrackVector3 UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
 	const rtm::vector4f ACLDefaultScale = rtm::vector_set(bIsAdditive ? 0.0f : 1.0f);
 
+	rtm::qvvf ACLDefaultAdditiveBindTransform = rtm::qvv_identity();
+	ACLDefaultAdditiveBindTransform.scale = ACLDefaultScale;
+
 	// We need to make sure to allocate enough ACL tracks. It is very common to have a skeleton with a number of bones
 	// and to have anim sequences that use that skeleton that have fewer tracks. This might happen if bones are added
 	// and when this happens, we'll populate the bind pose for that missing track. A less common case can happen where
@@ -176,8 +179,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 			rtm::qvvf BindTransform;
 			if (bIsAdditive)
 			{
-				BindTransform = rtm::qvv_identity();
-				BindTransform.scale = ACLDefaultScale;
+				BindTransform = ACLDefaultAdditiveBindTransform;
 			}
 			else
 			{
