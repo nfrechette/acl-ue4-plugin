@@ -350,7 +350,7 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 	Super::PopulateDDCKey(Ar);
 #endif
 
-	uint32 ForceRebuildVersion = 15;
+	uint32 ForceRebuildVersion = 16;
 
 	Ar << ForceRebuildVersion << DefaultVirtualVertexDistance << SafeVirtualVertexDistance << ErrorThreshold;
 	Ar << CompressionLevel;
