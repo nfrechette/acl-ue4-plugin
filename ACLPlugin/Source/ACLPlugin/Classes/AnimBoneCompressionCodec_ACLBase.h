@@ -51,6 +51,10 @@ class UAnimBoneCompressionCodec_ACLBase : public UAnimBoneCompressionCodec
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
 	TEnumAsByte<ACLCompressionLevel> CompressionLevel;
 
+	/** How to treat phantom tracks. Phantom tracks are not mapped to a skeleton bone. */
+	UPROPERTY(EditAnywhere, Category = "ACL Options")
+	ACLPhantomTrackMode PhantomTrackMode;
+
 	/** The default virtual vertex distance for normal bones. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float DefaultVirtualVertexDistance;

@@ -1286,7 +1286,9 @@ struct CompressAnimationsFunctor
 			FCompressibleAnimData CompressibleData(UE4Clip, false);
 #endif
 
-			acl::track_array_qvvf ACLTracks = BuildACLTransformTrackArray(ACLAllocatorImpl, CompressibleData, StatsCommandlet->ACLCodec->DefaultVirtualVertexDistance, StatsCommandlet->ACLCodec->SafeVirtualVertexDistance, false);
+			acl::track_array_qvvf ACLTracks = BuildACLTransformTrackArray(ACLAllocatorImpl, CompressibleData,
+				StatsCommandlet->ACLCodec->DefaultVirtualVertexDistance, StatsCommandlet->ACLCodec->SafeVirtualVertexDistance,
+				false, ACLPhantomTrackMode::Ignore);
 
 			// TODO: Add support for additive clips
 			//acl::track_array_qvvf ACLBaseTracks;
