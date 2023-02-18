@@ -77,6 +77,28 @@ static bool IsAdditiveBakedIntoRaw(const FCompressibleAnimData& CompressibleAnim
 	return false;	// Sequence has raw data but no additive base data, it isn't baked
 }
 
+// Returns a bit array, a bit is true if the corresponding UE track has a skeleton bone mapped to it, false otherwise
+static TBitArray<> GetMappedUETracks(const FCompressibleAnimData& CompressibleAnimData)
+{
+	const int32 NumBones = CompressibleAnimData.BoneData.Num();
+	const int32 NumUETracks = CompressibleAnimData.TrackToSkeletonMapTable.Num();
+
+	TBitArray<> MappedUETracks(false, NumUETracks);
+
+	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	{
+		const int32 UETrackIndex = FindAnimationTrackIndex(CompressibleAnimData, BoneIndex);
+
+		if (UETrackIndex >= 0)
+		{
+			// This track has a bone mapped to it
+			MappedUETracks[UETrackIndex] = true;
+		}
+	}
+
+	return MappedUETracks;
+}
+
 acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase)
 {
 	const bool bIsAdditive = bBuildAdditiveBase ? false : CompressibleAnimData.bIsValidAdditive;
@@ -113,17 +135,22 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	rtm::qvvf ACLDefaultAdditiveBindTransform = rtm::qvv_identity();
 	ACLDefaultAdditiveBindTransform.scale = ACLDefaultScale;
 
+	// A bit array to tell which UE tracks are mapped to a skeleton bone
+	const TBitArray<> MappedUETracks = GetMappedUETracks(CompressibleAnimData);
+
 	// We need to make sure to allocate enough ACL tracks. It is very common to have a skeleton with a number of bones
 	// and to have anim sequences that use that skeleton that have fewer tracks. This might happen if bones are added
 	// and when this happens, we'll populate the bind pose for that missing track. A less common case can happen where
 	// a sequence has compressed tracks for bones that no longer exist. We still need to compress this unused data to
 	// ensure the track indices remain in sync with the CompressedTrackToSkeletonMapTable.
-	const int32 NumInputACLTracks = FMath::Max(NumBones, NumUETracks);
+	// 
+	// We need to allocate one ACL track per UE bone and one for each unmapped UE track
+	const int32 NumUnmappedUETracks = NumUETracks - MappedUETracks.CountSetBits();
+	const int32 NumInputACLTracks = NumBones + NumUnmappedUETracks;
+	int32 NumOutputACLTracks = 0;	// For sanity check
 
 	acl::track_array_qvvf Tracks(AllocatorImpl, NumInputACLTracks);
 	Tracks.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*CompressibleAnimData.FullName)));
-
-	TBitArray<> PopulatedUETracks(false, NumUETracks);
 
 	// Populate all our track based on our skeleton, even if some end up stripped
 	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
@@ -144,8 +171,8 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 		// compressed stream.
 		if (UETrackIndex >= 0)
 		{
-			PopulatedUETracks[UETrackIndex] = true;
 			Desc.output_index = UETrackIndex;
+			NumOutputACLTracks++;
 		}
 		else
 		{
@@ -202,7 +229,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	int32 ACLTrackIndex = NumBones;	// Start inserting at the end
 	for (int32 UETrackIndex = 0; UETrackIndex < NumUETracks; ++UETrackIndex)
 	{
-		if (PopulatedUETracks[UETrackIndex])
+		if (MappedUETracks[UETrackIndex])
 		{
 			// This track has been populated, skip it
 			continue;
@@ -219,6 +246,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 
 		// Output index is our UE track index
 		Desc.output_index = UETrackIndex;
+		NumOutputACLTracks++;
 
 		acl::track_qvvf Track = acl::track_qvvf::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
 
@@ -243,6 +271,9 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 		Tracks[ACLTrackIndex] = MoveTemp(Track);
 		ACLTrackIndex++;
 	}
+
+	// Number of UE tracks and ACL output tracks should match
+	check(NumOutputACLTracks == NumUETracks);
 
 	return Tracks;
 }
