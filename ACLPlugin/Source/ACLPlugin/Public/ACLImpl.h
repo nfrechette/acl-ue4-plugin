@@ -204,12 +204,7 @@ enum ACLCompressionLevel
 };
 
 /** Editor only utilities */
-#if WITH_EDITOR
-#include <acl/compression/track_array.h>
-#include <acl/compression/compression_level.h>
-
-struct FCompressibleAnimData;
-class UAnimSequence;
+#if WITH_EDITORONLY_DATA
 
 /**
 * An enum to control how to handle UE phantom tracks.
@@ -230,6 +225,15 @@ enum class ACLPhantomTrackMode : uint8
 	// We ignore the phantom tracks and output a warning to the log.
 	Warn,
 };
+
+#endif
+
+#if WITH_EDITOR
+#include <acl/compression/track_array.h>
+#include <acl/compression/compression_level.h>
+
+struct FCompressibleAnimData;
+class UAnimSequence;
 
 ACLPLUGIN_API acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format);
 ACLPLUGIN_API acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
