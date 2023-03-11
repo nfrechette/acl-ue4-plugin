@@ -150,7 +150,8 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 	// Otherwise we output the constant default values
 	static constexpr acl::default_sub_track_mode get_default_rotation_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::constant; }
 	static constexpr acl::default_sub_track_mode get_default_translation_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::constant; }
-	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::legacy; }
+	// Always legacy for scale since there is no scale present in the bind pose
+	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return acl::default_sub_track_mode::legacy; }
 
 	// TODO: There is a performance impact here because the ref pose might use doubles on PC
 	FORCEINLINE_DEBUGGABLE rtm::quatf RTM_SIMD_CALL get_variable_default_rotation(uint32_t TrackIndex) const
@@ -162,10 +163,6 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 	{
 		return UEVector3ToACL(RefPoses[TrackToBoneMapping[TrackIndex].BoneTreeIndex].GetTranslation());
 	}
-
-	// Only called if bind pose stripping is enabled and we are non-additive.
-	// If this is the case, we can output 1.0 since there is no scale value in the bind pose.
-	FORCEINLINE_DEBUGGABLE rtm::vector4f RTM_SIMD_CALL get_variable_default_scale(uint32_t TrackIndex) const { return rtm::vector_set(1.0F); }
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
