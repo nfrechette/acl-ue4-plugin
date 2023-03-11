@@ -58,27 +58,60 @@ struct FAtomIndices
 /*
  * Output pose writer that can selectively skip certain tracks.
  */
-template<bool bSkipDefaultSubTracks>
+template<bool bUseBindPose>
 struct FUE4OutputWriter final : public acl::track_writer
 {
 	// Raw pointer for performance reasons, caller is responsible for ensuring data is valid
-	FACLTransform* Atoms;
+
+	// The bind pose
+	const FTransform* RefPoses;
+
+	// Maps track indices to bone indices
+	const FTrackToSkeletonMap* TrackToBoneMapping;
+
+	// The track to output transform index map
 	const FAtomIndices* TrackToAtomsMap;
 
-	FUE4OutputWriter(TArrayView<FTransform>& Atoms_, const FAtomIndices* TrackToAtomsMap_)
-		: Atoms(static_cast<FACLTransform*>(Atoms_.GetData()))
+	// The output transforms we write
+	FACLTransform* Atoms;
+
+	FUE4OutputWriter(const FAtomIndices* TrackToAtomsMap_, TArrayView<FTransform>& Atoms_)
+		: RefPoses(nullptr)
+		, TrackToBoneMapping(nullptr)
 		, TrackToAtomsMap(TrackToAtomsMap_)
+		, Atoms(static_cast<FACLTransform*>(Atoms_.GetData()))
+	{}
+
+	FUE4OutputWriter(const TArrayView<const FTransform>& RefPoses_, const TArrayView<const FTrackToSkeletonMap>& TrackToSkeletonMap, const FAtomIndices* TrackToAtomsMap_, TArrayView<FTransform>& Atoms_)
+		: RefPoses(RefPoses_.GetData())
+		, TrackToBoneMapping(TrackToSkeletonMap.GetData())
+		, TrackToAtomsMap(TrackToAtomsMap_)
+		, Atoms(static_cast<FACLTransform*>(Atoms_.GetData()))
 	{}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Override the OutputWriter behavior
+	// If we use the bind pose, each default sub-track will grab the bind pose value
+	// Otherwise we output the constant default values
 	FORCEINLINE_DEBUGGABLE bool skip_track_rotation(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Rotation == 0xFFFF; }
 	FORCEINLINE_DEBUGGABLE bool skip_track_translation(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Translation == 0xFFFF; }
 	FORCEINLINE_DEBUGGABLE bool skip_track_scale(uint32_t BoneIndex) const { return TrackToAtomsMap[BoneIndex].Scale == 0xFFFF; }
 
-	static constexpr acl::default_sub_track_mode get_default_rotation_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::constant; }
-	static constexpr acl::default_sub_track_mode get_default_translation_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::constant; }
-	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return bSkipDefaultSubTracks ? acl::default_sub_track_mode::skipped : acl::default_sub_track_mode::legacy; }
+	static constexpr acl::default_sub_track_mode get_default_rotation_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::constant; }
+	static constexpr acl::default_sub_track_mode get_default_translation_mode() { return bUseBindPose ? acl::default_sub_track_mode::variable : acl::default_sub_track_mode::constant; }
+	// Always legacy for scale since there is no scale present in the bind pose
+	static constexpr acl::default_sub_track_mode get_default_scale_mode() { return acl::default_sub_track_mode::legacy; }
+
+	// TODO: There is a performance impact here because the ref pose might use doubles on PC
+	FORCEINLINE_DEBUGGABLE rtm::quatf RTM_SIMD_CALL get_variable_default_rotation(uint32_t TrackIndex) const
+	{
+		return UEQuatToACL(RefPoses[TrackToBoneMapping[TrackIndex].BoneTreeIndex].GetRotation());
+	}
+
+	FORCEINLINE_DEBUGGABLE rtm::vector4f RTM_SIMD_CALL get_variable_default_translation(uint32_t TrackIndex) const
+	{
+		return UEVector3ToACL(RefPoses[TrackToBoneMapping[TrackIndex].BoneTreeIndex].GetTranslation());
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Called by the decoder to write out a quaternion rotation value for a specified bone index
@@ -318,25 +351,26 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 
 #if ACL_WITH_BIND_POSE_STRIPPING
 	// See [Bind pose stripping] for details
-	if (bIsBindPoseStripped ||
-		// Are we additive?
-		CompressedClipData->get_default_scale() == 0)
+	if (bIsBindPoseStripped &&
+		// Are we non-additive?
+		CompressedClipData->get_default_scale() != 0)
 	{
-		// If our default pose has been stripped, we can skip default sub-tracks since the caller will have pre-filled
-		// the output pose buffer with it.
-		// For non-additive anim sequences, this is the bind pose. For additive sequences, it is the additive identity.
-		constexpr bool bSkipDefaultSubTracks = true;
+		// Non-additive anim sequences must write out the bind pose for default sub-tracks since they
+		// have been stripped from the data. Additive anim sequences always have the additive identity
+		// stripped, no need for the bind pose.
+		constexpr bool bUseBindPose = true;
 
-		FUE4OutputWriter<bSkipDefaultSubTracks> PoseWriter(OutAtoms, TrackToAtomsMap);
+		FUE4OutputWriter<bUseBindPose> PoseWriter(DecompContext.GetRefLocalPoses(), DecompContext.GetTrackToSkeletonMap(), TrackToAtomsMap, OutAtoms);
 		ACLContext.decompress_tracks(PoseWriter);
 	}
 	else
 #endif
 	{
-		// Default pose isn't stripped, don't skip anything
-		constexpr bool bSkipDefaultSubTracks = false;
+		// Additive anim sequences have the identity stripped out, we'll output it.
+		// We also output the regular identity if bind pose stripping isn't enabled.
+		constexpr bool bUseBindPose = false;
 
-		FUE4OutputWriter<bSkipDefaultSubTracks> PoseWriter(OutAtoms, TrackToAtomsMap);
+		FUE4OutputWriter<bUseBindPose> PoseWriter(TrackToAtomsMap, OutAtoms);
 		ACLContext.decompress_tracks(PoseWriter);
 	}
 }
