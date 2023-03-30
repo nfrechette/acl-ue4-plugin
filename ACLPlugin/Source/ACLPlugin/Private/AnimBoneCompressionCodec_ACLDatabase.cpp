@@ -175,7 +175,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::PostCompression(const FCompressibleA
 	OutResult.CompressedByteStream.Empty(0);
 }
 
-void UAnimBoneCompressionCodec_ACLDatabase::GetCompressionSettings(acl::compression_settings& OutSettings) const
+void UAnimBoneCompressionCodec_ACLDatabase::GetCompressionSettings(const class ITargetPlatform* TargetPlatform, acl::compression_settings& OutSettings) const
 {
 	OutSettings = acl::get_default_compression_settings();
 
@@ -191,12 +191,16 @@ void UAnimBoneCompressionCodec_ACLDatabase::PopulateDDCKey(FArchive& Ar)
 {
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
 	Super::PopulateDDCKey(KeyArgs, Ar);
+
+	const class ITargetPlatform* TargetPlatform = KeyArgs.TargetPlatform;
 #else
 	Super::PopulateDDCKey(Ar);
+
+	const class ITargetPlatform* TargetPlatform = nullptr;
 #endif
 
 	acl::compression_settings Settings;
-	GetCompressionSettings(Settings);
+	GetCompressionSettings(TargetPlatform, Settings);
 
 	uint32 ForceRebuildVersion = 4;
 	uint32 SettingsHash = Settings.get_hash();

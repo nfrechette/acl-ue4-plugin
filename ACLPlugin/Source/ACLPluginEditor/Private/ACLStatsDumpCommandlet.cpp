@@ -12,6 +12,9 @@
 #include "Runtime/Engine/Public/AnimationCompression.h"
 #include "Editor/UnrealEd/Public/PackageHelperFunctions.h"
 
+#include "Interfaces/ITargetPlatform.h"
+#include "Interfaces/ITargetPlatformManagerModule.h"
+
 #if ENGINE_MAJOR_VERSION >= 5
 #include "AnimDataController.h"
 #endif
@@ -1344,8 +1347,14 @@ struct CompressAnimationsFunctor
 			{
 				UE_LOG(LogAnimationCompression, Verbose, TEXT("Extracting: %s (%d / %d)"), *UE4Clip->GetPathName(), SequenceIndex, NumAnimSequences);
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+				const ITargetPlatform* TargetPlatform = GetTargetPlatformManager()->GetRunningTargetPlatform();
+#else
+				const ITargetPlatform* TargetPlatform = nullptr;
+#endif
+
 				acl::compression_settings Settings;
-				StatsCommandlet->ACLCodec->GetCompressionSettings(Settings);
+				StatsCommandlet->ACLCodec->GetCompressionSettings(TargetPlatform, Settings);
 
 				const acl::error_result Error = acl::write_track_list(Context.ACLTracks, Settings, TCHAR_TO_ANSI(*UE4OutputPath));
 				if (Error.any())

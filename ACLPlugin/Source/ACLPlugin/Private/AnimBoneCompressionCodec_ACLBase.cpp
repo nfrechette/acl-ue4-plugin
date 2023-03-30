@@ -255,8 +255,14 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	}
 #endif
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+	const class ITargetPlatform* TargetPlatform = CompressibleAnimData.TargetPlatform;
+#else
+	const class ITargetPlatform* TargetPlatform = nullptr;
+#endif
+
 	acl::compression_settings Settings;
-	GetCompressionSettings(Settings);
+	GetCompressionSettings(TargetPlatform, Settings);
 
 	constexpr acl::additive_clip_format8 AdditiveFormat = acl::additive_clip_format8::additive1;
 
