@@ -148,7 +148,7 @@ void UAnimationCompressionLibraryDatabase::PreSave(const ITargetPlatform* Target
 #endif
 
 		TArray<uint8> BulkData;
-		BuildDatabase(CookedCompressedBytes, CookedAnimSequenceMappings, BulkData, bStripLowestTier);
+		BuildDatabase(CookedCompressedBytes, CookedAnimSequenceMappings, BulkData, bStripLowestTier, TargetPlatform);
 
 		CookedBulkData.Lock(LOCK_READ_WRITE);
 		{
@@ -160,7 +160,9 @@ void UAnimationCompressionLibraryDatabase::PreSave(const ITargetPlatform* Target
 	}
 }
 
-void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompressedBytes, TArray<uint64>& OutAnimSequenceMappings, TArray<uint8>& OutBulkData, bool bStripLowestTier) const
+void UAnimationCompressionLibraryDatabase::BuildDatabase(
+	TArray<uint8>& OutCompressedBytes, TArray<uint64>& OutAnimSequenceMappings, TArray<uint8>& OutBulkData,
+	bool bStripLowestTier, const ITargetPlatform* TargetPlatform) const
 {
 	// Clear any stale data we might have
 	OutCompressedBytes.Empty(0);
@@ -192,14 +194,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 		// We might need to revert to non-frame stripped data or the codec might have changed
 		// forcing us to recompress
 		// In practice we'll load directly from the DDC and it should be fast
-		const bool bAsyncCompression = false;
-		const bool bAllowAlternateCompressor = false;
-		const bool bOutput = false;
-
-		FRequestAnimCompressionParams Params(bAsyncCompression, bAllowAlternateCompressor, bOutput);
-		Params.bPerformFrameStripping = false;
-
-		AnimSeq->RequestAnimCompression(Params);
+		AnimSeq->CacheDerivedData(TargetPlatform);
 
 		const FACLDatabaseCompressedAnimData& AnimData = static_cast<const FACLDatabaseCompressedAnimData&>(*AnimSeq->CompressedData.CompressedDataStructure);
 		if (!AnimData.IsValid())
@@ -432,21 +427,24 @@ void UAnimationCompressionLibraryDatabase::UpdatePreviewState(bool bBuildDatabas
 		PreviewDatabaseStreamer.Reset();
 		DatabaseContext.reset();
 
-		BuildDatabase(PreviewCompressedBytes, PreviewAnimSequenceMappings, PreviewBulkData);
-
-		if (PreviewCompressedBytes.Num() != 0)
+		if (const ITargetPlatform* RunningPlatform = GetTargetPlatformManagerRef().GetRunningTargetPlatform())
 		{
-			// Our database was built, initialize what we need to be able to use it
-			const acl::compressed_database* CompressedDatabase = acl::make_compressed_database(PreviewCompressedBytes.GetData());
-			check(CompressedDatabase != nullptr && CompressedDatabase->is_valid(false).empty());
+			BuildDatabase(PreviewCompressedBytes, PreviewAnimSequenceMappings, PreviewBulkData, false, RunningPlatform);
 
-			PreviewDatabaseStreamer = MakeUnique<UE4DatabasePreviewStreamer>(*CompressedDatabase, PreviewBulkData);
+			if (PreviewCompressedBytes.Num() != 0)
+			{
+				// Our database was built, initialize what we need to be able to use it
+				const acl::compressed_database* CompressedDatabase = acl::make_compressed_database(PreviewCompressedBytes.GetData());
+				check(CompressedDatabase != nullptr && CompressedDatabase->is_valid(false).empty());
 
-			const bool ContextInitResult = DatabaseContext.initialize(ACLAllocatorImpl, *CompressedDatabase, *PreviewDatabaseStreamer, *PreviewDatabaseStreamer);
-			checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));
+				PreviewDatabaseStreamer = MakeUnique<UE4DatabasePreviewStreamer>(*CompressedDatabase, PreviewBulkData);
 
-			// New fidelity is lowest
-			CurrentVisualFidelity = ACLVisualFidelity::Lowest;
+				const bool ContextInitResult = DatabaseContext.initialize(ACLAllocatorImpl, *CompressedDatabase, *PreviewDatabaseStreamer, *PreviewDatabaseStreamer);
+				checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));
+
+				// New fidelity is lowest
+				CurrentVisualFidelity = ACLVisualFidelity::Lowest;
+			}
 		}
 	}
 

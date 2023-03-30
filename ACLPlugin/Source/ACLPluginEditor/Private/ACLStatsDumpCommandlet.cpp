@@ -207,7 +207,11 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UE4C
 			const FName BoneName(Track.get_name().c_str());
 
 #if ENGINE_MAJOR_VERSION >= 5
+	#if ENGINE_MINOR_VERSION >= 2
+			UE4ClipController.AddBoneCurve(BoneName);
+	#else
 			UE4ClipController.AddBoneTrack(BoneName);
+	#endif
 			UE4ClipController.SetBoneTrackKeys(BoneName, RawTrack.PosKeys, RawTrack.RotKeys, RawTrack.ScaleKeys);
 #else
 			UE4Clip->AddNewRawTrack(BoneName, &RawTrack);
@@ -260,8 +264,12 @@ static void SampleUE4Clip(const acl::track_array_qvvf& Tracks, USkeleton* UE4Ske
 		FTransform BoneTransform;
 		if (BoneTrackIndex != INDEX_NONE)
 		{
-#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+	#if ENGINE_MINOR_VERSION >= 2
+			UE4Clip->GetBoneTransform(BoneTransform, FSkeletonPoseBoneIndex(BoneTreeIndex), double(SampleTime), false);
+	#else
 			UE4Clip->GetBoneTransform(BoneTransform, BoneTrackIndex, double(SampleTime), false);
+	#endif
 #else
 			UE4Clip->GetBoneTransform(BoneTransform, BoneTrackIndex, SampleTime, false);
 #endif
@@ -281,14 +289,41 @@ static void SampleUE4Clip(const acl::track_array_qvvf& Tracks, USkeleton* UE4Ske
 static bool UE4ClipHasScale(const UAnimSequence* UE4Clip)
 {
 #if ENGINE_MAJOR_VERSION >= 5
-	const TArray<FBoneAnimationTrack>& Tracks = UE4Clip->GetDataModel()->GetBoneAnimationTracks();
-	for (const FBoneAnimationTrack& Track : Tracks)
+	#if ENGINE_MINOR_VERSION >= 2
 	{
-		if (Track.InternalTrackData.ScaleKeys.Num() != 0)
+		const FVector3d One(1.0, 1.0, 1.0);
+
+		TArray<FName> TrackNames;
+		UE4Clip->GetDataModel()->GetBoneTrackNames(TrackNames);
+
+		TArray<FTransform> TrackTransforms;
+		for (const FName& TrackName : TrackNames)
 		{
-			return true;
+			TrackTransforms.Reset();
+			UE4Clip->GetDataModel()->GetBoneTrackTransforms(TrackName, TrackTransforms);
+
+			for (const FTransform& Key : TrackTransforms)
+			{
+				if (!Key.GetScale3D().Equals(One))
+				{
+					// This key isn't equal to the default scale, we thus have scale
+					return true;
+				}
+			}
 		}
 	}
+	#else
+	{
+		const TArray<FBoneAnimationTrack>& Tracks = UE4Clip->GetDataModel()->GetBoneAnimationTracks();
+		for (const FBoneAnimationTrack& Track : Tracks)
+		{
+			if (Track.InternalTrackData.ScaleKeys.Num() != 0)
+			{
+				return true;
+			}
+		}
+	}
+	#endif
 #else
 	const TArray<FRawAnimSequenceTrack>& Tracks = UE4Clip->GetRawAnimationData();
 	for (const FRawAnimSequenceTrack& Track : Tracks)
@@ -661,7 +696,12 @@ static void CompressWithUE4Auto(FCompressionContext& Context, bool PerformExhaus
 	const uint64 UE4StartTimeCycles = FPlatformTime::Cycles64();
 
 	Context.UE4Clip->BoneCompressionSettings = Context.AutoCompressor;
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	Context.UE4Clip->CacheDerivedData(GetTargetPlatformManagerRef().GetRunningTargetPlatform());
+#else
 	Context.UE4Clip->RequestSyncAnimRecompression();
+#endif
 
 	const uint64 UE4EndTimeCycles = FPlatformTime::Cycles64();
 
@@ -734,7 +774,12 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 	const uint64 ACLStartTimeCycles = FPlatformTime::Cycles64();
 
 	Context.UE4Clip->BoneCompressionSettings = Context.ACLCompressor;
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	Context.UE4Clip->CacheDerivedData(GetTargetPlatformManagerRef().GetRunningTargetPlatform());
+#else
 	Context.UE4Clip->RequestSyncAnimRecompression();
+#endif
 
 	const uint64 ACLEndTimeCycles = FPlatformTime::Cycles64();
 
@@ -844,7 +889,12 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 	const uint64 UE4StartTimeCycles = FPlatformTime::Cycles64();
 
 	Context.UE4Clip->BoneCompressionSettings = Context.KeyReductionCompressor;
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	Context.UE4Clip->CacheDerivedData(GetTargetPlatformManagerRef().GetRunningTargetPlatform());
+#else
 	Context.UE4Clip->RequestSyncAnimRecompression();
+#endif
 
 	const uint64 UE4EndTimeCycles = FPlatformTime::Cycles64();
 
@@ -912,14 +962,17 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 #if ENGINE_MAJOR_VERSION >= 5
 				const AnimDataModelType* ClipData = Context.UE4Clip->GetDataModel();
-				const TArray<FBoneAnimationTrack>& RawTracks = ClipData->GetBoneAnimationTracks();
 				const int32 NumSamples = ClipData->GetNumberOfFrames();
-#else
-				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
-				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
-#endif
 
-				const int32 NumTracks = RawTracks.Num();
+	#if ENGINE_MINOR_VERSION >= 2
+				const int32 NumTracks = ClipData->GetNumBoneTracks();
+	#else
+				const int32 NumTracks = ClipData->GetBoneAnimationTracks().Num();
+	#endif
+#else
+				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
+				const int32 NumTracks = Context.UE4Clip->GetRawAnimationData().Num();
+#endif
 
 				const int32* TrackOffsets = AnimData.CompressedTrackOffsets.GetData();
 				const auto& ScaleOffsets = AnimData.CompressedScaleOffsets;
@@ -997,15 +1050,19 @@ static void CompressWithUE4KeyReduction(FCompressionContext& Context, bool Perfo
 
 #if ENGINE_MAJOR_VERSION >= 5
 				const AnimDataModelType* ClipData = Context.UE4Clip->GetDataModel();
-				const TArray<FBoneAnimationTrack>& RawTracks = ClipData->GetBoneAnimationTracks();
 				const int32 NumSamples = ClipData->GetNumberOfFrames();
+
+	#if ENGINE_MINOR_VERSION >= 2
+				const int32 NumTracks = ClipData->GetNumBoneTracks();
+	#else
+				const int32 NumTracks = ClipData->GetBoneAnimationTracks().Num();
+	#endif
 #else
-				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UE4Clip->GetRawAnimationData();
 				const int32 NumSamples = Context.UE4Clip->GetRawNumberOfFrames();
+				const int32 NumTracks = Context.UE4Clip->GetRawAnimationData().Num();
 #endif
 
 				const float SequenceLength = GetSequenceLength(*Context.UE4Clip);
-				const int32 NumTracks = RawTracks.Num();
 				const int32 NumCompressedKeys = GetCompressedNumberOfKeys(AnimData);
 
 				const float FrameRate = (NumSamples - 1) / SequenceLength;
