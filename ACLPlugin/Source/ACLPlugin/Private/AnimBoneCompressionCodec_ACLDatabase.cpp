@@ -268,7 +268,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressPose(FAnimSequenceDecompre
 	acl::decompression_context<UE4DefaultDBDecompressionSettings> ACLContext;
 
 #if WITH_EDITORONLY_DATA
-	acl::database_context<UE4DefaultDatabaseSettings>* DatabaseContext = DatabaseAsset != nullptr ? &DatabaseAsset->GetDatabaseContext() : nullptr;
+	acl::database_context<UE4DefaultDatabaseSettings>* DatabaseContext = DatabaseAsset != nullptr ? &DatabaseAsset->DatabaseContext : nullptr;
 	if (DatabaseContext != nullptr && DatabaseContext->is_initialized())
 	{
 		// We are previewing, use the database and the anim sequence data contained within it
@@ -324,7 +324,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressBone(FAnimSequenceDecompre
 	acl::decompression_context<UE4DefaultDBDecompressionSettings> ACLContext;
 
 #if WITH_EDITORONLY_DATA
-	acl::database_context<UE4DefaultDatabaseSettings>* DatabaseContext = DatabaseAsset != nullptr ? &DatabaseAsset->GetDatabaseContext() : nullptr;
+	acl::database_context<UE4DefaultDatabaseSettings>* DatabaseContext = DatabaseAsset != nullptr ? &DatabaseAsset->DatabaseContext : nullptr;
 	if (DatabaseContext != nullptr && DatabaseContext->is_initialized())
 	{
 		// We are previewing, use the database and the anim sequence data contained within it
