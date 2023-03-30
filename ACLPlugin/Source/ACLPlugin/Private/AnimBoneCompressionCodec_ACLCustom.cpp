@@ -21,7 +21,7 @@ UAnimBoneCompressionCodec_ACLCustom::UAnimBoneCompressionCodec_ACLCustom(const F
 }
 
 #if WITH_EDITORONLY_DATA
-void UAnimBoneCompressionCodec_ACLCustom::GetCompressionSettings(acl::compression_settings& OutSettings) const
+void UAnimBoneCompressionCodec_ACLCustom::GetCompressionSettings(const class ITargetPlatform* TargetPlatform, acl::compression_settings& OutSettings) const
 {
 	OutSettings = acl::compression_settings();
 	OutSettings.rotation_format = GetRotationFormat(RotationFormat);
@@ -38,12 +38,16 @@ void UAnimBoneCompressionCodec_ACLCustom::PopulateDDCKey(FArchive& Ar)
 {
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
 	Super::PopulateDDCKey(KeyArgs, Ar);
+
+	const class ITargetPlatform* TargetPlatform = KeyArgs.TargetPlatform;
 #else
 	Super::PopulateDDCKey(Ar);
+
+	const class ITargetPlatform* TargetPlatform = nullptr;
 #endif
 
 	acl::compression_settings Settings;
-	GetCompressionSettings(Settings);
+	GetCompressionSettings(TargetPlatform, Settings);
 
 	uint32 ForceRebuildVersion = 1;
 	uint32 SettingsHash = Settings.get_hash();

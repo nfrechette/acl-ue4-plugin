@@ -40,7 +40,7 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 #endif
 
 	// UAnimBoneCompressionCodec_ACLBase implementation
-	virtual void GetCompressionSettings(acl::compression_settings& OutSettings) const override;
+	virtual void GetCompressionSettings(const class ITargetPlatform* TargetPlatform, acl::compression_settings& OutSettings) const override;
 	virtual TArray<class USkeletalMesh*> GetOptimizationTargets() const override { return OptimizationTargets; }
 #endif
 
