@@ -294,7 +294,9 @@ static bool UE4ClipHasScale(const UAnimSequence* UE4Clip)
 	for (const FRawAnimSequenceTrack& Track : Tracks)
 	{
 		if (Track.ScaleKeys.Num() != 0)
+		{
 			return true;
+		}
 	}
 #endif
 
