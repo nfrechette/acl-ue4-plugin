@@ -58,8 +58,6 @@ UAnimationCompressionLibraryDatabase::UAnimationCompressionLibraryDatabase(const
 	, PreviewVisualFidelity(ACLVisualFidelity::Highest)
 #endif
 {
-	// Make sure to initialize our context properly
-	new (&GetDatabaseContext()) acl::database_context<UE4DefaultDatabaseSettings>();
 }
 
 #if WITH_EDITORONLY_DATA
@@ -423,8 +421,6 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 
 void UAnimationCompressionLibraryDatabase::UpdatePreviewState(bool bBuildDatabase)
 {
-	acl::database_context<UE4DefaultDatabaseSettings>& DatabaseContext = GetDatabaseContext();
-
 	// Check if we need to build/rebuild our preview database
 	if (bBuildDatabase)
 	{
@@ -557,8 +553,6 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 	FailAllRequests(FidelityChangeRequests);
 	FidelityChangeRequests.Empty();
 
-	acl::database_context<UE4DefaultDatabaseSettings>& DatabaseContext = GetDatabaseContext();
-
 	if (DatabaseStreamer)
 	{
 		// Wait for any pending IO requests
@@ -598,7 +592,7 @@ void UAnimationCompressionLibraryDatabase::PostLoad()
 
 		DatabaseStreamer = MakeUnique<UE4DatabaseStreamer>(*CompressedDatabase, CookedBulkData);
 
-		const bool ContextInitResult = GetDatabaseContext().initialize(ACLAllocatorImpl, *CompressedDatabase, *DatabaseStreamer, *DatabaseStreamer);
+		const bool ContextInitResult = DatabaseContext.initialize(ACLAllocatorImpl, *CompressedDatabase, *DatabaseStreamer, *DatabaseStreamer);
 		checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));
 	}
 }
@@ -618,8 +612,6 @@ void UAnimationCompressionLibraryDatabase::Serialize(FArchive& Ar)
 	}
 	else if (Ar.IsCountingMemory())
 	{
-		acl::database_context<UE4DefaultDatabaseSettings>& DatabaseContext = GetDatabaseContext();
-
 		// When counting memory, also track the streamed in data.
 		if (DatabaseContext.is_initialized() && DatabaseStreamer)
 		{
@@ -661,8 +653,6 @@ uint32 UAnimationCompressionLibraryDatabase::SetVisualFidelityImpl(ACLVisualFide
 {
 	// Must execute on the main thread but must do so while animations aren't updating
 	check(IsInGameThread());
-
-	acl::database_context<UE4DefaultDatabaseSettings>& DatabaseContext = GetDatabaseContext();
 
 #if WITH_EDITORONLY_DATA
 	if (!DatabaseContext.is_initialized())
@@ -847,8 +837,6 @@ static uint32 CalculateNumChunksToStream(const acl::compressed_database& Databas
 */
 bool UAnimationCompressionLibraryDatabase::UpdateVisualFidelityTicker(float DeltaTime)
 {
-	acl::database_context<UE4DefaultDatabaseSettings>& DatabaseContext = GetDatabaseContext();
-
 	check(DatabaseContext.is_initialized());
 
 	const uint32 NumChunksToStream = CalculateNumChunksToStream(*DatabaseContext.get_compressed_database(), MaxStreamRequestSizeKB);
