@@ -1,10 +1,16 @@
 # Significant changes per release
 
+## 2.0.8
+
+*  Add support for UE 5.2
+*  Fix edge case when skeleton bones are missing (validated)
+*  Minor improvements
+
 ## 2.0.7
 
 *  Add support for UE 5.1
 *  Fix wrong enum usage in ACL Custom
-*  Fix edge case when skeleton bones are missing
+*  Fix edge case when skeleton bones are missing (tentative)
 *  Minor improvements
 
 ## 2.0.6
