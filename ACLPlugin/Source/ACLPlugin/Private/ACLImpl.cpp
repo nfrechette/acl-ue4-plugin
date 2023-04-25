@@ -99,6 +99,20 @@ static TBitArray<> GetMappedUETracks(const FCompressibleAnimData& CompressibleAn
 	return MappedUETracks;
 }
 
+static int32 CountSetBits(const TBitArray<>& Array)
+{
+#if ENGINE_MAJOR_VERSION >= 5 || (ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION >= 26)
+	return Array.CountSetBits();
+#else
+	int32 Result = 0;
+	for (TBitArray<>::FConstIterator BitIt(Array); BitIt; ++BitIt)
+	{
+		Result += BitIt.GetValue();
+	}
+	return Result;
+#endif
+}
+
 acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, const FCompressibleAnimData& CompressibleAnimData, float DefaultVirtualVertexDistance, float SafeVirtualVertexDistance, bool bBuildAdditiveBase)
 {
 	const bool bIsAdditive = bBuildAdditiveBase ? false : CompressibleAnimData.bIsValidAdditive;
@@ -145,7 +159,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	// ensure the track indices remain in sync with the CompressedTrackToSkeletonMapTable.
 	// 
 	// We need to allocate one ACL track per UE bone and one for each unmapped UE track
-	const int32 NumUnmappedUETracks = NumUETracks - MappedUETracks.CountSetBits();
+	const int32 NumUnmappedUETracks = NumUETracks - CountSetBits(MappedUETracks);
 	const int32 NumInputACLTracks = NumBones + NumUnmappedUETracks;
 	int32 NumOutputACLTracks = 0;	// For sanity check
 
