@@ -66,6 +66,20 @@
 
 #define ACL_WITH_BIND_POSE_STRIPPING (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
 
+//////////////////////////////////////////////////////////////////////////
+// [Keyframe stripping]
+// 
+// ACL can strip keyframes that contribute the least amount of error.
+// This is controlled through two different variables which can be used on their own or together:
+//     * proportion: the minimum amount (percentage) of keyframes to strip
+//     * threshold: the threshold below which keyframes are stripped
+// 
+// In order to support this per platform, the plugin requires the target platform to be exposed in
+// a few codec API functions. Support for this has been added in UE 5.1.
+//////////////////////////////////////////////////////////////////////////
+
+#define ACL_WITH_KEYFRAME_STRIPPING (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+
 #include <acl/core/error.h>
 #include <acl/core/iallocator.h>
 #include <acl/decompression/decompress.h>
@@ -246,4 +260,9 @@ ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& Al
 /** Compatibility utilities */
 ACLPLUGIN_API uint32 GetNumSamples(const FCompressibleAnimData& CompressibleAnimData);
 ACLPLUGIN_API float GetSequenceLength(const UAnimSequence& AnimSeq);
+
+namespace ACL::Private
+{
+	ACLPLUGIN_API float GetPerPlatformFloat(const struct FPerPlatformFloat& PerPlatformFloat, const class ITargetPlatform* TargetPlatform);
+}
 #endif // WITH_EDITOR

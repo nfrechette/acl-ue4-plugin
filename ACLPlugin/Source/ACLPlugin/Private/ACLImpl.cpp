@@ -5,7 +5,9 @@
 #if WITH_EDITOR
 #include "AnimationCompression.h"
 #include "AnimationUtils.h"
+#include "PerPlatformProperties.h"
 #include "Animation/AnimCompressionTypes.h"
+#include "Interfaces/ITargetPlatform.h"
 
 acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format)
 {
@@ -315,5 +317,25 @@ float GetSequenceLength(const UAnimSequence& AnimSeq)
 #else
 	return AnimSeq.SequenceLength;
 #endif
+}
+
+namespace ACL::Private
+{
+	float GetPerPlatformFloat(const FPerPlatformFloat& PerPlatformFloat, const ITargetPlatform* TargetPlatform)
+	{
+		if (TargetPlatform == nullptr)
+		{
+			// TODO: Why does calling GetDefault() not link with undefined symbol?
+			return PerPlatformFloat.Default;	// Unknown target platform
+		}
+
+#if ENGINE_MAJOR_VERSION >= 5
+		return PerPlatformFloat.GetValueForPlatform(*TargetPlatform->IniPlatformName());
+#else
+		return PerPlatformFloat.GetValueForPlatformIdentifiers(
+			TargetPlatform->GetPlatformInfo().PlatformGroupName,
+			TargetPlatform->GetPlatformInfo().VanillaPlatformName);
+#endif
+	}
 }
 #endif	// WITH_EDITOR

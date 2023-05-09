@@ -19,6 +19,9 @@ UAnimBoneCompressionCodec_ACL::UAnimBoneCompressionCodec_ACL(const FObjectInitia
 	: Super(ObjectInitializer)
 #if WITH_EDITORONLY_DATA
 	, SafetyFallbackThreshold(1.0f)			// 1cm, should be very rarely exceeded
+	, bIsKeyframeStrippingSupported(!!ACL_WITH_KEYFRAME_STRIPPING)
+	, KeyframeStrippingProportion(0.0f)		// Strip nothing by default since it is destructive
+	, KeyframeStrippingThreshold(0.0f)		// Strip nothing by default since it is destructive
 #endif
 {
 }
@@ -60,6 +63,11 @@ void UAnimBoneCompressionCodec_ACL::GetCompressionSettings(const class ITargetPl
 	OutSettings = acl::get_default_compression_settings();
 
 	OutSettings.level = GetCompressionLevel(CompressionLevel);
+
+#if ACL_WITH_KEYFRAME_STRIPPING
+	OutSettings.keyframe_stripping.proportion = ACL::Private::GetPerPlatformFloat(KeyframeStrippingProportion, TargetPlatform);
+	OutSettings.keyframe_stripping.threshold = ACL::Private::GetPerPlatformFloat(KeyframeStrippingThreshold, TargetPlatform);
+#endif
 }
 
 ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACL::ExecuteSafetyFallback(acl::iallocator& Allocator, const acl::compression_settings& Settings, const acl::track_array_qvvf& RawClip, const acl::track_array_qvvf& BaseClip, const acl::compressed_tracks& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
