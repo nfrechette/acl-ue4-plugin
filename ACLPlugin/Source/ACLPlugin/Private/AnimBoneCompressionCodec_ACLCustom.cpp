@@ -12,22 +12,32 @@
 
 UAnimBoneCompressionCodec_ACLCustom::UAnimBoneCompressionCodec_ACLCustom(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-{
 #if WITH_EDITORONLY_DATA
-	RotationFormat = ACLRotationFormat::ACLRF_QuatDropW_Variable;
-	TranslationFormat = ACLVectorFormat::ACLVF_Vector3_Variable;
-	ScaleFormat = ACLVectorFormat::ACLVF_Vector3_Variable;
-#endif	// WITH_EDITORONLY_DATA
+	, RotationFormat(ACLRotationFormat::ACLRF_QuatDropW_Variable)
+	, TranslationFormat(ACLVectorFormat::ACLVF_Vector3_Variable)
+	, ScaleFormat(ACLVectorFormat::ACLVF_Vector3_Variable)
+	, bIsKeyframeStrippingSupported(!!ACL_WITH_KEYFRAME_STRIPPING)
+	, KeyframeStrippingProportion(0.0f)		// Strip nothing by default since it is destructive
+	, KeyframeStrippingThreshold(0.0f)		// Strip nothing by default since it is destructive
+#endif
+{
 }
 
 #if WITH_EDITORONLY_DATA
 void UAnimBoneCompressionCodec_ACLCustom::GetCompressionSettings(const class ITargetPlatform* TargetPlatform, acl::compression_settings& OutSettings) const
 {
 	OutSettings = acl::compression_settings();
+
 	OutSettings.rotation_format = GetRotationFormat(RotationFormat);
 	OutSettings.translation_format = GetVectorFormat(TranslationFormat);
 	OutSettings.scale_format = GetVectorFormat(ScaleFormat);
+
 	OutSettings.level = GetCompressionLevel(CompressionLevel);
+
+#if ACL_WITH_KEYFRAME_STRIPPING
+	OutSettings.keyframe_stripping.proportion = ACL::Private::GetPerPlatformFloat(KeyframeStrippingProportion, TargetPlatform);
+	OutSettings.keyframe_stripping.threshold = ACL::Private::GetPerPlatformFloat(KeyframeStrippingThreshold, TargetPlatform);
+#endif
 }
 
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)

@@ -30,6 +30,18 @@ class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACL
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
 	TArray<class USkeletalMesh*> OptimizationTargets;
 
+	/** Whether keyframe stripping is supported or not. Only used in the editor to enable/disable the feature. */
+	UPROPERTY(Transient)
+	bool bIsKeyframeStrippingSupported;
+
+	/** The minimum proportion of keyframes that should be stripped. */
+	UPROPERTY(EditAnywhere, Category = "ACL Destructive Options", meta = (ClampMin = "0", ClampMax = "1", EditCondition = "bIsKeyframeStrippingSupported", HideEditConditionToggle))
+	FPerPlatformFloat KeyframeStrippingProportion;
+
+	/** The error threshold below which to strip keyframes. If a keyframe can be reconstructed with an error below the threshold, it is stripped. UE 5.1+ */
+	UPROPERTY(EditAnywhere, Category = "ACL Destructive Options", meta = (ClampMin = "0", EditCondition = "bIsKeyframeStrippingSupported", HideEditConditionToggle))
+	FPerPlatformFloat KeyframeStrippingThreshold;
+
 	//////////////////////////////////////////////////////////////////////////
 
 	// UAnimBoneCompressionCodec implementation

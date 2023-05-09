@@ -3,6 +3,7 @@
 // Copyright 2018 Nicholas Frechette. All Rights Reserved.
 
 #include "CoreMinimal.h"
+#include "PerPlatformProperties.h"
 #include "UObject/ObjectMacros.h"
 #include "AnimBoneCompressionCodec_ACLBase.h"
 #include "AnimBoneCompressionCodec_ACL.generated.h"
@@ -24,6 +25,18 @@ class UAnimBoneCompressionCodec_ACL : public UAnimBoneCompressionCodec_ACLBase
 	/** The skeletal meshes used to estimate the skinning deformation during compression. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options")
 	TArray<class USkeletalMesh*> OptimizationTargets;
+
+	/** Whether keyframe stripping is supported or not. Only used in the editor to enable/disable the feature. */
+	UPROPERTY(Transient)
+	bool bIsKeyframeStrippingSupported;
+
+	/** The minimum proportion of keyframes that should be stripped. UE 5.1+ */
+	UPROPERTY(EditAnywhere, Category = "ACL Destructive Options", meta = (ClampMin = "0", ClampMax = "1", EditCondition = "bIsKeyframeStrippingSupported", HideEditConditionToggle))
+	FPerPlatformFloat KeyframeStrippingProportion;
+
+	/** The error threshold below which to strip keyframes. If a keyframe can be reconstructed with an error below the threshold, it is stripped. UE 5.1+ */
+	UPROPERTY(EditAnywhere, Category = "ACL Destructive Options", meta = (ClampMin = "0", EditCondition = "bIsKeyframeStrippingSupported", HideEditConditionToggle))
+	FPerPlatformFloat KeyframeStrippingThreshold;
 
 	//////////////////////////////////////////////////////////////////////////
 	// UObject implementation
