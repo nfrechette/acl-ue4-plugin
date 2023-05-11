@@ -319,23 +319,26 @@ float GetSequenceLength(const UAnimSequence& AnimSeq)
 #endif
 }
 
-namespace ACL::Private
+namespace ACL
 {
-	float GetPerPlatformFloat(const FPerPlatformFloat& PerPlatformFloat, const ITargetPlatform* TargetPlatform)
+	namespace Private
 	{
-		if (TargetPlatform == nullptr)
+		float GetPerPlatformFloat(const FPerPlatformFloat& PerPlatformFloat, const ITargetPlatform* TargetPlatform)
 		{
-			// TODO: Why does calling GetDefault() not link with undefined symbol?
-			return PerPlatformFloat.Default;	// Unknown target platform
-		}
+			if (TargetPlatform == nullptr)
+			{
+				// TODO: Why does calling GetDefault() not link with undefined symbol?
+				return PerPlatformFloat.Default;	// Unknown target platform
+			}
 
 #if ENGINE_MAJOR_VERSION >= 5
-		return PerPlatformFloat.GetValueForPlatform(*TargetPlatform->IniPlatformName());
+			return PerPlatformFloat.GetValueForPlatform(*TargetPlatform->IniPlatformName());
 #else
-		return PerPlatformFloat.GetValueForPlatformIdentifiers(
-			TargetPlatform->GetPlatformInfo().PlatformGroupName,
-			TargetPlatform->GetPlatformInfo().VanillaPlatformName);
+			return PerPlatformFloat.GetValueForPlatformIdentifiers(
+				TargetPlatform->GetPlatformInfo().PlatformGroupName,
+				TargetPlatform->GetPlatformInfo().VanillaPlatformName);
 #endif
+		}
 	}
 }
 #endif	// WITH_EDITOR

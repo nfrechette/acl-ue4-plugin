@@ -261,8 +261,11 @@ ACLPLUGIN_API acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& Al
 ACLPLUGIN_API uint32 GetNumSamples(const FCompressibleAnimData& CompressibleAnimData);
 ACLPLUGIN_API float GetSequenceLength(const UAnimSequence& AnimSeq);
 
-namespace ACL::Private
+namespace ACL
 {
-	ACLPLUGIN_API float GetPerPlatformFloat(const struct FPerPlatformFloat& PerPlatformFloat, const class ITargetPlatform* TargetPlatform);
+	namespace Private
+	{
+		ACLPLUGIN_API float GetPerPlatformFloat(const struct FPerPlatformFloat& PerPlatformFloat, const class ITargetPlatform* TargetPlatform);
+	}
 }
 #endif // WITH_EDITOR
