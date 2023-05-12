@@ -60,7 +60,7 @@ void FACLDatabaseCompressedAnimData::Bind(const TArrayView<uint8> BulkData)
 		const uint32 CompressedSize = CompressedClipData->get_size();
 
 		CompressedByteStream = TArrayView<uint8>(CompressedBytes, CompressedSize);
-		DatabaseContext = &Codec->DatabaseAsset->GetDatabaseContext();
+		DatabaseContext = &Codec->DatabaseAsset->DatabaseContext;
 	}
 	else
 	{
