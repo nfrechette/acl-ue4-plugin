@@ -15,6 +15,7 @@
 #include <acl/compression/transform_error_metrics.h>
 #include <acl/compression/track_error.h>
 #include <acl/core/bitset.h>
+#include <acl/core/compressed_tracks_version.h>
 #include <acl/decompression/decompress.h>
 #endif	// WITH_EDITORONLY_DATA
 
@@ -362,6 +363,9 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 	Ar << ForceRebuildVersion << DefaultVirtualVertexDistance << SafeVirtualVertexDistance << ErrorThreshold;
 	Ar << CompressionLevel;
 	Ar << PhantomTrackMode;
+
+	uint16 LatestACLVersion = static_cast<uint16>(acl::compressed_tracks_version16::latest);
+	Ar << LatestACLVersion;
 
 	// Add the end effector match name list since if it changes, we need to re-compress
 	const TArray<FString>& KeyEndEffectorsMatchNameArray = UAnimationSettings::Get()->KeyEndEffectorsMatchNameArray;
