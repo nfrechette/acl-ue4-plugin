@@ -13,6 +13,7 @@
 #include <acl/compression/track.h>
 #include <acl/compression/track_array.h>
 #include <acl/compression/track_error.h>
+#include <acl/core/compressed_tracks_version.h>
 #endif	// WITH_EDITOR
 
 #include <acl/decompression/decompress.h>
@@ -45,6 +46,9 @@ void UAnimCurveCompressionCodec_ACL::PopulateDDCKey(FArchive& Ar)
 
 	uint32 ForceRebuildVersion = 2;
 	Ar << ForceRebuildVersion;
+
+	uint16 LatestACLVersion = static_cast<uint16>(acl::compressed_tracks_version16::latest);
+	Ar << LatestACLVersion;
 
 	acl::compression_settings Settings;
 	uint32 SettingsHash = Settings.get_hash();
