@@ -8,6 +8,7 @@
 #include "PerPlatformProperties.h"
 #include "Animation/AnimCompressionTypes.h"
 #include "Interfaces/ITargetPlatform.h"
+#include "PlatformInfo.h"
 
 acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format)
 {
