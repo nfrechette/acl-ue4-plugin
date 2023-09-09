@@ -282,20 +282,6 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	acl::compressed_tracks* CompressedTracks = nullptr;
 	const acl::error_result CompressionResult = acl::compress_track_list(ACLAllocatorImpl, ACLTracks, Settings, ACLBaseTracks, AdditiveFormat, CompressedTracks, Stats);
 
-	// Make sure if we managed to compress, that the error is acceptable and if it isn't, re-compress again with safer settings
-	// This should be VERY rare with the default threshold
-	if (CompressionResult.empty())
-	{
-		const ACLSafetyFallbackResult FallbackResult = ExecuteSafetyFallback(ACLAllocatorImpl, Settings, ACLTracks, ACLBaseTracks, *CompressedTracks, CompressibleAnimData, OutResult);
-		if (FallbackResult != ACLSafetyFallbackResult::Ignored)
-		{
-			ACLAllocatorImpl.deallocate(CompressedTracks, CompressedTracks->get_size());
-			CompressedTracks = nullptr;
-
-			return FallbackResult == ACLSafetyFallbackResult::Success;
-		}
-	}
-
 	if (!CompressionResult.empty())
 	{
 		UE_LOG(LogAnimationCompression, Warning, TEXT("ACL failed to compress clip: %s [%s]"), ANSI_TO_TCHAR(CompressionResult.c_str()), *CompressibleAnimData.FullName);
@@ -402,11 +388,6 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 		}
 	}
 #endif
-}
-
-ACLSafetyFallbackResult UAnimBoneCompressionCodec_ACLBase::ExecuteSafetyFallback(acl::iallocator& Allocator, const acl::compression_settings& Settings, const acl::track_array_qvvf& RawClip, const acl::track_array_qvvf& BaseClip, const acl::compressed_tracks& CompressedClipData, const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult)
-{
-	return ACLSafetyFallbackResult::Ignored;
 }
 #endif
 
