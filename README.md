@@ -5,6 +5,16 @@
 ![UE](https://img.shields.io/badge/UE-4.25+-orange)
 [![Discord](https://img.shields.io/discord/691048241864769647?label=discord)](https://discord.gg/UERt4bS)
 
+# IMPORTANT NOTICE
+
+As of Unreal Engine 5.3, this plugin comes out of the box and is distributed and maintained by Epic in their fork. See [here](https://nfrechette.github.io/2023/09/17/acl_in_ue/) for details.
+
+This repository will remain mostly read-only following the next minor release and only accept critical fixes. Contributions should instead be directed to the Unreal Engine main development repository where the ACL Plugin fork lives (under **Engine/Plugins/Animation/ACLPlugin**).
+
+Support questions and requests should be directed to the Unreal Developer Network (UDN).
+
+====================================================
+
 # Animation Compression Library Unreal Engine Plugin
 
 This plugin integrates the [Animation Compression Library](https://github.com/nfrechette/acl) version [v2.0-develop](https://github.com/nfrechette/acl) within [Unreal Engine 4 and 5](https://www.unrealengine.com/en-US/blog). It is suitable for every animation clip and platform as it features a low memory footprint, high accuracy, and very fast compression and decompression.
