@@ -351,31 +351,22 @@ struct SimpleTransformWriter final : public acl::track_writer
 };
 
 #if ACL_WITH_BIND_POSE_STRIPPING
-static void FixupForBindPoseStripping(const UAnimBoneCompressionCodec_ACLBase& ACLCodec, USkeleton* UE4Skeleton, acl::track_array_qvvf& ACLTracks)
+static void FixupForBindPoseStripping(const UAnimBoneCompressionCodec_ACLBase& ACLCodec, acl::track_array_qvvf& ACLTracks)
 {
+	if (ACLCodec.bStripBindPose)
+	{
+		return;	// Nothing to fix-up if we strip the bind pose
+	}
+
 	// When reading the tracks from a file, the default value is the bind pose
 	// but we don't always want to strip every bone
 
-	TArray<FBoneData> BoneData;
-	FAnimationUtils::BuildSkeletonMetaData(UE4Skeleton, BoneData);
-
-	const int32 NumBones = BoneData.Num();
-	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+	for (acl::track_qvvf& Track : ACLTracks)
 	{
-		const FBoneData& UE4Bone = BoneData[BoneIndex];
-
-		acl::track_qvvf& Track = ACLTracks[BoneIndex];
 		acl::track_desc_transformf& Desc = Track.get_description();
 
-		const uint32 TrackIndex = Track.get_output_index();
-		const bool bIsRootBone = TrackIndex == 0;
-
-		// If we aren't doing bind pose stripping
-		if (!ACLCodec.bStripBindPose)
-		{
-			// Make sure the default value is the identity to prevent stripping
-			Desc.default_value = rtm::qvv_identity();
-		}
+		// Make sure the default value is the identity to prevent stripping
+		Desc.default_value = rtm::qvv_identity();
 	}
 }
 #endif
@@ -811,7 +802,7 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 		if (ACLCodec != nullptr && bHasClipData)
 		{
 			// Not ideal, this modifies the raw tracks but we shouldn't need them after we measure the error below
-			FixupForBindPoseStripping(*ACLCodec, Context.UE4Skeleton, Context.ACLTracks);
+			FixupForBindPoseStripping(*ACLCodec, Context.ACLTracks);
 		}
 #endif
 
