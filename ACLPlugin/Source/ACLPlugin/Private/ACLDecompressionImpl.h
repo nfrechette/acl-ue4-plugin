@@ -220,7 +220,7 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 };
 
 template<class ACLContextType>
-FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, bool bIsBindPoseStripped, int32 TrackIndex, FTransform& OutAtom)
+FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, int32 TrackIndex, FTransform& OutAtom)
 {
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
 	const float Time = DecompContext.GetEvaluationTime();
@@ -233,9 +233,9 @@ FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& De
 #if ACL_WITH_BIND_POSE_STRIPPING
 	// See [Bind pose stripping] for details
 	const acl::compressed_tracks* CompressedClipData = ACLContext.get_compressed_tracks();
-	if (bIsBindPoseStripped &&
-		// Are we non-additive?
-		CompressedClipData->get_default_scale() != 0)
+
+	// Are we non-additive?
+	if (CompressedClipData->get_default_scale() != 0)
 	{
 		// Non-additive anim sequences must write out the bind pose for default sub-tracks since they
 		// have been stripped from the data. Additive anim sequences always have the additive identity
@@ -261,7 +261,7 @@ FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& De
 }
 
 template<class ACLContextType>
-FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext, bool bIsBindPoseStripped,
+FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& DecompContext, ACLContextType& ACLContext,
 	const BoneTrackArray& RotationPairs, const BoneTrackArray& TranslationPairs, const BoneTrackArray& ScalePairs,
 	TArrayView<FTransform>& OutAtoms)
 {
@@ -351,9 +351,8 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 
 #if ACL_WITH_BIND_POSE_STRIPPING
 	// See [Bind pose stripping] for details
-	if (bIsBindPoseStripped &&
-		// Are we non-additive?
-		CompressedClipData->get_default_scale() != 0)
+	// Are we non-additive?
+	if (CompressedClipData->get_default_scale() != 0)
 	{
 		// Non-additive anim sequences must write out the bind pose for default sub-tracks since they
 		// have been stripped from the data. Additive anim sequences always have the additive identity

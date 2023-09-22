@@ -82,7 +82,7 @@ void UAnimBoneCompressionCodec_ACL::DecompressPose(FAnimSequenceDecompressionCon
 	acl::decompression_context<UE4DefaultDecompressionSettings> ACLContext;
 	ACLContext.initialize(*CompressedClipData);
 
-	::DecompressPose(DecompContext, ACLContext, bStripBindPose, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
+	::DecompressPose(DecompContext, ACLContext, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
 }
 
 void UAnimBoneCompressionCodec_ACL::DecompressBone(FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex, FTransform& OutAtom) const
@@ -94,5 +94,5 @@ void UAnimBoneCompressionCodec_ACL::DecompressBone(FAnimSequenceDecompressionCon
 	acl::decompression_context<UE4DefaultDecompressionSettings> ACLContext;
 	ACLContext.initialize(*CompressedClipData);
 
-	::DecompressBone(DecompContext, ACLContext, bStripBindPose, TrackIndex, OutAtom);
+	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
 }

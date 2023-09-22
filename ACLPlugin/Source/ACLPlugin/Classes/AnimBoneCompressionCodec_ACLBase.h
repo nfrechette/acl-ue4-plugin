@@ -60,16 +60,6 @@ class UAnimBoneCompressionCodec_ACLBase : public UAnimBoneCompressionCodec
 	float ErrorThreshold;
 #endif
 
-	/** Whether or not to strip the bind pose from compressed clips. UE 5.1+ */
-	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (EditCondition = "bIsBindPoseStrippingSupported", HideEditConditionToggle))
-	bool bStripBindPose;
-
-#if WITH_EDITORONLY_DATA
-	/** Whether bind pose stripping is supported or not. Only used in the editor to enable/disable the feature. */
-	UPROPERTY(Transient)
-	bool bIsBindPoseStrippingSupported;
-#endif
-
 #if WITH_EDITORONLY_DATA
 	// UAnimBoneCompressionCodec implementation
 	virtual bool Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) override;

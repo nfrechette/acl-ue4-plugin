@@ -319,7 +319,7 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressPose(FAnimSequenceDecompre
 	}
 #endif
 
-	::DecompressPose(DecompContext, ACLContext, bStripBindPose, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
+	::DecompressPose(DecompContext, ACLContext, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
 }
 
 void UAnimBoneCompressionCodec_ACLDatabase::DecompressBone(FAnimSequenceDecompressionContext& DecompContext, int32 TrackIndex, FTransform& OutAtom) const
@@ -375,5 +375,5 @@ void UAnimBoneCompressionCodec_ACLDatabase::DecompressBone(FAnimSequenceDecompre
 	}
 #endif
 
-	::DecompressBone(DecompContext, ACLContext, bStripBindPose, TrackIndex, OutAtom);
+	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
 }

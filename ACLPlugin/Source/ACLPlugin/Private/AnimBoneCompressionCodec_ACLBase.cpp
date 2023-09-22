@@ -47,12 +47,6 @@ UAnimBoneCompressionCodec_ACLBase::UAnimBoneCompressionCodec_ACLBase(const FObje
 
 	ErrorThreshold = 0.01f;					// 0.01cm, conservative enough for cinematographic quality
 #endif	// WITH_EDITORONLY_DATA
-
-	bStripBindPose = false;					// Disabled by default
-
-#if WITH_EDITORONLY_DATA
-	bIsBindPoseStrippingSupported = !!ACL_WITH_BIND_POSE_STRIPPING;
-#endif
 }
 
 #if WITH_EDITORONLY_DATA
@@ -249,7 +243,7 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 	// Additive sequences have their bind pose equivalent as the additive identity transform and as
 	// such, ACL performs stripping by default and everything works great.
 	// See [Bind pose stripping] for details
-	const bool bUsesBindPoseStripping = bStripBindPose && !CompressibleAnimData.bIsValidAdditive;
+	const bool bUsesBindPoseStripping = !CompressibleAnimData.bIsValidAdditive;
 	if (bUsesBindPoseStripping)
 	{
 		StripBindPose(CompressibleAnimData, ACLTracks);
@@ -361,11 +355,9 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 		Ar << MatchNameHash;
 	}
 
-	Ar << bStripBindPose;
-
 #if ACL_WITH_BIND_POSE_STRIPPING
 	// Additive sequences use the additive identity as their bind pose, no need for stripping
-	if (bStripBindPose && !KeyArgs.AnimSequence.IsValidAdditive())
+	if (!KeyArgs.AnimSequence.IsValidAdditive())
 	{
 		// When bind pose stripping is enabled, we have to include the bind pose in the DDC key.
 		// If a sequence is compressed with bind pose A, and we strip a few bones and later modify the bind pose,
