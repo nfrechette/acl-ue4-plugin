@@ -131,6 +131,34 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Metadata")
 	TArray<class UAnimSequence*> AnimSequences;
 
+	/** The total num of Animation Sequences in this database. */
+	UPROPERTY(VisibleAnywhere, Category = "Stats")
+	int32 NumAnimSequences;
+
+	/** The total size of all Animation Sequences if the database were not used. */
+	UPROPERTY(VisibleAnywhere, Category = "Stats")
+	int32 AnimSequencesOldSizeKB;
+
+	/** The total size of all Animation Sequences with the database in use. */
+	UPROPERTY(VisibleAnywhere, Category = "Stats")
+	int32 AnimSequencesNewSizeKB;
+
+	/** The total size of the database. */
+	UPROPERTY(VisibleAnywhere, Category = "Stats")
+	int32 DatabaseSizeKB;
+
+	/** The size of the database metadata. */
+	UPROPERTY(VisibleAnywhere, Category = "Stats")
+	int32 DatabaseMetadataSizeKB;
+
+	/** The size of the database medium importance streaming tier. */
+	UPROPERTY(VisibleAnywhere, Category = "Stats")
+	int32 MediumImportanceSizeKB;
+
+	/** The size of the database low importance streaming tier before any stripping. */
+	UPROPERTY(VisibleAnywhere, Category = "Stats")
+	int32 LowImportanceSizeSizeKB;
+
 public:
 	//////////////////////////////////////////////////////////////////////////
 	// UObject implementation
@@ -168,7 +196,7 @@ public:
 private:
 #if WITH_EDITORONLY_DATA
 	/** Builds our database and its related mappings as well as the new anim sequence data. */
-	void BuildDatabase(TArray<uint8>& OutCompressedBytes, TArray<uint64>& OutAnimSequenceMappings, TArray<uint8>& OutBulkData, bool bStripLowestTier = false) const;
+	void BuildDatabase(TArray<uint8>& OutCompressedBytes, TArray<uint64>& OutAnimSequenceMappings, TArray<uint8>& OutBulkData, bool bStripLowestTier = false);
 
 	/** Updates the internal preview state and optionally builds the database when requested. */
 	void UpdatePreviewState(bool bBuildDatabase);

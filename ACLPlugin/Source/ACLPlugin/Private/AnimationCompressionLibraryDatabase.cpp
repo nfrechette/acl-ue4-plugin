@@ -56,6 +56,13 @@ UAnimationCompressionLibraryDatabase::UAnimationCompressionLibraryDatabase(const
 	// By default, in the editor we preview the full quality.
 	// Our database context won't be used until we need to build the database for preview if we change this value.
 	, PreviewVisualFidelity(ACLVisualFidelity::Highest)
+	, NumAnimSequences(0)
+	, AnimSequencesOldSizeKB(0)
+	, AnimSequencesNewSizeKB(0)
+	, DatabaseSizeKB(0)
+	, DatabaseMetadataSizeKB(0)
+	, MediumImportanceSizeKB(0)
+	, LowImportanceSizeSizeKB(0)
 #endif
 {
 }
@@ -158,12 +165,19 @@ void UAnimationCompressionLibraryDatabase::PreSave(const ITargetPlatform* Target
 	}
 }
 
-void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompressedBytes, TArray<uint64>& OutAnimSequenceMappings, TArray<uint8>& OutBulkData, bool bStripLowestTier) const
+void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompressedBytes, TArray<uint64>& OutAnimSequenceMappings, TArray<uint8>& OutBulkData, bool bStripLowestTier)
 {
 	// Clear any stale data we might have
 	OutCompressedBytes.Empty(0);
 	OutAnimSequenceMappings.Empty(0);
 	OutBulkData.Empty(0);
+	NumAnimSequences = 0;
+	AnimSequencesOldSizeKB = 0;
+	AnimSequencesNewSizeKB = 0;
+	DatabaseSizeKB = 0;
+	DatabaseMetadataSizeKB = 0;
+	MediumImportanceSizeKB = 0;
+	LowImportanceSizeSizeKB = 0;
 
 	// We are cooking or previewing, iterate over every animation sequence that references this database
 	// and merge them together into our final database instance. Note that the mapping could
@@ -364,6 +378,16 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 	UE_LOG(LogAnimationCompression, Log, TEXT("    DB metadata is %.2f MB"), BytesToMB(SplitDB->get_size()));
 	UE_LOG(LogAnimationCompression, Log, TEXT("    DB medium tier is %.2f MB"), BytesToMB(BulkDataSizeMedium));
 	UE_LOG(LogAnimationCompression, Log, TEXT("    DB lowest tier is %.2f MB%s"), BytesToMB(BulkDataSizeLow), bStripLowestTier ? TEXT(" (stripped)") : TEXT(""));
+
+	auto BytesToCeilKB = [](SIZE_T NumBytes) { return int32((NumBytes + 1023) / 1024); };
+
+	NumAnimSequences = NumSequences;
+	AnimSequencesOldSizeKB = BytesToCeilKB(TotalSizeSeqOld);
+	AnimSequencesNewSizeKB = BytesToCeilKB(TotalSizeSeqNew);
+	DatabaseSizeKB = BytesToCeilKB(SplitDB->get_total_size());
+	DatabaseMetadataSizeKB = BytesToCeilKB(SplitDB->get_size());
+	MediumImportanceSizeKB = BytesToCeilKB(BulkDataSizeMedium);
+	LowImportanceSizeSizeKB = BytesToCeilKB(BulkDataSizeLow);
 
 	// Make sure to sort our array, it'll be sorted by hash first since it lives in the top bits
 	OutAnimSequenceMappings.Sort();
