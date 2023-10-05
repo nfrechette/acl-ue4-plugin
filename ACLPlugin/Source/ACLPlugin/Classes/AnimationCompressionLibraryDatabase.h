@@ -110,6 +110,10 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Database", meta = (ClampMin = "4", ClampMax = "1048576"))
 	uint32 MaxStreamRequestSizeKB;
 
+	/** The default level of quality to set when the database loads in-game. By default, nothing is streamed in. */
+	UPROPERTY(EditAnywhere, Category = "Database")
+	ACLVisualFidelity DefaultVisualFidelity;
+
 #if WITH_EDITORONLY_DATA
 	/** The level of quality to preview with the database when decompressing in the editor. */
 	UPROPERTY(EditAnywhere, Transient, Category = "Debug")
