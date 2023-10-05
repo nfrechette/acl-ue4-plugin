@@ -52,6 +52,7 @@ UAnimationCompressionLibraryDatabase::UAnimationCompressionLibraryDatabase(const
 	, StripLowestImportanceTier(false)	// By default we don't strip the lowest tier
 #endif
 	, MaxStreamRequestSizeKB(1024)		// By default we stream 1 MB (1 chunk) at a time
+	, DefaultVisualFidelity(ACLVisualFidelity::Lowest)
 #if WITH_EDITORONLY_DATA
 	// By default, in the editor we preview the full quality.
 	// Our database context won't be used until we need to build the database for preview if we change this value.
@@ -618,6 +619,13 @@ void UAnimationCompressionLibraryDatabase::PostLoad()
 
 		const bool ContextInitResult = DatabaseContext.initialize(ACLAllocatorImpl, *CompressedDatabase, *DatabaseStreamer, *DatabaseStreamer);
 		checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));
+	}
+
+	if (!GIsEditor)
+	{
+		// When launching outside the editor, we set the default visual fidelity
+		// In the editor, we use the preview fidelity instead
+		SetVisualFidelity(DefaultVisualFidelity);
 	}
 }
 
