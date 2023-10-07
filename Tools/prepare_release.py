@@ -53,6 +53,23 @@ if __name__ == "__main__":
 	shutil.rmtree(os.path.join(acl_root_dir, 'external', 'benchmark'))
 	shutil.rmtree(os.path.join(rtm_root_dir, 'external', 'benchmark'))
 
+	# Remove extra things not needed for UE development
+	dirs_to_prune = [ acl_root_dir, rtm_root_dir, sjsoncpp_root_dir ]
+	to_remove_list = [
+		'.all-contributorsrc', '.editorconfig', '.git', '.gitignore', '.gitmodules',
+		'cmake', 'tests', 'test_data', 'tools', 'make.py', 'sonar-project.properties',
+		'CMakeLists.txt', 'appveyor.yml', '.github'
+		]
+
+	for dir_to_prune in dirs_to_prune:
+		for to_remove in to_remove_list:
+			path_to_remove = os.path.join(dir_to_prune, to_remove)
+			if os.path.exists(path_to_remove):
+				try:
+					shutil.rmtree(path_to_remove)
+				except NotADirectoryError:
+					os.remove(path_to_remove)
+
 	print('Setting uplugin version to: {} ...'.format(target_ue_version))
 	uplugin_file = os.path.join(plugin_dst_dir, 'ACLPlugin.uplugin')
 	with open(uplugin_file) as f:
