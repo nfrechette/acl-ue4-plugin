@@ -55,7 +55,7 @@ void UAnimBoneCompressionCodec_ACLSafe::DecompressPose(FAnimSequenceDecompressio
 	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
 	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-	acl::decompression_context<UE4SafeDecompressionSettings> ACLContext;
+	acl::decompression_context<UESafeDecompressionSettings> ACLContext;
 	ACLContext.initialize(*CompressedClipData);
 
 	::DecompressPose(DecompContext, ACLContext, RotationPairs, TranslationPairs, ScalePairs, OutAtoms);
@@ -67,7 +67,7 @@ void UAnimBoneCompressionCodec_ACLSafe::DecompressBone(FAnimSequenceDecompressio
 	const acl::compressed_tracks* CompressedClipData = AnimData.GetCompressedTracks();
 	check(CompressedClipData != nullptr && CompressedClipData->is_valid(false).empty());
 
-	acl::decompression_context<UE4SafeDecompressionSettings> ACLContext;
+	acl::decompression_context<UESafeDecompressionSettings> ACLContext;
 	ACLContext.initialize(*CompressedClipData);
 
 	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);

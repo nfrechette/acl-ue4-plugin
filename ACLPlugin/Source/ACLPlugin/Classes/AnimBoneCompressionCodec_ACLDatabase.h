@@ -18,7 +18,7 @@ struct FACLDatabaseCompressedAnimData final : public ICompressedAnimData
 	TArrayView<uint8> CompressedByteStream;
 
 	/** Maps the database context instance. Used in cooked build only. */
-	acl::database_context<UE4DefaultDatabaseSettings>* DatabaseContext = nullptr;
+	acl::database_context<UEDefaultDatabaseSettings>* DatabaseContext = nullptr;
 
 	/** The codec instance that owns us. */
 	const class UAnimBoneCompressionCodec_ACLDatabase* Codec = nullptr;

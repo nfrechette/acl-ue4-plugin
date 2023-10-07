@@ -71,7 +71,7 @@ private:
 	FByteBulkData CookedBulkData;
 
 	/** The database decompression context object. Bound to the compressed database instance. */
-	acl::database_context<UE4DefaultDatabaseSettings> DatabaseContext;
+	acl::database_context<UEDefaultDatabaseSettings> DatabaseContext;
 
 	/** The streamer instance used by the database context. Only used in cooked builds. */
 	TUniquePtr<acl::database_streamer> DatabaseStreamer;

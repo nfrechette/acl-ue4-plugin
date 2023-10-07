@@ -270,7 +270,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 	{
 		checkSlow(MergedDB->is_valid(true).empty());
 
-		acl::database_context<UE4DefaultDatabaseSettings> DebugDatabaseContext;
+		acl::database_context<UEDefaultDatabaseSettings> DebugDatabaseContext;
 		const bool ContextInitResult = DebugDatabaseContext.initialize(ACLAllocatorImpl, *MergedDB);
 		checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));
 
@@ -603,7 +603,7 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 #endif
 
 	// Manually run the destructor since the container is opaque
-	DatabaseContext.~database_context<UE4DefaultDatabaseSettings>();
+	DatabaseContext.~database_context<UEDefaultDatabaseSettings>();
 }
 
 void UAnimationCompressionLibraryDatabase::PostLoad()
