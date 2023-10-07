@@ -12,6 +12,7 @@
 #include "ACLImpl.h"
 
 #include <acl/compression/compress.h>
+#include <acl/compression/pre_process.h>
 #include <acl/compression/transform_error_metrics.h>
 #include <acl/compression/track_error.h>
 #include <acl/core/bitset.h>
@@ -272,6 +273,22 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 		Settings.error_metric = &DefaultErrorMetric;
 	}
 
+	{
+		// We pre-process the raw tracks to prime them for compression
+		acl::pre_process_settings_t PreProcessSettings;
+		PreProcessSettings.actions = acl::pre_process_actions::recommended;
+		PreProcessSettings.precision_policy = acl::pre_process_precision_policy::lossy;
+		PreProcessSettings.error_metric = Settings.error_metric;
+
+		if (!ACLBaseTracks.is_empty())
+		{
+			PreProcessSettings.additive_base = &ACLBaseTracks;
+			PreProcessSettings.additive_format = AdditiveFormat;
+		}
+
+		acl::pre_process_track_list(ACLAllocatorImpl, PreProcessSettings, ACLTracks);
+	}
+
 	acl::output_stats Stats;
 	acl::compressed_tracks* CompressedTracks = nullptr;
 	const acl::error_result CompressionResult = acl::compress_track_list(ACLAllocatorImpl, ACLTracks, Settings, ACLBaseTracks, AdditiveFormat, CompressedTracks, Stats);
@@ -338,7 +355,7 @@ void UAnimBoneCompressionCodec_ACLBase::PopulateDDCKey(FArchive& Ar)
 	Super::PopulateDDCKey(Ar);
 #endif
 
-	uint32 ForceRebuildVersion = 17;
+	uint32 ForceRebuildVersion = 18;
 
 	Ar << ForceRebuildVersion << DefaultVirtualVertexDistance << SafeVirtualVertexDistance << ErrorThreshold;
 	Ar << CompressionLevel;
