@@ -188,7 +188,7 @@ struct UEDebugDBDecompressionSettings final : public UEDebugDecompressionSetting
 	using database_settings_type = UEDebugDatabaseSettings;
 };
 
-/** UE4 equivalents for some ACL enums */
+/** UE equivalents for some ACL enums */
 /** An enum for ACL rotation formats. */
 UENUM()
 enum ACLRotationFormat
