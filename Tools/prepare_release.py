@@ -35,12 +35,17 @@ if __name__ == "__main__":
 	plugin_dst_dir = os.path.join(staging_dir, 'ACLPlugin')
 	shutil.copytree(plugin_src_dir, plugin_dst_dir)
 
-	# Remove catch2 and other third party dependencies we do not own or need
-	print('Removing what we don\'t need ...')
 	acl_root_dir = os.path.join(plugin_dst_dir, 'Source', 'ThirdParty', 'acl')
 	rtm_root_dir = os.path.join(acl_root_dir, 'external', 'rtm')
 	sjsoncpp_root_dir = os.path.join(acl_root_dir, 'external', 'sjson-cpp')
 
+	# Copy natvis files in the root
+	shutil.copyfile(os.path.join(acl_root_dir, 'tools', 'vs_visualizers', 'acl.natvis'), os.path.join(plugin_dst_dir, 'acl.natvis'))
+	shutil.copyfile(os.path.join(rtm_root_dir, 'tools', 'vs_visualizers', 'rtm.natvis'), os.path.join(plugin_dst_dir, 'rtm.natvis'))
+	shutil.copyfile(os.path.join(sjsoncpp_root_dir, 'tools', 'vs_visualizers', 'sjson-cpp.natvis'), os.path.join(plugin_dst_dir, 'sjson-cpp.natvis'))
+
+	# Remove catch2 and other third party dependencies we do not own or need
+	print('Removing what we don\'t need ...')
 	shutil.rmtree(os.path.join(acl_root_dir, 'external', 'catch2'))
 	shutil.rmtree(os.path.join(rtm_root_dir, 'external', 'catch2'))
 	shutil.rmtree(os.path.join(sjsoncpp_root_dir, 'external', 'catch2'))
