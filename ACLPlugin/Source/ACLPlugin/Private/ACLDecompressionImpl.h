@@ -59,7 +59,7 @@ struct FAtomIndices
  * Output pose writer that can selectively skip certain tracks.
  */
 template<bool bUseBindPose>
-struct FUE4OutputWriter final : public acl::track_writer
+struct FUEOutputWriter final : public acl::track_writer
 {
 	// Raw pointer for performance reasons, caller is responsible for ensuring data is valid
 
@@ -75,14 +75,14 @@ struct FUE4OutputWriter final : public acl::track_writer
 	// The output transforms we write
 	FACLTransform* Atoms;
 
-	FUE4OutputWriter(const FAtomIndices* TrackToAtomsMap_, TArrayView<FTransform>& Atoms_)
+	FUEOutputWriter(const FAtomIndices* TrackToAtomsMap_, TArrayView<FTransform>& Atoms_)
 		: RefPoses(nullptr)
 		, TrackToBoneMapping(nullptr)
 		, TrackToAtomsMap(TrackToAtomsMap_)
 		, Atoms(static_cast<FACLTransform*>(Atoms_.GetData()))
 	{}
 
-	FUE4OutputWriter(const TArrayView<const FTransform>& RefPoses_, const TArrayView<const FTrackToSkeletonMap>& TrackToSkeletonMap, const FAtomIndices* TrackToAtomsMap_, TArrayView<FTransform>& Atoms_)
+	FUEOutputWriter(const TArrayView<const FTransform>& RefPoses_, const TArrayView<const FTrackToSkeletonMap>& TrackToSkeletonMap, const FAtomIndices* TrackToAtomsMap_, TArrayView<FTransform>& Atoms_)
 		: RefPoses(RefPoses_.GetData())
 		, TrackToBoneMapping(TrackToSkeletonMap.GetData())
 		, TrackToAtomsMap(TrackToAtomsMap_)
@@ -148,7 +148,7 @@ struct FUE4OutputWriter final : public acl::track_writer
 * Output track writer for a single track.
 */
 template<bool bUseBindPose>
-struct UE4OutputTrackWriter final : public acl::track_writer
+struct UEOutputTrackWriter final : public acl::track_writer
 {
 	// The bind pose
 	const FTransform* RefPoses;
@@ -159,13 +159,13 @@ struct UE4OutputTrackWriter final : public acl::track_writer
 	// Raw reference for performance reasons, caller is responsible for ensuring data is valid
 	FACLTransform& Atom;
 
-	explicit UE4OutputTrackWriter(FTransform& Atom_)
+	explicit UEOutputTrackWriter(FTransform& Atom_)
 		: RefPoses(nullptr)
 		, TrackToBoneMapping(nullptr)
 		, Atom(static_cast<FACLTransform&>(Atom_))
 	{}
 
-	UE4OutputTrackWriter(const TArrayView<const FTransform>& RefPoses_, const TArrayView<const FTrackToSkeletonMap>& TrackToSkeletonMap, FTransform& Atom_)
+	UEOutputTrackWriter(const TArrayView<const FTransform>& RefPoses_, const TArrayView<const FTrackToSkeletonMap>& TrackToSkeletonMap, FTransform& Atom_)
 		: RefPoses(RefPoses_.GetData())
 		, TrackToBoneMapping(TrackToSkeletonMap.GetData())
 		, Atom(static_cast<FACLTransform&>(Atom_))
@@ -245,7 +245,7 @@ FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& De
 		checkf(DecompContext.GetRefLocalPoses().Num() > 0, TEXT("Reference pose must be provided in the FAnimSequenceDecompressionContext constructor to use bind pose stripping"));
 		checkf(DecompContext.GetTrackToSkeletonMap().Num() > 0, TEXT("TrackToSkeletonMap must be provided in the FAnimSequenceDecompressionContext constructor to use bind pose stripping"));
 
-		UE4OutputTrackWriter<bUseBindPose> Writer(DecompContext.GetRefLocalPoses(), DecompContext.GetTrackToSkeletonMap(), OutAtom);
+		UEOutputTrackWriter<bUseBindPose> Writer(DecompContext.GetRefLocalPoses(), DecompContext.GetTrackToSkeletonMap(), OutAtom);
 		ACLContext.decompress_track(TrackIndex, Writer);
 	}
 	else
@@ -255,7 +255,7 @@ FORCEINLINE_DEBUGGABLE void DecompressBone(FAnimSequenceDecompressionContext& De
 		// We also output the regular identity if bind pose stripping isn't enabled.
 		constexpr bool bUseBindPose = false;
 
-		UE4OutputTrackWriter<bUseBindPose> Writer(OutAtom);
+		UEOutputTrackWriter<bUseBindPose> Writer(OutAtom);
 		ACLContext.decompress_track(TrackIndex, Writer);
 	}
 }
@@ -359,7 +359,7 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 		// stripped, no need for the bind pose.
 		constexpr bool bUseBindPose = true;
 
-		FUE4OutputWriter<bUseBindPose> PoseWriter(DecompContext.GetRefLocalPoses(), DecompContext.GetTrackToSkeletonMap(), TrackToAtomsMap, OutAtoms);
+		FUEOutputWriter<bUseBindPose> PoseWriter(DecompContext.GetRefLocalPoses(), DecompContext.GetTrackToSkeletonMap(), TrackToAtomsMap, OutAtoms);
 		ACLContext.decompress_tracks(PoseWriter);
 	}
 	else
@@ -369,7 +369,7 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 		// We also output the regular identity if bind pose stripping isn't enabled.
 		constexpr bool bUseBindPose = false;
 
-		FUE4OutputWriter<bUseBindPose> PoseWriter(TrackToAtomsMap, OutAtoms);
+		FUEOutputWriter<bUseBindPose> PoseWriter(TrackToAtomsMap, OutAtoms);
 		ACLContext.decompress_tracks(PoseWriter);
 	}
 }
