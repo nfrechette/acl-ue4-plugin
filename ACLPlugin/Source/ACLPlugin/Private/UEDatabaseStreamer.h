@@ -13,11 +13,11 @@
 // UE 4.25 doesn't expose its virtual memory management, see FPlatformMemory::FPlatformVirtualMemoryBlock
 #define WITH_VMEM_MANAGEMENT 0
 
-/** A simple async UE4 streamer. Memory is allocated on the first stream in request and deallocated on the last stream out request. */
-class UE4DatabaseStreamer final : public acl::database_streamer
+/** A simple async UE streamer. Memory is allocated on the first stream in request and deallocated on the last stream out request. */
+class UEDatabaseStreamer final : public acl::database_streamer
 {
 public:
-	UE4DatabaseStreamer(const acl::compressed_database& CompressedDatabase, FByteBulkData& StreamableBulkData_)
+	UEDatabaseStreamer(const acl::compressed_database& CompressedDatabase, FByteBulkData& StreamableBulkData_)
 		: database_streamer(Requests, acl::k_num_database_tiers)
 		, StreamableBulkData(StreamableBulkData_)
 		, PendingIORequest(nullptr)
@@ -40,7 +40,7 @@ public:
 #endif
 	}
 
-	virtual ~UE4DatabaseStreamer()
+	virtual ~UEDatabaseStreamer()
 	{
 		// If we have a stream in request, wait for it to complete and clear it
 		WaitForStreamingToComplete();
@@ -165,8 +165,8 @@ public:
 	}
 
 private:
-	UE4DatabaseStreamer(const UE4DatabaseStreamer&) = delete;
-	UE4DatabaseStreamer& operator=(const UE4DatabaseStreamer&) = delete;
+	UEDatabaseStreamer(const UEDatabaseStreamer&) = delete;
+	UEDatabaseStreamer& operator=(const UEDatabaseStreamer&) = delete;
 
 	FByteBulkData& StreamableBulkData;
 	uint8* BulkData[acl::k_num_database_tiers];

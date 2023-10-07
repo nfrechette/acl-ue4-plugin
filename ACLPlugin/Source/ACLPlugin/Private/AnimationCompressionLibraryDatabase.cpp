@@ -3,7 +3,7 @@
 #include "AnimationCompressionLibraryDatabase.h"
 #include "AnimBoneCompressionCodec_ACLDatabase.h"
 
-#include "UE4DatabaseStreamer.h"
+#include "UEDatabaseStreamer.h"
 
 #include "LatentActions.h"
 #include "Containers/Ticker.h"
@@ -21,7 +21,7 @@
 #include "UObject/ObjectSaveContext.h"
 #endif
 
-#include "UE4DatabasePreviewStreamer.h"
+#include "UEDatabasePreviewStreamer.h"
 
 #include <acl/compression/compress.h>
 #endif	// WITH_EDITORONLY_DATA
@@ -461,7 +461,7 @@ void UAnimationCompressionLibraryDatabase::UpdatePreviewState(bool bBuildDatabas
 			const acl::compressed_database* CompressedDatabase = acl::make_compressed_database(PreviewCompressedBytes.GetData());
 			check(CompressedDatabase != nullptr && CompressedDatabase->is_valid(false).empty());
 
-			PreviewDatabaseStreamer = MakeUnique<UE4DatabasePreviewStreamer>(*CompressedDatabase, PreviewBulkData);
+			PreviewDatabaseStreamer = MakeUnique<UEDatabasePreviewStreamer>(*CompressedDatabase, PreviewBulkData);
 
 			const bool ContextInitResult = DatabaseContext.initialize(ACLAllocatorImpl, *CompressedDatabase, *PreviewDatabaseStreamer, *PreviewDatabaseStreamer);
 			checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));
@@ -581,7 +581,7 @@ void UAnimationCompressionLibraryDatabase::BeginDestroy()
 	if (DatabaseStreamer)
 	{
 		// Wait for any pending IO requests
-		UE4DatabaseStreamer* Streamer = (UE4DatabaseStreamer*)DatabaseStreamer.Release();
+		UEDatabaseStreamer* Streamer = (UEDatabaseStreamer*)DatabaseStreamer.Release();
 		Streamer->WaitForStreamingToComplete();
 
 		// Reset our context to make sure it no longer references the streamer
@@ -615,7 +615,7 @@ void UAnimationCompressionLibraryDatabase::PostLoad()
 		const acl::compressed_database* CompressedDatabase = acl::make_compressed_database(CookedCompressedBytes.GetData());
 		check(CompressedDatabase != nullptr && CompressedDatabase->is_valid(false).empty());
 
-		DatabaseStreamer = MakeUnique<UE4DatabaseStreamer>(*CompressedDatabase, CookedBulkData);
+		DatabaseStreamer = MakeUnique<UEDatabaseStreamer>(*CompressedDatabase, CookedBulkData);
 
 		const bool ContextInitResult = DatabaseContext.initialize(ACLAllocatorImpl, *CompressedDatabase, *DatabaseStreamer, *DatabaseStreamer);
 		checkf(ContextInitResult, TEXT("ACL failed to initialize the database context"));

@@ -12,11 +12,11 @@
 #include <acl/decompression/database/database_streamer.h>
 
 
-/** A simple UE4 preview streamer. Everything is assumed to be in memory and no real streaming is done. */
-class UE4DatabasePreviewStreamer final : public acl::database_streamer
+/** A simple UE preview streamer. Everything is assumed to be in memory and no real streaming is done. */
+class UEDatabasePreviewStreamer final : public acl::database_streamer
 {
 public:
-	UE4DatabasePreviewStreamer(const acl::compressed_database& CompressedDatabase, const TArray<uint8>& BulkData_)
+	UEDatabasePreviewStreamer(const acl::compressed_database& CompressedDatabase, const TArray<uint8>& BulkData_)
 		: database_streamer(Requests, acl::k_num_database_tiers)
 	{
 		const uint32 BulkDataMediumSize = CompressedDatabase.get_bulk_data_size(acl::quality_tier::medium_importance);
@@ -48,8 +48,8 @@ public:
 	}
 
 private:
-	UE4DatabasePreviewStreamer(const UE4DatabasePreviewStreamer&) = delete;
-	UE4DatabasePreviewStreamer& operator=(const UE4DatabasePreviewStreamer&) = delete;
+	UEDatabasePreviewStreamer(const UEDatabasePreviewStreamer&) = delete;
+	UEDatabasePreviewStreamer& operator=(const UEDatabasePreviewStreamer&) = delete;
 
 	const uint8* BulkData[acl::k_num_database_tiers];
 
