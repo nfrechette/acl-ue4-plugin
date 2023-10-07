@@ -156,7 +156,7 @@ static void PopulateShellDistanceFromOptimizationTargets(const FCompressibleAnim
 			continue;	// No skinned vertices for this bone, skipping
 		}
 
-		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[ACLBoneIndex];
+		const FBoneData& UEBone = CompressibleAnimData.BoneData[ACLBoneIndex];
 
 		acl::track_desc_transformf& Desc = ACLTrack.get_description();
 
@@ -165,7 +165,7 @@ static void PopulateShellDistanceFromOptimizationTargets(const FCompressibleAnim
 		// Together with the precision value, all vertices skinned to this bone
 		// will be guaranteed to have an error smaller or equal to the precision
 		// threshold used.
-		if (UE4Bone.bHasSocket || UE4Bone.bKeyEndEffector)
+		if (UEBone.bHasSocket || UEBone.bKeyEndEffector)
 		{
 			// Bones that have sockets or are key end effectors require extra precision, make sure
 			// that our shell distance is at least what we ask of it regardless of the skinning
@@ -192,7 +192,7 @@ static void StripBindPose(const FCompressibleAnimData& CompressibleAnimData, acl
 
 	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
-		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[BoneIndex];
+		const FBoneData& UEBone = CompressibleAnimData.BoneData[BoneIndex];
 
 		acl::track_qvvf& Track = ACLTracks[BoneIndex];
 		acl::track_desc_transformf& Desc = Track.get_description();
@@ -211,7 +211,7 @@ static void StripBindPose(const FCompressibleAnimData& CompressibleAnimData, acl
 		//         Single bone decompression will output the correct value
 
 		// Set the default value to the bind pose so that it can be stripped
-		Desc.default_value = rtm::qvv_set(UEQuatToACL(UE4Bone.Orientation), UEVector3ToACL(UE4Bone.Position), DefaultScale);
+		Desc.default_value = rtm::qvv_set(UEQuatToACL(UEBone.Orientation), UEVector3ToACL(UEBone.Position), DefaultScale);
 	}
 }
 #endif

@@ -148,7 +148,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	const int32 NumUETracks = CompressibleAnimData.TrackToSkeletonMapTable.Num();
 
 	// Additive animations have 0,0,0 scale as the default since we add it
-	const FRawAnimTrackVector3 UE4DefaultScale(bIsAdditive ? 0.0f : 1.0f);
+	const FRawAnimTrackVector3 UEDefaultScale(bIsAdditive ? 0.0f : 1.0f);
 	const rtm::vector4f ACLDefaultScale = rtm::vector_set(bIsAdditive ? 0.0f : 1.0f);
 
 	rtm::qvvf ACLDefaultAdditiveBindTransform = rtm::qvv_identity();
@@ -174,14 +174,14 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 	// Populate all our track based on our skeleton, even if some end up stripped
 	for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
-		const FBoneData& UE4Bone = CompressibleAnimData.BoneData[BoneIndex];
+		const FBoneData& UEBone = CompressibleAnimData.BoneData[BoneIndex];
 
 		acl::track_desc_transformf Desc;
 
 		// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)
-		Desc.shell_distance = (UE4Bone.bHasSocket || UE4Bone.bKeyEndEffector) ? SafeVirtualVertexDistance : DefaultVirtualVertexDistance;
+		Desc.shell_distance = (UEBone.bHasSocket || UEBone.bKeyEndEffector) ? SafeVirtualVertexDistance : DefaultVirtualVertexDistance;
 
-		const int32 ParentBoneIndex = UE4Bone.GetParent();
+		const int32 ParentBoneIndex = UEBone.GetParent();
 		Desc.parent_index = ParentBoneIndex >= 0 ? ParentBoneIndex : acl::k_invalid_track_index;
 
 		const int32 UETrackIndex = FindAnimationTrackIndex(CompressibleAnimData, BoneIndex);
@@ -202,7 +202,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 		Desc.default_value.scale = ACLDefaultScale;
 
 		acl::track_qvvf Track = acl::track_qvvf::make_reserve(Desc, AllocatorImpl, NumSamples, SampleRate);
-		Track.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*UE4Bone.Name.ToString())));
+		Track.set_name(acl::string(AllocatorImpl, TCHAR_TO_ANSI(*UEBone.Name.ToString())));
 
 		if (UETrackIndex >= 0)
 		{
@@ -217,7 +217,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 				const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
 				Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
 
-				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
+				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UEDefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
 				Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
 			}
 		}
@@ -232,7 +232,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 			}
 			else
 			{
-				BindTransform = rtm::qvv_set(UEQuatToACL(UE4Bone.Orientation), UEVector3ToACL(UE4Bone.Position), ACLDefaultScale);
+				BindTransform = rtm::qvv_set(UEQuatToACL(UEBone.Orientation), UEVector3ToACL(UEBone.Position), ACLDefaultScale);
 			}
 
 			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
@@ -300,7 +300,7 @@ acl::track_array_qvvf BuildACLTransformTrackArray(ACLAllocator& AllocatorImpl, c
 				const FRawAnimTrackVector3& TranslationSample = RawTrack.PosKeys.Num() == 1 ? RawTrack.PosKeys[0] : RawTrack.PosKeys[SampleIndex];
 				Track[SampleIndex].translation = UEVector3ToACL(TranslationSample);
 
-				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UE4DefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
+				const FRawAnimTrackVector3& ScaleSample = RawTrack.ScaleKeys.Num() == 0 ? UEDefaultScale : (RawTrack.ScaleKeys.Num() == 1 ? RawTrack.ScaleKeys[0] : RawTrack.ScaleKeys[SampleIndex]);
 				Track[SampleIndex].scale = UEVector3ToACL(ScaleSample);
 			}
 		}
