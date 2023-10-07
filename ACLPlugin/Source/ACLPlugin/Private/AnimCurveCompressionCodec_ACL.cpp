@@ -215,7 +215,7 @@ bool UAnimCurveCompressionCodec_ACL::Compress(const FCompressibleAnimData& AnimS
 }
 #endif // WITH_EDITORONLY_DATA
 
-struct UE4CurveDecompressionSettings final : public acl::decompression_settings
+struct UECurveDecompressionSettings final : public acl::decompression_settings
 {
 	static constexpr bool is_track_type_supported(acl::track_type8 type) { return type == acl::track_type8::float1f; }
 
@@ -232,12 +232,12 @@ struct UE4CurveDecompressionSettings final : public acl::decompression_settings
 #endif
 };
 
-struct UE4CurveWriter final : public acl::track_writer
+struct UECurveWriter final : public acl::track_writer
 {
 	const TArray<FSmartName>& CompressedCurveNames;
 	FBlendedCurve& Curves;
 
-	UE4CurveWriter(const TArray<FSmartName>& CompressedCurveNames_, FBlendedCurve& Curves_)
+	UECurveWriter(const TArray<FSmartName>& CompressedCurveNames_, FBlendedCurve& Curves_)
 		: CompressedCurveNames(CompressedCurveNames_)
 		, Curves(Curves_)
 	{
@@ -266,19 +266,19 @@ void UAnimCurveCompressionCodec_ACL::DecompressCurves(const FCompressedAnimSeque
 	const acl::compressed_tracks* CompressedTracks = acl::make_compressed_tracks(AnimSeq.CompressedCurveByteStream.GetData());
 	check(CompressedTracks != nullptr && CompressedTracks->is_valid(false).empty());
 
-	acl::decompression_context<UE4CurveDecompressionSettings> Context;
+	acl::decompression_context<UECurveDecompressionSettings> Context;
 	Context.initialize(*CompressedTracks);
 	Context.seek(CurrentTime, acl::sample_rounding_policy::none);
 
-	UE4CurveWriter TrackWriter(CompressedCurveNames, Curves);
+	UECurveWriter TrackWriter(CompressedCurveNames, Curves);
 	Context.decompress_tracks(TrackWriter);
 }
 
-struct UE4ScalarCurveWriter final : public acl::track_writer
+struct UEScalarCurveWriter final : public acl::track_writer
 {
 	float SampleValue;
 
-	UE4ScalarCurveWriter()
+	UEScalarCurveWriter()
 		: SampleValue(0.0f)
 	{
 	}
@@ -302,7 +302,7 @@ float UAnimCurveCompressionCodec_ACL::DecompressCurve(const FCompressedAnimSeque
 	const acl::compressed_tracks* CompressedTracks = acl::make_compressed_tracks(AnimSeq.CompressedCurveByteStream.GetData());
 	check(CompressedTracks != nullptr && CompressedTracks->is_valid(false).empty());
 
-	acl::decompression_context<UE4CurveDecompressionSettings> Context;
+	acl::decompression_context<UECurveDecompressionSettings> Context;
 	Context.initialize(*CompressedTracks);
 	Context.seek(CurrentTime, acl::sample_rounding_policy::none);
 
@@ -321,7 +321,7 @@ float UAnimCurveCompressionCodec_ACL::DecompressCurve(const FCompressedAnimSeque
 		return 0.0f;	// Track not found
 	}
 
-	UE4ScalarCurveWriter TrackWriter;
+	UEScalarCurveWriter TrackWriter;
 	Context.decompress_track(TrackIndex, TrackWriter);
 
 	return TrackWriter.SampleValue;
