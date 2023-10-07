@@ -140,7 +140,7 @@ using FRawAnimTrackVector3 = FVector;
 #endif
 
 /** The decompression settings used by ACL */
-struct UE4DefaultDecompressionSettings : public acl::default_transform_decompression_settings
+struct UEDefaultDecompressionSettings : public acl::default_transform_decompression_settings
 {
 	// Only support our latest version
 	static constexpr acl::compressed_tracks_version16 version_supported() { return acl::compressed_tracks_version16::latest; }
@@ -155,37 +155,37 @@ struct UE4DefaultDecompressionSettings : public acl::default_transform_decompres
 #endif
 };
 
-struct UE4DebugDecompressionSettings : public acl::debug_transform_decompression_settings
+struct UEDebugDecompressionSettings : public acl::debug_transform_decompression_settings
 {
 	// Only support our latest version
 	static constexpr acl::compressed_tracks_version16 version_supported() { return acl::compressed_tracks_version16::latest; }
 };
 
 // Same as debug settings for now since everything is allowed
-using UE4CustomDecompressionSettings = UE4DebugDecompressionSettings;
+using UECustomDecompressionSettings = UEDebugDecompressionSettings;
 
-struct UE4SafeDecompressionSettings final : public UE4DefaultDecompressionSettings
+struct UESafeDecompressionSettings final : public UEDefaultDecompressionSettings
 {
 	static constexpr bool is_rotation_format_supported(acl::rotation_format8 format) { return format == acl::rotation_format8::quatf_full; }
 	static constexpr acl::rotation_format8 get_rotation_format(acl::rotation_format8 /*format*/) { return acl::rotation_format8::quatf_full; }
 };
 
-struct UE4DefaultDatabaseSettings final : public acl::default_database_settings
+struct UEDefaultDatabaseSettings final : public acl::default_database_settings
 {
 	// Only support our latest version
 	static constexpr acl::compressed_tracks_version16 version_supported() { return acl::compressed_tracks_version16::latest; }
 };
 
-struct UE4DefaultDBDecompressionSettings final : public UE4DefaultDecompressionSettings
+struct UEDefaultDBDecompressionSettings final : public UEDefaultDecompressionSettings
 {
-	using database_settings_type = UE4DefaultDatabaseSettings;
+	using database_settings_type = UEDefaultDatabaseSettings;
 };
 
-using UE4DebugDatabaseSettings = acl::debug_database_settings;
+using UEDebugDatabaseSettings = acl::debug_database_settings;
 
-struct UE4DebugDBDecompressionSettings final : public UE4DebugDecompressionSettings
+struct UEDebugDBDecompressionSettings final : public UEDebugDecompressionSettings
 {
-	using database_settings_type = UE4DebugDatabaseSettings;
+	using database_settings_type = UEDebugDatabaseSettings;
 };
 
 /** UE4 equivalents for some ACL enums */
