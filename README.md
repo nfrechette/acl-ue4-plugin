@@ -29,7 +29,7 @@ You can find the ACL plugin on the Unreal Marketplace [here](https://www.unreale
 
 If you would like to contribute to the ACL UE Plugin, make sure to check out the [contributing guidelines](CONTRIBUTING.md).
 
-** NOTE: If you clone this repository, you MUST run the script under [.\Tools\prepare_release.py](./Tools/prepare_release.py) to package the plugin. It pre-processes some required files. **
+**NOTE: If you clone this repository, you MUST run the script under [.\Tools\prepare_release.py](./Tools/prepare_release.py) to package the plugin. It pre-processes some required files.**
 
 ## License, copyright, and code of conduct
 
