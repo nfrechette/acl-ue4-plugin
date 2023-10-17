@@ -2,6 +2,9 @@
 
 // Copyright 2018 Nicholas Frechette. All Rights Reserved.
 
+#include "Animation/AnimSequenceDecompressionContext.h"
+#include "Animation/AnimTypes.h"
+#include "AnimEncoding.h"
 #include "CoreMinimal.h"
 
 #include "ACLImpl.h"

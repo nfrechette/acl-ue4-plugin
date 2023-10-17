@@ -2,14 +2,12 @@
 
 #include "AnimationCompressionLibraryDatabase.h"
 #include "AnimBoneCompressionCodec_ACLDatabase.h"
-
+#include "Engine/Engine.h"
 #include "UEDatabaseStreamer.h"
 
 #include "LatentActions.h"
 #include "Containers/Ticker.h"
-#include "Engine/Engine.h"
 
-#include "ACLImpl.h"
 
 #if WITH_EDITORONLY_DATA
 #include "Animation/AnimBoneCompressionSettings.h"
@@ -21,6 +19,7 @@
 #include "UObject/ObjectSaveContext.h"
 #endif
 
+#include "ACLImpl.h"
 #include "UEDatabasePreviewStreamer.h"
 
 THIRD_PARTY_INCLUDES_START

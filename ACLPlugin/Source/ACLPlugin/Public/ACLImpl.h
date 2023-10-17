@@ -97,6 +97,8 @@ THIRD_PARTY_INCLUDES_START
 THIRD_PARTY_INCLUDES_END
 #endif
 
+#include "ACLImpl.generated.h"
+
 /** The ACL allocator implementation simply forwards to the default heap allocator. */
 class ACLAllocator final : public acl::iallocator
 {
