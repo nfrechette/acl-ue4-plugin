@@ -158,7 +158,7 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UESk
 
 static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UEClip, USkeleton* UESkeleton)
 {
-	const int32 NumSamples = Tracks.get_num_samples_per_track();
+	const uint32 NumSamples = Tracks.get_num_samples_per_track();
 	const float SequenceLength = FGenericPlatformMath::Max<float>(Tracks.get_finite_duration(), MINIMUM_ANIMATION_LENGTH);
 
 #if ENGINE_MAJOR_VERSION >= 5
@@ -200,19 +200,19 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UECl
 			RawTrack.RotKeys.Empty();
 			RawTrack.ScaleKeys.Empty();
 
-			for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				const FRawAnimTrackQuat Rotation = ACLQuatToUE(rtm::quat_normalize(Track[SampleIndex].rotation));
 				RawTrack.RotKeys.Add(Rotation);
 			}
 
-			for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				const FRawAnimTrackVector3 Translation = ACLVector3ToUE(Track[SampleIndex].translation);
 				RawTrack.PosKeys.Add(Translation);
 			}
 
-			for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
+			for (uint32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex)
 			{
 				const FRawAnimTrackVector3 Scale = ACLVector3ToUE(Track[SampleIndex].scale);
 				RawTrack.ScaleKeys.Add(Scale);
