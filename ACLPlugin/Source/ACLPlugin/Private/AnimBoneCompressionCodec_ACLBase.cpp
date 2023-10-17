@@ -107,7 +107,7 @@ static void AppendMaxVertexDistances(USkeletalMesh* OptimizationTarget, TMap<FNa
 		for (uint32 VertexIndex = 0; VertexIndex < NumVertices; ++VertexIndex)
 		{
 			const FSoftSkinVertex& VertexInfo = Section.SoftVertices[VertexIndex];
-			const FVector& VertexPosition = UEVector3Cast(VertexInfo.Position);
+			const FVector VertexPosition = UEVector3Cast(VertexInfo.Position);
 
 			for (uint32 InfluenceIndex = 0; InfluenceIndex < MAX_TOTAL_INFLUENCES; ++InfluenceIndex)
 			{
