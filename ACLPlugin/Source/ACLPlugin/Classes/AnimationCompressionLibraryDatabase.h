@@ -171,7 +171,7 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 #if ENGINE_MAJOR_VERSION >= 5
-	virtual void PreSave(FObjectPreSaveContext SaveContext) override;
+	virtual void PreSave(FObjectPreSaveContext ObjectSaveContext) override;
 #else
 	virtual void PreSave(const class ITargetPlatform* TargetPlatform) override;
 #endif

@@ -127,15 +127,15 @@ void UAnimationCompressionLibraryDatabase::PostEditChangeProperty(FPropertyChang
 }
 
 #if ENGINE_MAJOR_VERSION >= 5
-void UAnimationCompressionLibraryDatabase::PreSave(FObjectPreSaveContext SaveContext)
+void UAnimationCompressionLibraryDatabase::PreSave(FObjectPreSaveContext ObjectSaveContext)
 #else
 void UAnimationCompressionLibraryDatabase::PreSave(const ITargetPlatform* TargetPlatform)
 #endif
 {
 #if ENGINE_MAJOR_VERSION >= 5
-	Super::PreSave(SaveContext);
+	Super::PreSave(ObjectSaveContext);
 
-	const ITargetPlatform* TargetPlatform = SaveContext.GetTargetPlatform();
+	const ITargetPlatform* TargetPlatform = ObjectSaveContext.GetTargetPlatform();
 #else
 	Super::PreSave(TargetPlatform);
 #endif
