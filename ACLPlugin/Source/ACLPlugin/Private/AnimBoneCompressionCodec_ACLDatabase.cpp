@@ -130,13 +130,13 @@ void UAnimBoneCompressionCodec_ACLDatabase::GetPreloadDependencies(TArray<UObjec
 }
 
 #if ENGINE_MAJOR_VERSION >= 5
-void UAnimBoneCompressionCodec_ACLDatabase::PreSave(FObjectPreSaveContext SaveContext)
+void UAnimBoneCompressionCodec_ACLDatabase::PreSave(FObjectPreSaveContext ObjectSaveContext)
 #else
 void UAnimBoneCompressionCodec_ACLDatabase::PreSave(const class ITargetPlatform* TargetPlatform)
 #endif
 {
 #if ENGINE_MAJOR_VERSION >= 5
-	Super::PreSave(SaveContext);
+	Super::PreSave(ObjectSaveContext);
 #else
 	Super::PreSave(TargetPlatform);
 #endif
