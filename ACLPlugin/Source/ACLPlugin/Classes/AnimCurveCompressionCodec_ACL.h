@@ -9,7 +9,7 @@
 #include "Animation/AnimCurveCompressionCodec.h"
 #include "AnimCurveCompressionCodec_ACL.generated.h"
 
-/** The default codec implementation for ACL curve compression support with the minimal set of exposed features for ease of use. */
+/** Uses the open source Animation Compression Library with default settings suitable for general purpose animation curves. */
 UCLASS(MinimalAPI, config = Engine, meta = (DisplayName = "ACL Curves"))
 class UAnimCurveCompressionCodec_ACL : public UAnimCurveCompressionCodec
 {
