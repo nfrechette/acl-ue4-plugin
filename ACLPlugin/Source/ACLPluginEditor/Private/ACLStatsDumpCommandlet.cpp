@@ -55,7 +55,7 @@ THIRD_PARTY_INCLUDES_END
 // 
 // Codec specific:
 //		-auto: Uses automatic compression
-//		-MasterTolerance=<tolerance>: The error threshold used by automatic compression
+//		-ErrorTolerance=<tolerance>: The error threshold used by automatic compression
 // 
 //		-acl: Uses ACL compression
 // 
