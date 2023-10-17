@@ -60,9 +60,7 @@ class UAnimBoneCompressionCodec_ACLBase : public UAnimBoneCompressionCodec
 	/** The error threshold to use when optimizing and compressing the animation sequence. */
 	UPROPERTY(EditAnywhere, Category = "ACL Options", meta = (ClampMin = "0"))
 	float ErrorThreshold;
-#endif
 
-#if WITH_EDITORONLY_DATA
 	// UAnimBoneCompressionCodec implementation
 	virtual bool Compress(const FCompressibleAnimData& CompressibleAnimData, FCompressibleAnimDataResult& OutResult) override;
 
