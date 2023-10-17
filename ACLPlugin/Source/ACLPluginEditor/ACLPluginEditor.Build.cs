@@ -8,9 +8,13 @@ namespace UnrealBuildTool.Rules
 	{
 		public ACLPluginEditor(ReadOnlyTargetRules Target) : base(Target)
 		{
+			CppStandard = CppStandardVersion.Cpp17;
+
+			// Replace with PCHUsageMode.UseExplicitOrSharedPCHs when this plugin can compile with cpp20
+			PCHUsage = PCHUsageMode.NoPCHs;
+
 			string ACLSDKDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "../ThirdParty"));
 
-			PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 			//OptimizeCode = CodeOptimization.Never;
 			//bUseUnity = false;
 
