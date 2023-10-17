@@ -1411,9 +1411,9 @@ int32 UACLStatsDumpCommandlet::Main(const FString& Params)
 		AutoCompressionSettings = FAnimationUtils::GetDefaultAnimationBoneCompressionSettings();
 		AutoCompressionSettings->bForceBelowThreshold = true;
 
-		if (ParamsMap.Contains(TEXT("MasterTolerance")))
+		if (ParamsMap.Contains(TEXT("ErrorTolerance")))
 		{
-			AutoCompressionSettings->ErrorThreshold = FCString::Atof(*ParamsMap[TEXT("MasterTolerance")]);
+			AutoCompressionSettings->ErrorThreshold = FCString::Atof(*ParamsMap[TEXT("ErrorTolerance")]);
 		}
 	}
 
