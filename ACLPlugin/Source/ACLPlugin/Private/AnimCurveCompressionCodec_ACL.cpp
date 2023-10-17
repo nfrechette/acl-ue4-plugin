@@ -331,3 +331,4 @@ float UAnimCurveCompressionCodec_ACL::DecompressCurve(const FCompressedAnimSeque
 
 	return TrackWriter.SampleValue;
 }
+

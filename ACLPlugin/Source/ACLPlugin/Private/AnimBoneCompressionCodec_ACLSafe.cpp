@@ -74,3 +74,4 @@ void UAnimBoneCompressionCodec_ACLSafe::DecompressBone(FAnimSequenceDecompressio
 
 	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
 }
+

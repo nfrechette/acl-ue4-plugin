@@ -14,3 +14,4 @@ UObject* UAnimationCompressionLibraryDatabaseFactory::FactoryCreateNew(UClass* C
 {
 	return NewObject<UAnimationCompressionLibraryDatabase>(InParent, Class, Name, Flags);
 }
+

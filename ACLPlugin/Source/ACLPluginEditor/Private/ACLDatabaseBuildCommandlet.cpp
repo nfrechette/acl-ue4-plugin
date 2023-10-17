@@ -183,3 +183,4 @@ int32 UACLDatabaseBuildCommandlet::Main(const FString& Params)
 
 	return bFailedToSave ? 1 : 0;
 }
+

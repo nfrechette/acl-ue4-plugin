@@ -433,3 +433,4 @@ void UAnimBoneCompressionCodec_ACLBase::ByteSwapOut(ICompressedAnimData& AnimDat
 	// TODO: ACL does not support byte swapping
 	MemoryStream.Serialize(CompressedData.GetData(), CompressedData.Num());
 }
+
