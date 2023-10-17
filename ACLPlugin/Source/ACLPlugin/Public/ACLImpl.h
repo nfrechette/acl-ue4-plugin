@@ -259,7 +259,9 @@ enum class ACLPhantomTrackMode : uint8
 
 #if WITH_EDITOR
 struct FCompressibleAnimData;
+struct FPerPlatformFloat;
 class UAnimSequence;
+class ITargetPlatform;
 
 ACLPLUGIN_API acl::rotation_format8 GetRotationFormat(ACLRotationFormat Format);
 ACLPLUGIN_API acl::vector_format8 GetVectorFormat(ACLVectorFormat Format);
@@ -277,7 +279,7 @@ namespace ACL
 {
 	namespace Private
 	{
-		ACLPLUGIN_API float GetPerPlatformFloat(const struct FPerPlatformFloat& PerPlatformFloat, const class ITargetPlatform* TargetPlatform);
+		ACLPLUGIN_API float GetPerPlatformFloat(const FPerPlatformFloat& PerPlatformFloat, const ITargetPlatform* TargetPlatform);
 	}
 }
 #endif // WITH_EDITOR
