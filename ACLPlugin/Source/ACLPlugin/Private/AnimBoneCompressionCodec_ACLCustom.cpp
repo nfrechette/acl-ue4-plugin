@@ -7,7 +7,9 @@
 #if WITH_EDITORONLY_DATA
 #include "Rendering/SkeletalMeshModel.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/compression/compression_settings.h>
+THIRD_PARTY_INCLUDES_END
 #endif
 
 UAnimBoneCompressionCodec_ACLCustom::UAnimBoneCompressionCodec_ACLCustom(const FObjectInitializer& ObjectInitializer)

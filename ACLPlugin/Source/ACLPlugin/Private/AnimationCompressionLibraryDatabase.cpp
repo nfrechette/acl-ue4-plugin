@@ -23,7 +23,9 @@
 
 #include "UEDatabasePreviewStreamer.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/compression/compress.h>
+THIRD_PARTY_INCLUDES_END
 #endif	// WITH_EDITORONLY_DATA
 
 const TCHAR* VisualFidelityToString(ACLVisualFidelity Fidelity)

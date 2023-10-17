@@ -11,6 +11,7 @@
 
 #include "ACLImpl.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/compression/compress.h>
 #include <acl/compression/pre_process.h>
 #include <acl/compression/transform_error_metrics.h>
@@ -18,6 +19,7 @@
 #include <acl/core/bitset.h>
 #include <acl/core/compressed_tracks_version.h>
 #include <acl/decompression/decompress.h>
+THIRD_PARTY_INCLUDES_END
 #endif	// WITH_EDITORONLY_DATA
 
 #include <acl/core/compressed_tracks.h>

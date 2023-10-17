@@ -4,8 +4,10 @@
 
 #include "ACLImpl.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/decompression/database/database.h>
 #include <acl/decompression/database/database_streamer.h>
+THIRD_PARTY_INCLUDES_END
 
 #include "CoreMinimal.h"
 #include "Containers/Ticker.h"

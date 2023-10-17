@@ -15,10 +15,12 @@
 #include "ACLImpl.h"
 #include "EditorDatabaseMonitor.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/compression/compress.h>
 #include <acl/compression/track_error.h>
 #include <acl/decompression/decompress.h>
 #include <acl/decompression/database/null_database_streamer.h>
+THIRD_PARTY_INCLUDES_END
 #endif	// WITH_EDITORONLY_DATA
 
 #include "ACLDecompressionImpl.h"

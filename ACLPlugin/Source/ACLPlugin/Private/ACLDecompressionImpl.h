@@ -6,8 +6,10 @@
 
 #include "ACLImpl.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/decompression/decompress.h>
 #include <acl/decompression/database/database.h>
+THIRD_PARTY_INCLUDES_END
 
 constexpr acl::sample_rounding_policy get_rounding_policy(EAnimInterpolationType InterpType) { return InterpType == EAnimInterpolationType::Step ? acl::sample_rounding_policy::floor : acl::sample_rounding_policy::none; }
 

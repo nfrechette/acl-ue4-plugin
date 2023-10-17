@@ -9,14 +9,18 @@
 #include "Animation/MorphTarget.h"
 #include "Rendering/SkeletalMeshModel.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/compression/compress.h>
 #include <acl/compression/track.h>
 #include <acl/compression/track_array.h>
 #include <acl/compression/track_error.h>
 #include <acl/core/compressed_tracks_version.h>
-#endif	// WITH_EDITOR
+THIRD_PARTY_INCLUDES_END
+#endif
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/decompression/decompress.h>
+THIRD_PARTY_INCLUDES_END
 
 UAnimCurveCompressionCodec_ACL::UAnimCurveCompressionCodec_ACL(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

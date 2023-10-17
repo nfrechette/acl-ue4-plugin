@@ -8,6 +8,7 @@
 
 #include "ACLImpl.h"
 
+THIRD_PARTY_INCLUDES_START
 #if WITH_EDITORONLY_DATA
 #include <acl/compression/compression_settings.h>
 #include <acl/compression/track_array.h>
@@ -16,6 +17,7 @@
 #endif
 
 #include <acl/core/compressed_tracks.h>
+THIRD_PARTY_INCLUDES_END
 
 #include "AnimBoneCompressionCodec_ACLBase.generated.h"
 
