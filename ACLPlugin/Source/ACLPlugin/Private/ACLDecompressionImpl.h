@@ -280,11 +280,11 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 	ACLContext.seek(Time, get_rounding_policy(DecompContext.Interpolation));
 
 	const acl::compressed_tracks* CompressedClipData = ACLContext.get_compressed_tracks();
-	const int32 TrackCount = CompressedClipData->get_num_tracks();
+	const int32 ACLBoneCount = CompressedClipData->get_num_tracks();
 
 	// TODO: Allocate this with padding and use SIMD to set everything to 0xFF
-	FAtomIndices* TrackToAtomsMap = new(FMemStack::Get()) FAtomIndices[TrackCount];
-	FMemory::Memset(TrackToAtomsMap, 0xFF, sizeof(FAtomIndices) * TrackCount);
+	FAtomIndices* TrackToAtomsMap = new(FMemStack::Get()) FAtomIndices[ACLBoneCount];
+	FMemory::Memset(TrackToAtomsMap, 0xFF, sizeof(FAtomIndices) * ACLBoneCount);
 
 	// TODO: We should only need 1x uint16 atom index for each track/bone index
 	// and we need 3 bits to tell whether we care about the rot/trans/scale
@@ -348,7 +348,7 @@ FORCEINLINE_DEBUGGABLE void DecompressPose(FAnimSequenceDecompressionContext& De
 	checkf(OutAtoms.IsValidIndex(MinAtomIndex), TEXT("Invalid atom index: %d"), MinAtomIndex);
 	checkf(OutAtoms.IsValidIndex(MaxAtomIndex), TEXT("Invalid atom index: %d"), MaxAtomIndex);
 	checkf(MinTrackIndex >= 0, TEXT("Invalid track index: %d"), MinTrackIndex);
-	checkf(MaxTrackIndex < TrackCount, TEXT("Invalid track index: %d"), MaxTrackIndex);
+	checkf(MaxTrackIndex < ACLBoneCount, TEXT("Invalid track index: %d"), MaxTrackIndex);
 #endif
 
 	// We will decompress the whole pose even if we only care about a smaller subset of bone tracks.
