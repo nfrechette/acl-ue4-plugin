@@ -720,7 +720,7 @@ static void CompressWithUEAuto(FCompressionContext& Context, bool PerformExhaust
 		const double UECompressionRatio = double(Context.UERawSize) / double(CompressedSize);
 		const double ACLCompressionRatio = double(Context.ACLRawSize) / double(CompressedSize);
 
-		Writer["ue4_auto"] = [&](sjson::ObjectWriter& Writer)
+		Writer["ue4_auto"] = [&](sjson::ObjectWriter& Writer)	//-V1047
 		{
 			Writer["algorithm_name"] = TCHAR_TO_ANSI(*Context.UEClip->BoneCompressionSettings->GetClass()->GetName());
 			Writer["codec_name"] = TCHAR_TO_ANSI(*GetCodecName(Context.UEClip->CompressedData.BoneCompressionCodec));
@@ -795,7 +795,7 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 		const double UECompressionRatio = double(Context.UERawSize) / double(CompressedSize);
 		const double ACLCompressionRatio = double(Context.ACLRawSize) / double(CompressedSize);
 
-		Writer["ue4_acl"] = [&](sjson::ObjectWriter& Writer)
+		Writer["ue4_acl"] = [&](sjson::ObjectWriter& Writer)	//-V1047
 		{
 			Writer["algorithm_name"] = TCHAR_TO_ANSI(*Context.UEClip->BoneCompressionSettings->GetClass()->GetName());
 			Writer["codec_name"] = TCHAR_TO_ANSI(*GetCodecName(Context.UEClip->CompressedData.BoneCompressionCodec));
@@ -905,7 +905,7 @@ static void CompressWithUEKeyReduction(FCompressionContext& Context, bool Perfor
 		const double UECompressionRatio = double(Context.UERawSize) / double(CompressedSize);
 		const double ACLCompressionRatio = double(Context.ACLRawSize) / double(CompressedSize);
 
-		Writer["ue4_keyreduction"] = [&](sjson::ObjectWriter& Writer)
+		Writer["ue4_keyreduction"] = [&](sjson::ObjectWriter& Writer)	//-V1047
 		{
 			Writer["algorithm_name"] = TCHAR_TO_ANSI(*Context.UEClip->BoneCompressionSettings->GetClass()->GetName());
 			Writer["codec_name"] = TCHAR_TO_ANSI(*GetCodecName(Context.UEClip->CompressedData.BoneCompressionCodec));
@@ -935,7 +935,7 @@ static void CompressWithUEKeyReduction(FCompressionContext& Context, bool Perfor
 			// Number of animated tracks (not constant/default)
 			int32 NumAnimatedTracks = 0;
 
-			Writer["dropped_track_keys"] = [&](sjson::ArrayWriter& Writer)
+			Writer["dropped_track_keys"] = [&](sjson::ArrayWriter& Writer)	//-V1047
 			{
 				if (!bHasClipData)
 				{
@@ -1020,7 +1020,7 @@ static void CompressWithUEKeyReduction(FCompressionContext& Context, bool Perfor
 			Writer["total_num_animated_keys"] = TotalNumAnimatedKeys;
 			Writer["total_num_dropped_animated_keys"] = TotalNumDroppedAnimatedKeys;
 
-			Writer["dropped_pose_keys"] = [&](sjson::ArrayWriter& Writer)
+			Writer["dropped_pose_keys"] = [&](sjson::ArrayWriter& Writer)	//-V1047
 			{
 				if (!bHasClipData)
 				{
