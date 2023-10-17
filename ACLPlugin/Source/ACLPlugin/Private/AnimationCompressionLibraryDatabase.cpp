@@ -1158,3 +1158,4 @@ ACLVisualFidelity UAnimationCompressionLibraryDatabase::GetVisualFidelity(UAnima
 	checkf(DatabaseAsset != nullptr, TEXT("Cannot query null ACL database asset"));
 	return DatabaseAsset != nullptr ? DatabaseAsset->CurrentVisualFidelity : ACLVisualFidelity::Lowest;
 }
+

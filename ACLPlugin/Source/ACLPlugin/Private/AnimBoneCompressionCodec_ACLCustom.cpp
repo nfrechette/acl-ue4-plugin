@@ -101,3 +101,4 @@ void UAnimBoneCompressionCodec_ACLCustom::DecompressBone(FAnimSequenceDecompress
 
 	::DecompressBone(DecompContext, ACLContext, TrackIndex, OutAtom);
 }
+
