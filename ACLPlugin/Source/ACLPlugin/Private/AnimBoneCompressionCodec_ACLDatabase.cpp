@@ -184,7 +184,9 @@ void UAnimBoneCompressionCodec_ACLDatabase::GetCompressionSettings(const class I
 
 	OutSettings.level = GetCompressionLevel(CompressionLevel);
 	OutSettings.enable_database_support = true;
-	OutSettings.keyframe_stripping.strip_trivial = false;	// We don't support stripping trivial keyframes with database support, yet
+
+	// Disable keyframe stripping, even the trivial one as it currently isn't supported
+	OutSettings.keyframe_stripping.strip_trivial = false;
 }
 
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
