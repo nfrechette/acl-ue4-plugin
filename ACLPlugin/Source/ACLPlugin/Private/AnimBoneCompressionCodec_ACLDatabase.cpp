@@ -6,6 +6,7 @@
 
 #if WITH_EDITORONLY_DATA
 #include "Animation/AnimBoneCompressionSettings.h"
+#include "Engine/SkeletalMesh.h"
 #include "Rendering/SkeletalMeshModel.h"
 
 #if ENGINE_MAJOR_VERSION >= 5

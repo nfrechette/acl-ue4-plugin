@@ -3,7 +3,7 @@
 #include "AnimBoneCompressionCodec_ACL.h"
 
 #if WITH_EDITORONLY_DATA
-#include "AnimBoneCompressionCodec_ACLSafe.h"
+#include "Engine/SkeletalMesh.h"
 #include "Rendering/SkeletalMeshModel.h"
 
 #include "ACLImpl.h"

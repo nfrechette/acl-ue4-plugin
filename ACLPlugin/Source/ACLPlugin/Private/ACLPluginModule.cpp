@@ -2,12 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "IACLPluginModule.h"
+#include "Misc/CoreDelegates.h"
 #include "Modules/ModuleManager.h"
+#include "ACLImpl.h"
 
 // Enable console commands only in development builds when logging is enabled
 #define WITH_ACL_CONSOLE_COMMANDS (!UE_BUILD_SHIPPING && !UE_BUILD_TEST && !NO_LOGGING)
-
-#include "ACLImpl.h"
 
 #if WITH_ACL_CONSOLE_COMMANDS
 #include "AnimationCompressionLibraryDatabase.h"

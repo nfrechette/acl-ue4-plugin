@@ -7,6 +7,7 @@
 #include "HAL/UnrealMemory.h"
 
 #include "ACLImpl.h"
+#include "Serialization/BulkData.h"
 
 THIRD_PARTY_INCLUDES_START
 #include <acl/decompression/database/database_streamer.h>

@@ -7,6 +7,7 @@
 #if WITH_EDITORONLY_DATA
 #include "AnimationCompression.h"
 #include "Animation/MorphTarget.h"
+#include "Engine/SkeletalMesh.h"
 #include "Rendering/SkeletalMeshModel.h"
 
 THIRD_PARTY_INCLUDES_START

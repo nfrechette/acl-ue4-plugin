@@ -3,7 +3,12 @@
 #include "AssetTypeActions_AnimationCompressionLibraryDatabase.h"
 #include "AnimBoneCompressionCodec_ACLDatabase.h"
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#include "Styling/AppStyle.h"
+#else
 #include "EditorStyleSet.h"
+#endif
+
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 
 void FAssetTypeActions_AnimationCompressionLibraryDatabase::OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor)

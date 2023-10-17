@@ -2,16 +2,17 @@
 
 #include "ACLStatsDumpCommandlet.h"
 
-#include "Runtime/Core/Public/HAL/FileManagerGeneric.h"
-#include "Runtime/Core/Public/HAL/PlatformTime.h"
+#include "HAL/FileManagerGeneric.h"
+#include "HAL/PlatformTime.h"
 #include "Runtime/CoreUObject/Public/UObject/UObjectIterator.h"
 #include "Runtime/Engine/Classes/Animation/AnimBoneCompressionSettings.h"
 #include "Runtime/Engine/Classes/Animation/AnimCompress.h"
 #include "Runtime/Engine/Classes/Animation/AnimCompress_RemoveLinearKeys.h"
 #include "Runtime/Engine/Classes/Animation/Skeleton.h"
 #include "Runtime/Engine/Public/AnimationCompression.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "Editor/UnrealEd/Public/PackageHelperFunctions.h"
-
+#include "Misc/CoreMisc.h"
 #include "Interfaces/ITargetPlatform.h"
 #include "Interfaces/ITargetPlatformManagerModule.h"
 

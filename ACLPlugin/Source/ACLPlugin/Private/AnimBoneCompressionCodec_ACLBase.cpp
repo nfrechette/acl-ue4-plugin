@@ -1,13 +1,16 @@
 // Copyright 2018 Nicholas Frechette. All Rights Reserved.
 
 #include "AnimBoneCompressionCodec_ACLBase.h"
+#include "Animation/Skeleton.h"
 #include "Serialization/MemoryWriter.h"
 #include "Serialization/MemoryReader.h"
 
 #if WITH_EDITORONLY_DATA
 #include "AnimBoneCompressionCodec_ACLSafe.h"
 #include "Animation/AnimationSettings.h"
+#include "Engine/SkeletalMesh.h"
 #include "Rendering/SkeletalMeshModel.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #include "ACLImpl.h"
 

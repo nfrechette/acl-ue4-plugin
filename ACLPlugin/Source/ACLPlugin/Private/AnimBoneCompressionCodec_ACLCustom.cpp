@@ -5,6 +5,7 @@
 #include "ACLDecompressionImpl.h"
 
 #if WITH_EDITORONLY_DATA
+#include "Engine/SkeletalMesh.h"
 #include "Rendering/SkeletalMeshModel.h"
 
 THIRD_PARTY_INCLUDES_START
