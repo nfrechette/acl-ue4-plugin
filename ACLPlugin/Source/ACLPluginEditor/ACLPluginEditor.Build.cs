@@ -21,8 +21,6 @@ namespace UnrealBuildTool.Rules
 			PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
 			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/external/sjson-cpp/includes"));
 
-			PrivateIncludePaths.Add("ACLPluginEditor/Private");
-
 			PublicDependencyModuleNames.Add("ACLPlugin");
 			PublicDependencyModuleNames.Add("Core");
 			PublicDependencyModuleNames.Add("CoreUObject");
