@@ -8,7 +8,9 @@
 
 #include "ACLImpl.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/decompression/database/database_streamer.h>
+THIRD_PARTY_INCLUDES_END
 
 // UE 4.25 doesn't expose its virtual memory management, see FPlatformMemory::FPlatformVirtualMemoryBlock
 #define WITH_VMEM_MANAGEMENT 0

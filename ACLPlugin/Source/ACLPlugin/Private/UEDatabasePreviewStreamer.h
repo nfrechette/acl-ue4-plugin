@@ -8,8 +8,10 @@
 
 #include "ACLImpl.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/core/compressed_database.h>
 #include <acl/decompression/database/database_streamer.h>
+THIRD_PARTY_INCLUDES_END
 
 
 /** A simple UE preview streamer. Everything is assumed to be in memory and no real streaming is done. */

@@ -22,6 +22,7 @@
 #include "AnimBoneCompressionCodec_ACL.h"
 #include "ACLImpl.h"
 
+THIRD_PARTY_INCLUDES_START
 #include <sjson/parser.h>
 #include <sjson/writer.h>
 
@@ -37,6 +38,7 @@
 #include <rtm/quatf.h>
 #include <rtm/qvvf.h>
 #include <rtm/vector4f.h>
+THIRD_PARTY_INCLUDES_END
 
 //////////////////////////////////////////////////////////////////////////
 // Commandlet example inspired by: https://github.com/ue4plugins/CommandletPlugin

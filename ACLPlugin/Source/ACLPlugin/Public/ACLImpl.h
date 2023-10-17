@@ -80,6 +80,7 @@
 
 #define ACL_WITH_KEYFRAME_STRIPPING (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
 
+THIRD_PARTY_INCLUDES_START
 #include <acl/core/error.h>
 #include <acl/core/iallocator.h>
 #include <acl/decompression/decompress.h>
@@ -87,6 +88,14 @@
 #include <rtm/quatf.h>
 #include <rtm/vector4f.h>
 #include <rtm/qvvf.h>
+THIRD_PARTY_INCLUDES_END
+
+#if WITH_EDITOR
+THIRD_PARTY_INCLUDES_START
+#include <acl/compression/track_array.h>
+#include <acl/compression/compression_level.h>
+THIRD_PARTY_INCLUDES_END
+#endif
 
 /** The ACL allocator implementation simply forwards to the default heap allocator. */
 class ACLAllocator final : public acl::iallocator
@@ -243,9 +252,6 @@ enum class ACLPhantomTrackMode : uint8
 #endif
 
 #if WITH_EDITOR
-#include <acl/compression/track_array.h>
-#include <acl/compression/compression_level.h>
-
 struct FCompressibleAnimData;
 class UAnimSequence;
 

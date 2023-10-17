@@ -5,7 +5,9 @@
 #include "ACLDecompressionImpl.h"
 
 #if WITH_EDITORONLY_DATA
+THIRD_PARTY_INCLUDES_START
 #include <acl/compression/compression_settings.h>
+THIRD_PARTY_INCLUDES_END
 #endif
 
 UAnimBoneCompressionCodec_ACLSafe::UAnimBoneCompressionCodec_ACLSafe(const FObjectInitializer& ObjectInitializer)
