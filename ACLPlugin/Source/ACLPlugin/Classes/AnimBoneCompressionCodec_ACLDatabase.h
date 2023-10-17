@@ -50,7 +50,11 @@ struct FACLDatabaseCompressedAnimData final : public ICompressedAnimData
 	virtual bool IsValid() const override;
 };
 
-/** The default database codec implementation for ACL support with the minimal set of exposed features for ease of use. */
+/**
+  * Uses the open source Animation Compression Library with default settings and database support.
+  * The referenced database can be used to strip the least important keyframes on a per platform basis
+  * or they can be streamed in/out on demand through Blueprint or C++.
+  */
 UCLASS(MinimalAPI, config = Engine, meta = (DisplayName = "Anim Compress ACL Database"))
 class UAnimBoneCompressionCodec_ACLDatabase : public UAnimBoneCompressionCodec_ACLBase
 {

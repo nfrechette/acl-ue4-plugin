@@ -7,7 +7,7 @@
 #include "AnimBoneCompressionCodec_ACLBase.h"
 #include "AnimBoneCompressionCodec_ACLCustom.generated.h"
 
-/** The custom codec implementation for ACL support with all features supported. */
+/** Uses the open source Animation Compression Library with custom settings suitable for debugging purposes. */
 UCLASS(MinimalAPI, config = Engine, meta = (DisplayName = "Anim Compress ACL Custom"))
 class UAnimBoneCompressionCodec_ACLCustom : public UAnimBoneCompressionCodec_ACLBase
 {

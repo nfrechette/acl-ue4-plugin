@@ -7,7 +7,7 @@
 #include "AnimBoneCompressionCodec_ACLBase.h"
 #include "AnimBoneCompressionCodec_ACLSafe.generated.h"
 
-/** The default codec implementation for ACL support with the minimal set of exposed features for ease of use. */
+/** Uses the open source Animation Compression Library with the safest and least destructive settings suitable when animations must be preserved with near raw fidelity. */
 UCLASS(MinimalAPI, config = Engine, meta = (DisplayName = "Anim Compress ACL Safe"))
 class UAnimBoneCompressionCodec_ACLSafe : public UAnimBoneCompressionCodec_ACLBase
 {
