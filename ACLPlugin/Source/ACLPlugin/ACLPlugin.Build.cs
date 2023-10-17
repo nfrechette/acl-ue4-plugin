@@ -18,11 +18,8 @@ namespace UnrealBuildTool.Rules
 			//OptimizeCode = CodeOptimization.Never;
 			//bUseUnity = false;
 
-			PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
 			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/includes"));
 			PublicIncludePaths.Add(Path.Combine(ACLSDKDir, "acl/external/rtm/includes"));
-
-			PrivateIncludePaths.Add("ACLPlugin/Private");
 
 			PublicDependencyModuleNames.Add("Core");
 			PublicDependencyModuleNames.Add("CoreUObject");
