@@ -777,8 +777,6 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 	{
 		const bool bHasClipData = Context.UEClip->CompressedData.CompressedDataStructure != nullptr;
 
-		UAnimBoneCompressionCodec_ACLBase* ACLCodec = Cast<UAnimBoneCompressionCodec_ACLBase>(Context.UEClip->CompressedData.BoneCompressionCodec);
-
 		AnimationErrorStats UEErrorStats;
 		uint32 WorstBone = INDEX_NONE;
 		float MaxError = 0.0f;
