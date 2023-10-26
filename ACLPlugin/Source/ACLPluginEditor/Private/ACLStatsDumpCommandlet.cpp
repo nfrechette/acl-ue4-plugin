@@ -225,7 +225,11 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UECl
 			const FName BoneName(Track.get_name().c_str());
 
 #if ENGINE_MAJOR_VERSION >= 5
+	#if ENGINE_MINOR_VERSION >= 2
+			UEClipController.AddBoneCurve(BoneName);
+	#else
 			UEClipController.AddBoneTrack(BoneName);
+	#endif
 			UEClipController.SetBoneTrackKeys(BoneName, RawTrack.PosKeys, RawTrack.RotKeys, RawTrack.ScaleKeys);
 #else
 			UEClip->AddNewRawTrack(BoneName, &RawTrack);
@@ -273,20 +277,28 @@ static void SampleUEClip(const acl::track_array_qvvf& Tracks, USkeleton* UESkele
 		const acl::track_qvvf& Track = Tracks[BoneIndex];
 		const FName BoneName(Track.get_name().c_str());
 		const int32 BoneTreeIndex = RefSkeleton.FindBoneIndex(BoneName);
-		const int32 BoneTrackIndex = GetAnimationTrackIndex(BoneTreeIndex, UEClip);
 
 		FTransform BoneTransform;
-		if (BoneTrackIndex != INDEX_NONE)
-		{
-#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
-			UEClip->GetBoneTransform(BoneTransform, BoneTrackIndex, double(SampleTime), false);
-#else
-			UEClip->GetBoneTransform(BoneTransform, BoneTrackIndex, SampleTime, false);
-#endif
-		}
-		else
+		if (BoneTreeIndex != INDEX_NONE)
 		{
 			BoneTransform = RefSkeletonPose[BoneTreeIndex];
+
+#if ENGINE_MAJOR_VERSION >= 5
+	#if ENGINE_MINOR_VERSION >= 2
+			if (UEClip->GetDataModel()->IsValidBoneTrackName(BoneName))
+			{
+				UEClip->GetBoneTransform(BoneTransform, FSkeletonPoseBoneIndex(BoneTreeIndex), double(SampleTime), false);
+			}
+	#else
+			UEClip->GetBoneTransform(BoneTransform, BoneTreeIndex, double(SampleTime), false);
+	#endif
+#else
+			const int32 BoneTrackIndex = GetAnimationTrackIndex(BoneTreeIndex, UEClip);
+			if (BoneTrackIndex != INDEX_NONE)
+			{
+				UEClip->GetBoneTransform(BoneTransform, BoneTrackIndex, SampleTime, false);
+			}
+#endif
 		}
 
 		const rtm::quatf Rotation = UEQuatToACL(BoneTransform.GetRotation());
@@ -299,6 +311,34 @@ static void SampleUEClip(const acl::track_array_qvvf& Tracks, USkeleton* UESkele
 static bool UEClipHasScale(const UAnimSequence* UEClip)
 {
 #if ENGINE_MAJOR_VERSION >= 5
+#if ENGINE_MINOR_VERSION >= 2
+	TArray<FName> TrackNames;
+	UEClip->GetDataModel()->GetBoneTrackNames(TrackNames);
+
+	bool bHasScaleKeys = false;
+	for (const FName& TrackName : TrackNames)
+	{
+		UEClip->GetDataModel()->IterateBoneKeys(
+			TrackName,
+			[&bHasScaleKeys](const FVector3f& Position, const FQuat4f& Rotation, const FVector3f& Scale, const FFrameNumber& FrameNumber)
+			{
+				if (!Scale.IsUnit())
+				{
+					bHasScaleKeys = true;
+					return false;
+				}
+
+				return true;
+			});
+
+		if (bHasScaleKeys)
+		{
+			break;
+		}
+	}
+
+	return bHasScaleKeys;
+#else	// ENGINE_MINOR_VERSION >= 2
 	const TArray<FBoneAnimationTrack>& Tracks = UEClip->GetDataModel()->GetBoneAnimationTracks();
 	for (const FBoneAnimationTrack& Track : Tracks)
 	{
@@ -307,7 +347,8 @@ static bool UEClipHasScale(const UAnimSequence* UEClip)
 			return true;
 		}
 	}
-#else
+#endif	// ENGINE_MINOR_VERSION >= 2
+#else	// ENGINE_MAJOR_VERSION >= 5
 	const TArray<FRawAnimSequenceTrack>& Tracks = UEClip->GetRawAnimationData();
 	for (const FRawAnimSequenceTrack& Track : Tracks)
 	{
@@ -316,7 +357,7 @@ static bool UEClipHasScale(const UAnimSequence* UEClip)
 			return true;
 		}
 	}
-#endif
+#endif	// ENGINE_MAJOR_VERSION >= 5
 
 	return false;
 }
@@ -697,7 +738,12 @@ static void CompressWithUEAuto(FCompressionContext& Context, bool PerformExhaust
 	const uint64 UEStartTimeCycles = FPlatformTime::Cycles64();
 
 	Context.UEClip->BoneCompressionSettings = Context.AutoCompressor;
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	Context.UEClip->CacheDerivedDataForCurrentPlatform();
+#else
 	Context.UEClip->RequestSyncAnimRecompression();
+#endif
 
 	const uint64 UEEndTimeCycles = FPlatformTime::Cycles64();
 
@@ -770,7 +816,12 @@ static void CompressWithACL(FCompressionContext& Context, bool PerformExhaustive
 	const uint64 ACLStartTimeCycles = FPlatformTime::Cycles64();
 
 	Context.UEClip->BoneCompressionSettings = Context.ACLCompressor;
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	Context.UEClip->CacheDerivedDataForCurrentPlatform();
+#else
 	Context.UEClip->RequestSyncAnimRecompression();
+#endif
 
 	const uint64 ACLEndTimeCycles = FPlatformTime::Cycles64();
 
@@ -880,7 +931,12 @@ static void CompressWithUEKeyReduction(FCompressionContext& Context, bool Perfor
 	const uint64 UEStartTimeCycles = FPlatformTime::Cycles64();
 
 	Context.UEClip->BoneCompressionSettings = Context.KeyReductionCompressor;
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	Context.UEClip->CacheDerivedDataForCurrentPlatform();
+#else
 	Context.UEClip->RequestSyncAnimRecompression();
+#endif
 
 	const uint64 UEEndTimeCycles = FPlatformTime::Cycles64();
 
@@ -948,14 +1004,12 @@ static void CompressWithUEKeyReduction(FCompressionContext& Context, bool Perfor
 
 #if ENGINE_MAJOR_VERSION >= 5
 				const AnimDataModelType* ClipData = Context.UEClip->GetDataModel();
-				const TArray<FBoneAnimationTrack>& RawTracks = ClipData->GetBoneAnimationTracks();
+				const int32 NumTracks = ClipData->GetNumBoneTracks();
 				const int32 NumSamples = ClipData->GetNumberOfFrames();
 #else
-				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UEClip->GetRawAnimationData();
+				const int32 NumTracks = Context.UEClip->GetRawAnimationData().Num();
 				const int32 NumSamples = Context.UEClip->GetRawNumberOfFrames();
 #endif
-
-				const int32 NumTracks = RawTracks.Num();
 
 				const int32* TrackOffsets = AnimData.CompressedTrackOffsets.GetData();
 				const auto& ScaleOffsets = AnimData.CompressedScaleOffsets;
@@ -1033,15 +1087,14 @@ static void CompressWithUEKeyReduction(FCompressionContext& Context, bool Perfor
 
 #if ENGINE_MAJOR_VERSION >= 5
 				const AnimDataModelType* ClipData = Context.UEClip->GetDataModel();
-				const TArray<FBoneAnimationTrack>& RawTracks = ClipData->GetBoneAnimationTracks();
+				const int32 NumTracks = ClipData->GetNumBoneTracks();
 				const int32 NumSamples = ClipData->GetNumberOfFrames();
 #else
-				const TArray<FRawAnimSequenceTrack>& RawTracks = Context.UEClip->GetRawAnimationData();
+				const int32 NumTracks = Context.UEClip->GetRawAnimationData().Num();
 				const int32 NumSamples = Context.UEClip->GetRawNumberOfFrames();
 #endif
 
 				const float SequenceLength = GetSequenceLength(*Context.UEClip);
-				const int32 NumTracks = RawTracks.Num();
 				const int32 NumCompressedKeys = GetCompressedNumberOfKeys(AnimData);
 
 				const float FrameRate = (NumSamples - 1) / SequenceLength;
