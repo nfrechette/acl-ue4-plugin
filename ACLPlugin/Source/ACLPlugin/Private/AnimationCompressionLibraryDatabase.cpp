@@ -8,6 +8,9 @@
 #include "LatentActions.h"
 #include "Containers/Ticker.h"
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AnimationCompressionLibraryDatabase)
+#endif
 
 #if WITH_EDITORONLY_DATA
 #include "Animation/AnimBoneCompressionSettings.h"

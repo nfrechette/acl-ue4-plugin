@@ -4,6 +4,10 @@
 
 #include "ACLDecompressionImpl.h"
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AnimBoneCompressionCodec_ACLCustom)
+#endif
+
 #if WITH_EDITORONLY_DATA
 #include "Engine/SkeletalMesh.h"
 #include "Rendering/SkeletalMeshModel.h"
