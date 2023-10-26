@@ -15,6 +15,7 @@ public:
 	virtual UClass* GetSupportedClass() const override { return UAnimationCompressionLibraryDatabase::StaticClass(); }
 	virtual bool CanFilter() override { return true; }
 	virtual uint32 GetCategories() override { return EAssetTypeCategories::Animation; }
+	virtual const TArray<FText>& GetSubMenus() const override;
 
 	virtual void OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor = TSharedPtr<IToolkitHost>()) override;
 
