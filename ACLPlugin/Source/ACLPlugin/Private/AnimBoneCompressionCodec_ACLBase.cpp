@@ -5,6 +5,10 @@
 #include "Serialization/MemoryWriter.h"
 #include "Serialization/MemoryReader.h"
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AnimBoneCompressionCodec_ACLBase)
+#endif
+
 #if WITH_EDITORONLY_DATA
 #include "AnimBoneCompressionCodec_ACLSafe.h"
 #include "Animation/AnimationSettings.h"

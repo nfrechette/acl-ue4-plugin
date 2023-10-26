@@ -3,6 +3,10 @@
 #include "AnimationCompressionLibraryDatabaseFactory.h"
 #include "AnimationCompressionLibraryDatabase.h"
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AnimationCompressionLibraryDatabaseFactory)
+#endif
+
 UAnimationCompressionLibraryDatabaseFactory::UAnimationCompressionLibraryDatabaseFactory(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {

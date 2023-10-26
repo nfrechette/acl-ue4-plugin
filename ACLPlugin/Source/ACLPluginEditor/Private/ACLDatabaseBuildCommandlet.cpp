@@ -16,6 +16,10 @@
 #include "AssetRegistryModule.h"
 #endif
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(ACLDatabaseBuildCommandlet)
+#endif
+
 
 //////////////////////////////////////////////////////////////////////////
 // Commandlet example inspired by: https://github.com/ue4plugins/CommandletPlugin

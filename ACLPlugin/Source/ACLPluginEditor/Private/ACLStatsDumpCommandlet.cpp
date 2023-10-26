@@ -23,6 +23,10 @@
 #include "AnimBoneCompressionCodec_ACL.h"
 #include "ACLImpl.h"
 
+#if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(ACLStatsDumpCommandlet)
+#endif
+
 THIRD_PARTY_INCLUDES_START
 #include <sjson/parser.h>
 #include <sjson/writer.h>
