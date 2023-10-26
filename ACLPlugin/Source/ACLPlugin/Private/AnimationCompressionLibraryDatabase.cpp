@@ -209,6 +209,12 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 		// We might need to revert to non-frame stripped data or the codec might have changed
 		// forcing us to recompress
 		// In practice we'll load directly from the DDC and it should be fast
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+		{
+			TGuardValue<int32> FrameStrippingGuard(GPerformFrameStripping, 0);
+			AnimSeq->CacheDerivedDataForCurrentPlatform();
+		}
+#else
 		const bool bAsyncCompression = false;
 		const bool bAllowAlternateCompressor = false;
 		const bool bOutput = false;
@@ -217,6 +223,7 @@ void UAnimationCompressionLibraryDatabase::BuildDatabase(TArray<uint8>& OutCompr
 		Params.bPerformFrameStripping = false;
 
 		AnimSeq->RequestAnimCompression(Params);
+#endif
 
 		const FACLDatabaseCompressedAnimData& AnimData = static_cast<const FACLDatabaseCompressedAnimData&>(*AnimSeq->CompressedData.CompressedDataStructure);
 		if (!AnimData.IsValid())
