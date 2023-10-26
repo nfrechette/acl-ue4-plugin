@@ -7,6 +7,11 @@
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1)
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AnimCurveCompressionCodec_ACL)
 #endif
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+#include "Animation/AnimCurveUtils.h"
+#endif
+
 #if WITH_EDITORONLY_DATA
 #include "AnimationCompression.h"
 #include "Animation/MorphTarget.h"
@@ -240,6 +245,22 @@ struct UECurveDecompressionSettings final : public acl::decompression_settings
 #endif
 };
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+struct UECurveWriter final : public acl::track_writer
+{
+	TArray<float, FAnimStackAllocator>& Buffer;
+
+	explicit UECurveWriter(TArray<float, FAnimStackAllocator>& Buffer_)
+		: Buffer(Buffer_)
+	{
+	}
+
+	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL write_float1(uint32_t TrackIndex, rtm::scalarf_arg0 Value)
+	{
+		Buffer[TrackIndex] = rtm::scalar_cast(Value);
+	}
+};
+#else
 struct UECurveWriter final : public acl::track_writer
 {
 	const TArray<FSmartName>& CompressedCurveNames;
@@ -260,11 +281,17 @@ struct UECurveWriter final : public acl::track_writer
 		}
 	}
 };
+#endif
 
 void UAnimCurveCompressionCodec_ACL::DecompressCurves(const FCompressedAnimSequence& AnimSeq, FBlendedCurve& Curves, float CurrentTime) const
 {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+	const TArray<FAnimCompressedCurveIndexedName>& IndexedCurveNames = AnimSeq.IndexedCurveNames;
+	const int32 NumCurves = IndexedCurveNames.Num();
+#else
 	const TArray<FSmartName>& CompressedCurveNames = AnimSeq.CompressedCurveNames;
 	const int32 NumCurves = CompressedCurveNames.Num();
+#endif
 
 	if (NumCurves == 0)
 	{
@@ -278,8 +305,30 @@ void UAnimCurveCompressionCodec_ACL::DecompressCurves(const FCompressedAnimSeque
 	Context.initialize(*CompressedTracks);
 	Context.seek(CurrentTime, acl::sample_rounding_policy::none);
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+	TArray<float, FAnimStackAllocator> DecompressionBuffer;
+	DecompressionBuffer.SetNumUninitialized(NumCurves);
+
+	UECurveWriter TrackWriter(DecompressionBuffer);
+#else
 	UECurveWriter TrackWriter(CompressedCurveNames, Curves);
+#endif
+
 	Context.decompress_tracks(TrackWriter);
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+	auto GetNameFromIndex = [&IndexedCurveNames](int32 InCurveIndex)
+	{
+		return IndexedCurveNames[IndexedCurveNames[InCurveIndex].CurveIndex].CurveName;
+	};
+
+	auto GetValueFromIndex = [&DecompressionBuffer, &IndexedCurveNames](int32 InCurveIndex)
+	{
+		return DecompressionBuffer[IndexedCurveNames[InCurveIndex].CurveIndex];
+	};
+
+	UE::Anim::FCurveUtils::BuildSorted(Curves, NumCurves, GetNameFromIndex, GetValueFromIndex, Curves.GetFilter());
+#endif
 }
 
 struct UEScalarCurveWriter final : public acl::track_writer
@@ -297,10 +346,19 @@ struct UEScalarCurveWriter final : public acl::track_writer
 	}
 };
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+float UAnimCurveCompressionCodec_ACL::DecompressCurve(const FCompressedAnimSequence& AnimSeq, FName CurveName, float CurrentTime) const
+#else
 float UAnimCurveCompressionCodec_ACL::DecompressCurve(const FCompressedAnimSequence& AnimSeq, SmartName::UID_Type CurveUID, float CurrentTime) const
+#endif
 {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+	const TArray<FAnimCompressedCurveIndexedName>& IndexedCurveNames = AnimSeq.IndexedCurveNames;
+	const int32 NumCurves = IndexedCurveNames.Num();
+#else
 	const TArray<FSmartName>& CompressedCurveNames = AnimSeq.CompressedCurveNames;
 	const int32 NumCurves = CompressedCurveNames.Num();
+#endif
 
 	if (NumCurves == 0)
 	{
@@ -317,7 +375,11 @@ float UAnimCurveCompressionCodec_ACL::DecompressCurve(const FCompressedAnimSeque
 	int32 TrackIndex = -1;
 	for (int32 CurveIndex = 0; CurveIndex < NumCurves; ++CurveIndex)
 	{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+		if (IndexedCurveNames[CurveIndex].CurveName == CurveName)
+#else
 		if (CompressedCurveNames[CurveIndex].UID == CurveUID)
+#endif
 		{
 			TrackIndex = CurveIndex;
 			break;
