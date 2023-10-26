@@ -26,7 +26,7 @@ struct FACLTransform final : public FTransform
 
 	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL SetRotationRaw(rtm::quatf_arg0 Rotation_)
 	{
-#if PLATFORM_ENABLE_VECTORINTRINSICS
+#if PLATFORM_ENABLE_VECTORINTRINSICS || ENABLE_VECTORIZED_TRANSFORM
 		Rotation = Rotation_;
 #else
 		rtm::quat_store(Rotation_, &Rotation.X);
@@ -35,7 +35,7 @@ struct FACLTransform final : public FTransform
 
 	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL SetTranslationRaw(rtm::vector4f_arg0 Translation_)
 	{
-#if PLATFORM_ENABLE_VECTORINTRINSICS
+#if PLATFORM_ENABLE_VECTORINTRINSICS || ENABLE_VECTORIZED_TRANSFORM
 		Translation = VectorSet_W0(Translation_);
 #else
 		rtm::vector_store3(Translation_, &Translation.X);
@@ -44,7 +44,7 @@ struct FACLTransform final : public FTransform
 
 	FORCEINLINE_DEBUGGABLE void RTM_SIMD_CALL SetScale3DRaw(rtm::vector4f_arg0 Scale_)
 	{
-#if PLATFORM_ENABLE_VECTORINTRINSICS
+#if PLATFORM_ENABLE_VECTORINTRINSICS || ENABLE_VECTORIZED_TRANSFORM
 		Scale3D = VectorSet_W0(Scale_);
 #else
 		rtm::vector_store3(Scale_, &Scale3D.X);
