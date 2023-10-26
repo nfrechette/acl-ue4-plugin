@@ -79,3 +79,12 @@ void FAssetTypeActions_AnimationCompressionLibraryDatabase::ExecuteBuild(TWeakOb
 	UAnimationCompressionLibraryDatabase* Database = DatabasePtr.Get();
 	Database->UpdateReferencingAnimSequenceList();
 }
+
+const TArray<FText>& FAssetTypeActions_AnimationCompressionLibraryDatabase::GetSubMenus() const
+{
+	static const TArray<FText> SubMenus
+	{
+		NSLOCTEXT("AssetTypeActions_AnimationCompressionLibraryDatabase", "AnimAdvancedSubMenu", "Advanced")
+	};
+	return SubMenus;
+}
