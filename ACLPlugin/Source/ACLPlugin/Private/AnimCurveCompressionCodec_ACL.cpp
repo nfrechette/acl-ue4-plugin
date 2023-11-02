@@ -77,6 +77,15 @@ static const TArray<FFloatCurve>& GetRawCurves(const FCompressibleAnimData& Anim
 #endif
 }
 
+static FName GetCurveName(const FFloatCurve& Curve)
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+	return Curve.GetName();
+#else
+	return Curve.Name.DisplayName;
+#endif
+}
+
 // For each curve, returns its largest position delta if the curve is for a morph target, 0.0 otherwise
 static TArray<float> GetMorphTargetMaxPositionDeltas(const FCompressibleAnimData& AnimSeq, const USkeletalMesh* MorphTargetSource)
 {
@@ -96,7 +105,7 @@ static TArray<float> GetMorphTargetMaxPositionDeltas(const FCompressibleAnimData
 		float MaxDeltaPosition = 0.0f;
 		const FFloatCurve& Curve = RawCurves[CurveIndex];
 
-		UMorphTarget* Target = MorphTargetSource->FindMorphTarget(Curve.Name.DisplayName);
+		UMorphTarget* Target = MorphTargetSource->FindMorphTarget(GetCurveName(Curve));
 		if (Target != nullptr)
 		{
 			// This curve drives a morph target, find the largest displacement it can have

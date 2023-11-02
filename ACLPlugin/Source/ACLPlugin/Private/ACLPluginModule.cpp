@@ -104,7 +104,12 @@ static SIZE_T GetCompressedBoneSize(const FCompressedAnimSequence& CompressedDat
 
 static SIZE_T GetCompressedCurveSize(const FCompressedAnimSequence& CompressedData)
 {
-	SIZE_T Size = CompressedData.CompressedCurveNames.GetAllocatedSize();
+	SIZE_T Size = 0;
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+	Size += CompressedData.IndexedCurveNames.GetAllocatedSize();
+#else
+	Size += CompressedData.CompressedCurveNames.GetAllocatedSize();
+#endif
 	Size += CompressedData.CompressedCurveByteStream.GetAllocatedSize();
 	return Size;
 }
