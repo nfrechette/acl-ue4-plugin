@@ -58,7 +58,7 @@ if __name__ == "__main__":
 	to_remove_list = [
 		'.all-contributorsrc', '.editorconfig', '.git', '.gitignore', '.gitmodules',
 		'cmake', 'tests', 'test_data', 'tools', 'make.py', 'sonar-project.properties',
-		'CMakeLists.txt', 'appveyor.yml', '.github'
+		'CMakeLists.txt', 'appveyor.yml', '.github', 'docs'
 		]
 
 	for dir_to_prune in dirs_to_prune:
