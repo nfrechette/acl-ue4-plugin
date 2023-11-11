@@ -230,6 +230,7 @@ enum ACLCompressionLevel
 	ACLCL_Medium UMETA(DisplayName = "Medium"),
 	ACLCL_High UMETA(DisplayName = "High"),
 	ACLCL_Highest UMETA(DisplayName = "Highest"),
+	ACLCL_Automatic UMETA(DisplayName = "Automatic"),
 };
 
 /** Editor only utilities */

@@ -46,7 +46,7 @@ UAnimBoneCompressionCodec_ACLBase::UAnimBoneCompressionCodec_ACLBase(const FObje
 	: Super(ObjectInitializer)
 {
 #if WITH_EDITORONLY_DATA
-	CompressionLevel = ACLCL_Medium;
+	CompressionLevel = ACLCL_Automatic;
 	PhantomTrackMode = ACLPhantomTrackMode::Ignore;	// Same as UE codecs
 
 	// We use a higher virtual vertex distance when bones have a socket attached or are keyed end effectors (IK, hand, camera, etc)

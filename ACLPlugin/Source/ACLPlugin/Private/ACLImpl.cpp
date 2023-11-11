@@ -36,11 +36,12 @@ acl::compression_level8 GetCompressionLevel(ACLCompressionLevel Level)
 	switch (Level)
 	{
 	default:
-	case ACLCL_Lowest:	return acl::compression_level8::lowest;
-	case ACLCL_Low:		return acl::compression_level8::low;
-	case ACLCL_Medium:	return acl::compression_level8::medium;
-	case ACLCL_High:	return acl::compression_level8::high;
-	case ACLCL_Highest:	return acl::compression_level8::highest;
+	case ACLCL_Lowest:		return acl::compression_level8::lowest;
+	case ACLCL_Low:			return acl::compression_level8::low;
+	case ACLCL_Medium:		return acl::compression_level8::medium;
+	case ACLCL_High:		return acl::compression_level8::high;
+	case ACLCL_Highest:		return acl::compression_level8::highest;
+	case ACLCL_Automatic:	return acl::compression_level8::automatic;
 	}
 }
 
