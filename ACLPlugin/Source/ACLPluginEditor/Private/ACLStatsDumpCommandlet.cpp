@@ -181,7 +181,8 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UECl
 	UEClipController.SetFrameRate(FFrameRate(FrameRate, 1));
 
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2)
-	UEClipController.SetNumberOfFrames(FFrameNumber(NumSamples));
+	const int32 NumFrames = NumSamples - 1;
+	UEClipController.SetNumberOfFrames(FFrameNumber(NumFrames));
 #else
 	UEClipController.SetPlayLength(SequenceLength);
 #endif
