@@ -168,6 +168,8 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UESk
 
 static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UEClip, USkeleton* UESkeleton)
 {
+	UEClip->SetSkeleton(UESkeleton);
+
 	const int32 NumSamples = Tracks.get_num_samples_per_track();	// int32 for 5.2 FFrameNumber constructor
 	const float SequenceLength = FGenericPlatformMath::Max<float>(Tracks.get_finite_duration(), MINIMUM_ANIMATION_LENGTH);
 
@@ -178,6 +180,11 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UECl
 	const uint32 FrameRate = FGenericPlatformMath::RoundToInt(SampleRate);
 
 	IAnimationDataController& UEClipController = UEClip->GetController();
+	UEClipController.InitializeModel();
+	UEClipController.ResetModel(false);
+
+	UEClipController.OpenBracket(FText::FromString("Generating Animation Data"));
+
 	UEClipController.SetFrameRate(FFrameRate(FrameRate, 1));
 
 #if (ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2)
@@ -189,15 +196,10 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UECl
 
 	// Ensure our frame rate update propagates first to avoid re-sampling below
 	UEClipController.NotifyPopulated();
-
-	UEClipController.OpenBracket(FText::FromString("Generating Animation Data"));
-	UEClipController.RemoveAllBoneTracks();
 #else
 	UEClip->SequenceLength = SequenceLength;
 	UEClip->SetRawNumberOfFrame(NumSamples);
 #endif
-
-	UEClip->SetSkeleton(UESkeleton);
 
 	if (NumSamples != 0)
 	{
