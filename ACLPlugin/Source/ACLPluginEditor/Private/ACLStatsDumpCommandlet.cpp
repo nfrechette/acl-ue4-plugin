@@ -135,6 +135,12 @@ static const TCHAR* ReadACLClip(FFileManagerGeneric& FileManager, const FString&
 	return nullptr;
 }
 
+static FString GetBoneName(const acl::track_qvvf& Track)
+{
+	// We add a prefix to ensure the name is safe for ControlRig in 5.x
+	return FString::Printf(TEXT("ACL_%s"), ANSI_TO_TCHAR(Track.get_name().c_str()));
+}
+
 static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UESkeleton)
 {
 	// Not terribly clean, we cast away the 'const' to modify the skeleton
@@ -145,7 +151,7 @@ static void ConvertSkeleton(const acl::track_array_qvvf& Tracks, USkeleton* UESk
 	{
 		const acl::track_desc_transformf& Desc = Track.get_description();
 
-		const FString BoneName = ANSI_TO_TCHAR(Track.get_name().c_str());
+		const FString BoneName = GetBoneName(Track);
 
 		FMeshBoneInfo UEBone;
 		UEBone.Name = FName(*BoneName);
@@ -222,7 +228,7 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UECl
 				RawTrack.ScaleKeys.Add(Scale);
 			}
 
-			const FName BoneName(Track.get_name().c_str());
+			const FName BoneName(*GetBoneName(Track));
 
 #if ENGINE_MAJOR_VERSION >= 5
 	#if ENGINE_MINOR_VERSION >= 2
@@ -275,7 +281,7 @@ static void SampleUEClip(const acl::track_array_qvvf& Tracks, USkeleton* UESkele
 	for (uint32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
 	{
 		const acl::track_qvvf& Track = Tracks[BoneIndex];
-		const FName BoneName(Track.get_name().c_str());
+		const FName BoneName(*GetBoneName(Track));
 		const int32 BoneTreeIndex = RefSkeleton.FindBoneIndex(BoneName);
 
 		FTransform BoneTransform;
