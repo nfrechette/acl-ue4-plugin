@@ -286,7 +286,20 @@ bool UAnimBoneCompressionCodec_ACLBase::Compress(const FCompressibleAnimData& Co
 		// We pre-process the raw tracks to prime them for compression
 		acl::pre_process_settings_t PreProcessSettings;
 		PreProcessSettings.actions = acl::pre_process_actions::recommended;
-		PreProcessSettings.precision_policy = acl::pre_process_precision_policy::lossy;
+
+		// If we retain full precision, use lossless pre-processing
+		if (Settings.rotation_format == acl::rotation_format8::quatf_full ||
+			Settings.rotation_format == acl::rotation_format8::quatf_drop_w_full ||
+			Settings.translation_format == acl::vector_format8::vector3f_full ||
+			Settings.scale_format == acl::vector_format8::vector3f_full)
+		{
+			PreProcessSettings.precision_policy = acl::pre_process_precision_policy::lossless;
+		}
+		else
+		{
+			PreProcessSettings.precision_policy = acl::pre_process_precision_policy::lossy;
+		}
+
 		PreProcessSettings.error_metric = Settings.error_metric;
 
 		if (!ACLBaseTracks.is_empty())
