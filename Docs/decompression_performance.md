@@ -6,15 +6,17 @@
 
 ![Playground Ryzen Median Performance](Images/acl_plugin_decomp_ryzen_playground.svg)
 
-## Google Pixel 3 @ 2.5 GHz (arm64)
+**Note: ACL Plugin 2.0 numbers were gathered in UE 4.25. ACL 2.1 appears slightly slower than 2.0 most likely as a result of UE 5.x using double floating point precision in the output buffer.**
 
-![Matinee P3 Median Performance](Images/acl_plugin_decomp_p3_matinee.svg)
+## Google Pixel 7 @ 2.85 GHz (arm64)
 
-![Playground P3 Median Performance](Images/acl_plugin_decomp_p3_playground.svg)
+![Matinee P7 Median Performance](Images/acl_plugin_decomp_p7_matinee.svg)
+
+![Playground P7 Median Performance](Images/acl_plugin_decomp_p7_playground.svg)
 
 ## Observations
 
-A number of interesting things can be seen in the above graphs. ACL is *much* faster: ranging from **3.4x** to **5.1x** on PC and **3.4x** to **8.4x** on mobile. The variance is also much lower as decompression performance remains consistent from frame to frame. As a result, fewer spikes can be seen with ACL.
+A number of interesting things can be seen in the above graphs. ACL is *much* faster. The variance is also much lower as decompression performance remains consistent from frame to frame. As a result, fewer spikes can be seen with ACL.
 
 The Matinee fight scene also shows how UE searches for keys when linearly interpolating. The keys are split into two and the codec estimates if our desired keys are more likely to be in the first half or the second half. It then starts searching from that end towards the other. In the wild, most sequences are very short and such a heuristic is a reasonable choice over a more traditional binary search. However, the fight scene is very long at 2000 frames! The graphs highlights how decompressing early or late in the sequence is much faster than near the middle.
 
@@ -28,6 +30,8 @@ Two scenarios are tracked:
 All the performance metrics were extracted with a **Development** build. This might be a bit slower than the performance you might see under a **Shipping** configuration but not by much.
 
 Decompression performance is extracted using the UE CSV profiler. Reproducing the above numbers with your own projects should be fairly straight forward if you follow these steps.
+
+**Note: Matinee doesn't run in UE 5.x and thus data has been extracted using UE 4.25. When present, numbers for ACL Plugin 2.0 are from UE 4.25 as well.**
 
 ### Run your project and dump the stats
 

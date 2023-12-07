@@ -1,10 +1,26 @@
 # Significant changes per release
 
+## 2.1.0
+
+*  Upgrade to ACL 2.1
+*  Add support for bind pose stripping in UE 5.1+
+*  Add support for keyframe stripping in UE 5.1+
+*  Remove safety fallback codec, no longer required
+*  Database support cleanup
+*  Add support for raw data pre-processing
+*  Add support for UE 5.3
+
+## 2.0.8
+
+*  Add support for UE 5.2
+*  Fix edge case when skeleton bones are missing (validated)
+*  Minor improvements
+
 ## 2.0.7
 
 *  Add support for UE 5.1
 *  Fix wrong enum usage in ACL Custom
-*  Fix edge case when skeleton bones are missing
+*  Fix edge case when skeleton bones are missing (tentative)
 *  Minor improvements
 
 ## 2.0.6

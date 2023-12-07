@@ -180,7 +180,9 @@ static void ConvertClip(const acl::track_array_qvvf& Tracks, UAnimSequence* UECl
 	const uint32 FrameRate = FGenericPlatformMath::RoundToInt(SampleRate);
 
 	IAnimationDataController& UEClipController = UEClip->GetController();
+#if ENGINE_MINOR_VERSION >= 2
 	UEClipController.InitializeModel();
+#endif
 	UEClipController.ResetModel(false);
 
 	UEClipController.OpenBracket(FText::FromString("Generating Animation Data"));

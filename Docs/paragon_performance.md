@@ -1,22 +1,24 @@
 # Paragon database performance
 
-|                   | ACL Plugin v2.0.0 | ACL Plugin v1.0.0 | UE v4.25.0 |
+|                   | ACL Plugin v2.1.0 | ACL Plugin v2.0.0 | UE v5.2.0 |
 | -------               | --------      | -------               | -------               |
-| **Compressed size**   | 224.30 MB | 225.39 MB | 384.99 MB |
-| **Compression ratio** | 19.06 : 1 | 18.97 : 1 | 11.11 : 1 |
-| **Compression time**  | 8m 32.77s | 11m 2.79s | 1h 14m 31.60s |
-| **Compression speed** | 8539.37 KB/sec | 6606.51 KB/sec | 979.23 KB/sec |
-| **Max ACL error**     | 0.8622 cm | 0.8622 cm | 0.8619 cm |
-| **Max UE4 error**     | 0.8602 cm | 0.8601 cm | 0.6454 cm |
-| **ACL Error 99<sup>th</sup> percentile** | 0.0095 cm | 0.0094 cm | 0.0437 cm |
-| **Samples below ACL error threshold** | 99.13 % | 99.20 % | 81.47 % |
+| **Compressed size**   | 183.98 MB | 224.30 MB | 391.66 MB |
+| **Compression ratio** | 23.24 : 1 | 19.06 : 1 | 10.92 : 1 |
+| **Compression time**  | 19m 22.95s | 8m 32.77s | 33m 24.28s |
+| **Compression speed** | 3765.21 KB/sec | 8539.37 KB/sec | 2184.70 KB/sec |
+| **Max ACL error**     | 1.2065 cm | 0.8622 cm | 1.2169 cm |
+| **Max UE error**     | 0.8434 cm | 0.8602 cm | 0.8491 cm |
+| **ACL Error 99<sup>th</sup> percentile** | 0.0197 cm | 0.0095 cm | 0.0358 cm |
+| **Samples below ACL error threshold** | 94.78 % | 99.13 % | 82.81 % |
 
-ACL was smaller for **6356** clips (**96.92 %**)  
-ACL was more accurate for **4957** clips (**75.59 %**)  
-ACL has faster compression for **6513** clips (**99.31 %**)  
-ACL was smaller, better, and faster for **4800** clips (**73.19 %**)  
+ACL was smaller for **6469** clips (**98.64 %**)  
+ACL was more accurate for **4829** clips (**73.64 %**)  
+ACL has faster compression for **5302** clips (**80.85 %**)  
+ACL was smaller, better, and faster for **3896** clips (**59.41 %**)  
 
-Would the *ACL Plugin* have been included in the *Automatic Compression* permutations tried, it would have won for **6166** clips (**94.02 %**)
+Would the *ACL Plugin* have been included in the *Automatic Compression* permutations tried, it would have won for **6479** clips (**98.80 %**)
+
+**Note: Numbers for ACL 2.0 were extracted with UE 4.25.**
 
 ## Data and method used
 
@@ -42,6 +44,6 @@ The data set contains among other things:
 
 To measure and extract the compression statistics, the provided [commandlet](../ACLPlugin/Source/ACLPluginEditor/Classes/ACLStatsDumpCommandlet.h) is used along with a [python script](../ACLPlugin/Extras/stat_parser.py) to parse the results.
 
-The *ACL Plugin* uses the default settings with an error threshold of **0.01cm** while *UE4* uses the *Automatic Compression* with an error threshold (master tolerance) of **0.1 cm**. Both error thresholds used are suitable for production use. The **99th** percentile and the number of samples below the ACL error threshold are calculated by measuring the error with ACL on every bone at every sample.
+The *ACL Plugin* uses the default settings with an error threshold of **0.01cm** while *UE* uses the *Automatic Compression* with an error threshold (master tolerance) of **0.1 cm**. Both error thresholds used are suitable for production use. The **99th** percentile and the number of samples below the ACL error threshold are calculated by measuring the error with ACL on every bone at every sample.
 
 *ACL* and *UE* both use separate methods to measure the error and both values are shown for transparency.
