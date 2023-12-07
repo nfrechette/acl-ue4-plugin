@@ -6,6 +6,8 @@
 
 ![Playground Ryzen Median Performance](Images/acl_plugin_decomp_ryzen_playground.svg)
 
+**Note: ACL Plugin 2.0 numbers were gathered in UE 4.25. ACL 2.1 appears slightly slower than 2.0 most likely as a result of UE 5.x using double floating point precision in the output buffer.**
+
 ## Google Pixel 7 @ 2.85 GHz (arm64)
 
 ![Matinee P7 Median Performance](Images/acl_plugin_decomp_p7_matinee.svg)
